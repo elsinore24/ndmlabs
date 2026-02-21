@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Outfit, Space_Mono } from "next/font/google";
+import AppStoreLink from "./AppStoreLink";
 import "./links.css";
 
 const outfit = Outfit({
@@ -49,22 +50,7 @@ export default function LinksPage() {
         {/* ── APPS & GAMES ── */}
         <div className="section-label delay-1">Apps &amp; Games</div>
         <div className="links">
-          {/* Starscapes: Visual Riddles */}
-          <a
-            href="https://apps.apple.com/us/app/starscapes-visual-riddles/id6756834182"
-            className="link-card app-store delay-2"
-          >
-            <img
-              src="/starscapes-icon.png"
-              alt="Starscapes"
-              className="app-icon"
-            />
-            <div className="link-content">
-              <div className="title">Starscapes: Visual Riddles</div>
-              <span className="badge">Download from the App Store</span>
-            </div>
-            <span className="link-arrow">→</span>
-          </a>
+          <AppStoreLink />
         </div>
 
         {/* ── FIND US ── */}
