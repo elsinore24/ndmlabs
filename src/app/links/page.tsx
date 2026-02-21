@@ -88,7 +88,7 @@ export default function LinksPage() {
 
           {/* TikTok – Update href with your TikTok URL */}
           <a
-            href="#"
+            href="https://www.tiktok.com/@ndm.labs?_r=1&_t=ZT-945uqnKo75h"
             className="link-card delay-5"
           >
             <div className="link-icon icon-tiktok">
