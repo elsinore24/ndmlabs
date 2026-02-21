@@ -29,9 +29,12 @@ export default function AppStoreLink() {
       <img src="/starscapes-icon.png" alt="Starscapes" className="app-icon" />
       <div className="link-content">
         <div className="title">Starscapes: Visual Riddles</div>
-        <span className="badge">Download from the App Store</span>
+        <img
+          src="/appstore_button.png"
+          alt="Download on the App Store"
+          className="appstore-badge"
+        />
       </div>
-      <span className="link-arrow">&rarr;</span>
     </a>
   );
 }
