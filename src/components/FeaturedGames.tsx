@@ -8,6 +8,15 @@ const games = [
     url: "https://apps.apple.com/us/app/starscapes-visual-riddles/id6756834182",
   },
   {
+    id: 4,
+    title: "Coach of the Year",
+    description:
+      "Draft eleven across the eras and outcoach history. Daily challenge leaderboard live now.",
+    icon: null,
+    status: "In Development",
+    url: "/koth",
+  },
+  {
     id: 2,
     title: "Project Alpha",
     description: "An innovative gaming experience that redefines the genre.",
