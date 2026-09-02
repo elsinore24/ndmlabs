@@ -210,19 +210,14 @@ export default function KothBoard() {
                   {throne.holder_handle} · crowned{" "}
                   {throne.claimed_at?.slice(0, 10)}
                 </p>
-                <ul className="mt-4 space-y-1">
-                  {throne.five.map((entry) => (
-                    <li key={entry.slot} className="flex gap-3 font-mono text-sm">
-                      <span className="w-6 text-gray-600">{entry.slot}</span>
-                      <span className="text-white">
-                        {entry.name ?? entry.pid.split(":")[0]}
-                      </span>
-                      <span className="text-gray-600">
-                        &apos;{entry.pid.split(":")[1]?.slice(2)}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
+                {/* The five stays behind the app door (Dan, 2026-09-02):
+                    the site sells the mystery, the challenge reveals the
+                    roster. */}
+                <p className="mt-4 font-mono text-sm text-gray-500">
+                  The King&apos;s five is revealed in the app — download Coach
+                  of the Year and challenge the throne to see who you&apos;re
+                  up against.
+                </p>
               </div>
               <h3 className="mt-8 font-mono text-xs tracking-widest text-gray-500">
                 THE LINEAGE
