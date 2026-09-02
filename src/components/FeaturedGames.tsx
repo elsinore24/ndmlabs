@@ -1,3 +1,5 @@
+import CurrentKing from "./CurrentKing";
+
 const games = [
   {
     id: 1,
@@ -101,6 +103,7 @@ export default function FeaturedGames() {
           })}
         </div>
       </div>
+      <CurrentKing />
     </section>
   );
 }

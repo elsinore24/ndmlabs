@@ -10,7 +10,7 @@ import { useEffect, useState } from "react";
 
 const SUPABASE_URL = "https://lopawitfeyhtzppfchik.supabase.co";
 const SUPABASE_KEY = "sb_publishable_Jy4XRKu11PdztPoCSZfduw_kHed6SyY";
-const SHOW_THRONE = false;
+const SHOW_THRONE = true;
 
 type DailyRow = {
   rank: number;
@@ -18,6 +18,21 @@ type DailyRow = {
   score: number;
   score_opp: number;
   venue: string | null;
+};
+type Throne = {
+  version: number;
+  holder_handle: string;
+  team_name: string;
+  defenses: number;
+  claimed_at: string;
+  five: { slot: string; pid: string; name?: string }[];
+};
+type LineageEntry = {
+  id: number;
+  holder_handle: string;
+  team_name: string;
+  defenses: number;
+  dethroned_by_handle: string;
 };
 type ReignRow = {
   handle: string;
@@ -54,6 +69,8 @@ export default function KothBoard() {
   const [tab, setTab] = useState<string>("DAILY");
   const [daily, setDaily] = useState<DailyRow[] | null>(null);
   const [reigns, setReigns] = useState<ReignRow[] | null>(null);
+  const [throne, setThrone] = useState<Throne | null>(null);
+  const [lineage, setLineage] = useState<LineageEntry[]>([]);
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
@@ -91,6 +108,17 @@ export default function KothBoard() {
             ended_at: r.ended_at,
           }))
         );
+        if (SHOW_THRONE) {
+          const throneRows = (await rest(
+            "throne?id=eq.1&select=version,holder_handle,team_name,defenses,claimed_at,five"
+          )) as Throne[];
+          setThrone(throneRows[0] ?? null);
+          setLineage(
+            (await rest(
+              "throne_lineage?select=id,holder_handle,team_name,defenses,dethroned_by_handle&order=version.desc&limit=25"
+            )) as LineageEntry[]
+          );
+        }
       } catch {
         setFailed(true);
       }
@@ -159,6 +187,66 @@ export default function KothBoard() {
                 </li>
               ))}
             </ol>
+          )}
+        </section>
+      )}
+
+      {tab === "THE THRONE" && !failed && (
+        <section className="mt-6">
+          {throne === null ? (
+            <p className="mt-6 font-mono text-sm text-gray-600">Loading…</p>
+          ) : (
+            <div>
+              <h2 className="font-mono text-xs tracking-widest text-gray-500">
+                ONE THRONE FOR THE WHOLE WORLD · BEST-OF-5 TO TAKE IT
+              </h2>
+              <div className="mt-4 rounded-2xl border border-[#FFB020]/40 bg-gray-900/60 p-6">
+                <p className="font-mono text-[10px] tracking-widest text-[#FFB020]">
+                  👑 CURRENT KING · {throne.defenses}{" "}
+                  {throne.defenses === 1 ? "DEFENSE" : "DEFENSES"}
+                </p>
+                <p className="mt-1 text-3xl font-bold">{throne.team_name}</p>
+                <p className="font-mono text-xs text-gray-500">
+                  {throne.holder_handle} · crowned{" "}
+                  {throne.claimed_at?.slice(0, 10)}
+                </p>
+                <ul className="mt-4 space-y-1">
+                  {throne.five.map((entry) => (
+                    <li key={entry.slot} className="flex gap-3 font-mono text-sm">
+                      <span className="w-6 text-gray-600">{entry.slot}</span>
+                      <span className="text-white">
+                        {entry.name ?? entry.pid.split(":")[0]}
+                      </span>
+                      <span className="text-gray-600">
+                        &apos;{entry.pid.split(":")[1]?.slice(2)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <h3 className="mt-8 font-mono text-xs tracking-widest text-gray-500">
+                THE LINEAGE
+              </h3>
+              {lineage.length === 0 ? (
+                <p className="mt-3 font-mono text-sm text-gray-500">
+                  No King has fallen yet. The Gatekeepers await.
+                </p>
+              ) : (
+                <ol className="mt-3 divide-y divide-gray-900">
+                  {lineage.map((r) => (
+                    <li key={r.id} className="flex items-baseline gap-3 py-2">
+                      <span className="font-bold">{r.team_name}</span>
+                      <span className="font-mono text-[10px] text-gray-600">
+                        {r.holder_handle}
+                      </span>
+                      <span className="ml-auto font-mono text-xs text-gray-500">
+                        {r.defenses} def · fell to {r.dethroned_by_handle}
+                      </span>
+                    </li>
+                  ))}
+                </ol>
+              )}
+            </div>
           )}
         </section>
       )}
