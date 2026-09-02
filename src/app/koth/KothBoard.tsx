@@ -19,6 +19,13 @@ type DailyRow = {
   score_opp: number;
   venue: string | null;
 };
+type WeekRow = {
+  rank: number;
+  handle: string;
+  games: number;
+  wins: number;
+  margin: number;
+};
 type Throne = {
   version: number;
   holder_handle: string;
@@ -62,12 +69,22 @@ function todayUTC(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
+// Monday of the current UTC week — the weekly board's key, matching
+// Postgres date_trunc('week'), which is ISO (weeks start Monday).
+function mondayUTC(): string {
+  const now = new Date();
+  const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7));
+  return d.toISOString().slice(0, 10);
+}
+
 export default function KothBoard() {
   const tabs = SHOW_THRONE
-    ? (["DAILY", "RECORDS", "THE THRONE"] as const)
-    : (["DAILY", "RECORDS"] as const);
+    ? (["DAILY", "THE WEEK", "RECORDS", "THE THRONE"] as const)
+    : (["DAILY", "THE WEEK", "RECORDS"] as const);
   const [tab, setTab] = useState<string>("DAILY");
   const [daily, setDaily] = useState<DailyRow[] | null>(null);
+  const [week, setWeek] = useState<WeekRow[] | null>(null);
   const [reigns, setReigns] = useState<ReignRow[] | null>(null);
   const [throne, setThrone] = useState<Throne | null>(null);
   const [lineage, setLineage] = useState<LineageEntry[]>([]);
@@ -76,9 +93,12 @@ export default function KothBoard() {
   useEffect(() => {
     (async () => {
       try {
+        // Winners first, then margin — points-scored ranked a shootout
+        // loss over a controlled win (Dan, 2026-09-02). The daily_board
+        // view computes won/margin so the ordering happens server-side.
         const scores = (await rest(
-          `daily_scores?day=eq.${todayUTC()}` +
-            `&select=uid,score,score_opp,venue&order=score.desc,created_at.asc&limit=100`
+          `daily_board?day=eq.${todayUTC()}` +
+            `&select=uid,score,score_opp,venue&order=won.desc,margin.desc,created_at.asc&limit=100`
         )) as { uid: string; score: number; score_opp: number; venue: string | null }[];
         const handles = await handleMap([...new Set(scores.map((s) => s.uid))]);
         setDaily(
@@ -88,6 +108,23 @@ export default function KothBoard() {
             score: s.score,
             score_opp: s.score_opp,
             venue: s.venue,
+          }))
+        );
+
+        // The week is where coaching shows: one game is a statistical roll,
+        // seven accumulate skill. Wins, then total margin across the week.
+        const weekRows = (await rest(
+          `weekly_board?week=eq.${mondayUTC()}` +
+            `&select=uid,games,wins,margin&order=wins.desc,margin.desc,first_played.asc&limit=100`
+        )) as { uid: string; games: number; wins: number; margin: number }[];
+        const weekHandles = await handleMap([...new Set(weekRows.map((s) => s.uid))]);
+        setWeek(
+          weekRows.map((s, i) => ({
+            rank: i + 1,
+            handle: weekHandles[s.uid] ?? "COACH",
+            games: s.games,
+            wins: s.wins,
+            margin: s.margin,
           }))
         );
 
@@ -183,6 +220,53 @@ export default function KothBoard() {
                     }`}
                   >
                     {r.score}–{r.score_opp}
+                  </span>
+                </li>
+              ))}
+            </ol>
+          )}
+        </section>
+      )}
+
+      {tab === "THE WEEK" && !failed && (
+        <section className="mt-6">
+          <h2 className="font-mono text-xs tracking-widest text-gray-500">
+            WEEK OF {mondayUTC()} · SEVEN GAMES · LUCK AVERAGES OUT
+          </h2>
+          {week === null ? (
+            <p className="mt-6 font-mono text-sm text-gray-600">Loading…</p>
+          ) : week.length === 0 ? (
+            <p className="mt-6 font-mono text-sm text-gray-500">
+              Nobody has played this week yet.
+            </p>
+          ) : (
+            <ol className="mt-4 divide-y divide-gray-900">
+              {week.map((r) => (
+                <li key={r.rank} className="flex items-baseline gap-3 py-2">
+                  <span
+                    className={`w-8 text-right font-mono text-sm ${
+                      r.rank <= 3 ? "text-[#FFB020]" : "text-gray-600"
+                    }`}
+                  >
+                    {r.rank}
+                  </span>
+                  <span className="font-bold">{r.handle}</span>
+                  <span className="font-mono text-[10px] text-gray-600">
+                    {r.games} {r.games === 1 ? "GAME" : "GAMES"}
+                  </span>
+                  <span className="ml-auto font-mono text-sm tabular-nums text-gray-400">
+                    {r.wins}–{r.games - r.wins}
+                  </span>
+                  <span
+                    className={`w-12 text-right font-mono text-sm tabular-nums ${
+                      r.margin > 0
+                        ? "text-emerald-400"
+                        : r.margin < 0
+                          ? "text-red-400"
+                          : "text-gray-500"
+                    }`}
+                  >
+                    {r.margin > 0 ? `+${r.margin}` : r.margin}
                   </span>
                 </li>
               ))}
