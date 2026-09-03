@@ -138,10 +138,15 @@
 }
 .koth-king .meta { font-size: 11px; color: var(--dust); letter-spacing: 0.12em; margin-top: 6px; }
 .koth-king .meta b { color: var(--chalk); letter-spacing: 0.02em; font-size: 12px; }
-/* Each fact is one unbreakable span, separated by a drawn middot, so the
-   line wraps between facts and never inside one. */
+/* Each fact is one unbreakable span, separated by a drawn middot, so the line
+   wraps between facts and never inside one.
+   A flex row, not inline spans: adjacent JSX elements have no whitespace
+   between them, so inline nowrap spans give the line no break opportunity at
+   all and it runs straight through the defenses cell. Flex wrapping breaks
+   between items without needing one. */
+.koth-king .meta { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 10px; }
 .koth-king .meta span { white-space: nowrap; }
-.koth-king .meta span + span::before { content: "·"; margin: 0 10px; color: var(--faint); }
+.koth-king .meta span + span::before { content: "·"; margin-right: 10px; color: var(--faint); }
 .koth-king .def {
   text-align: center;
   padding: 0 18px;

@@ -76,6 +76,20 @@ export type SoloReign = {
   crowned_at: string;
   ended_at: string | null;
 };
+/** One coach's best climb: what the ladder run was worth. */
+export type BestRun = {
+  uid: string;
+  run_id: string;
+  coach_handle: string;
+  score: number;
+  rungs_cleared: number;
+  summit_tier: number;
+  top_rung: string | null;
+  clean: boolean;
+  ran_the_table: boolean;
+  finished_at: string;
+};
+
 /** One row of TOP 10 THIS MONTH: a player-season's best game this month. */
 export type TopPlayer = {
   player_id: string;
@@ -177,6 +191,10 @@ export function minutesAgo(since: number): string {
   const mins = Math.max(0, Math.round((Date.now() - since) / 60000));
   if (mins === 0) return "UPDATED JUST NOW";
   return `UPDATED ${mins} MIN AGO`;
+}
+/** `2,022` — a run score, grouped, the way the final screen prints it. */
+export function grouped(n: number): string {
+  return n.toLocaleString("en-US");
 }
 export function ordinal(n: number): string {
   const s = ["TH", "ST", "ND", "RD"];

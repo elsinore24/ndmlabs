@@ -10,16 +10,19 @@ import Header from "@/components/Header";
 import {
   APP_STORE_URL,
   type Challenge, type DailyRaw, type DailyRow, type LineageEntry, type Move,
-  type SoloReign, type Throne, type TopPlayer, type Venue, type WeekRow,
+  type BestRun, type SoloReign, type Throne, type TopPlayer, type Venue, type WeekRow,
   type Profile,
-  clockTime, defensesLabel, fiveLine, leadPlayer, longDate,
+  clockTime, defensesLabel, fiveLine, grouped, leadPlayer, longDate,
   minutesAgo, mondayUTC, monthName, monthStartUTC, movement, ordinal, playerLabel,
   profileMap, rest, scoreline, statLine,
   shortDate, signed, todayUTC, venueChip, venueFallback, venueName,
 } from "./lib";
 import "./koth.css";
 
-const TABS = ["DAILY", "THE WEEK", "RECORDS", "THE THRONE"] as const;
+// No THE THRONE tab: the King strip at the top of the page IS the throne
+// (Dan, 2026-09-03), and a tab repeating it was the same fact twice. Its
+// lineage moved into RECORDS, where the rest of the history lives.
+const TABS = ["DAILY", "THE WEEK", "THE CLIMB", "RECORDS"] as const;
 type Tab = (typeof TABS)[number];
 const POLL_MS = 60_000;
 
@@ -33,6 +36,7 @@ type Board = {
   bestMargins: { handle: string; scoreline: string; margin: number; day: string }[];
   mostWins: { handle: string; wins: number }[];
   topPlayers: TopPlayer[];
+  runs: BestRun[];
   today: Venue;
   tomorrow: Venue;
   /** COACH OF THE DAY: today's #1, or the latest day with results until
@@ -55,7 +59,7 @@ export default function KothLive() {
     try {
       const today = todayUTC();
       const [throneRows, lineage, challenges, dailyRaw, weekRaw, solo, venues, winsRaw, monthRaw,
-             topPlayers] =
+             topPlayers, runs] =
         await Promise.all([
           rest<Throne[]>(
             "throne?id=eq.1&select=version,holder_uid,holder_handle,team_name,defenses,claimed_at,five,lead_player"
@@ -91,6 +95,11 @@ export default function KothLive() {
           rest<TopPlayer[]>(
             "top_players_month?select=player_id,player_name,player_season,coach_handle,uid,played_on,pts,reb,ast,stl,blk,composite&order=composite.desc&limit=10"
           ),
+          // Best climb per coach — the view has already deduped, so this is a
+          // board of people, not of one person's afternoon.
+          rest<BestRun[]>(
+            "best_runs?select=uid,run_id,coach_handle,score,rungs_cleared,summit_tier,top_rung,clean,ran_the_table,finished_at&order=score.desc&limit=100"
+          ),
         ]);
 
       // One profile read covers every name on the page, the throne's holder
@@ -101,6 +110,7 @@ export default function KothLive() {
         ...weekRaw.map((r) => r.uid),
         ...solo.map((r) => r.uid),
         ...winsRaw.map((r) => r.uid),
+        ...runs.map((r) => r.uid),
         ...(throneRows[0] ? [throneRows[0].holder_uid] : []),
       ]);
       const nameOf = (uid: string) => profiles[uid]?.handle ?? "COACH";
@@ -165,6 +175,7 @@ export default function KothLive() {
         bestMargins,
         mostWins,
         topPlayers,
+        runs,
         today: todayVenue,
         tomorrow: venues.find((v) => v.day === todayUTC(1)) ?? venueFallback(todayUTC(1)),
         coach,
@@ -236,7 +247,7 @@ export default function KothLive() {
             {tab === "DAILY" && <DailyTab board={board} />}
             {tab === "THE WEEK" && <WeekTab board={board} />}
             {tab === "RECORDS" && <RecordsTab board={board} />}
-            {tab === "THE THRONE" && <ThroneTab board={board} />}
+            {tab === "THE CLIMB" && <ClimbTab board={board} />}
           </div>
           <aside className="side">
             {board?.coach && <CoachOfTheDayCard {...board.coach} today={todayUTC()} />}
@@ -523,6 +534,22 @@ function RecordsTab({ board }: { board: Board | null }) {
         </tbody></table>
       )}
 
+      <div className="koth-section-h mono" style={{ marginTop: 28 }}>THE LINEAGE</div>
+      {board.lineage.length === 0 ? (
+        <p className="koth-empty mono">No King has fallen yet. The Gatekeepers await.</p>
+      ) : (
+        <table><tbody>
+          {board.lineage.map((r) => (
+            <tr key={r.id}>
+              <td className="display"><b>{r.team_name}</b> <span className="mono faint" style={{ fontSize: 10 }}>{r.holder_handle}</span></td>
+              <td className="mono num amber">{defensesLabel(r.defenses)}</td>
+              <td className="mono num dust hide-sm" style={{ fontSize: 11 }}>{shortDate(r.claimed_at)} – {shortDate(r.ended_at)}</td>
+              <td className="mono num faint" style={{ fontSize: 11 }}>FELL TO {r.dethroned_by_handle}</td>
+            </tr>
+          ))}
+        </tbody></table>
+      )}
+
       <div className="koth-section-h mono" style={{ marginTop: 28 }}>MOST DAILY WINS</div>
       {board.mostWins.length === 0 ? (
         <p className="koth-empty mono">No daily win on record yet.</p>
@@ -541,55 +568,45 @@ function RecordsTab({ board }: { board: Board | null }) {
   );
 }
 
-function ThroneTab({ board }: { board: Board | null }) {
+function ClimbTab({ board }: { board: Board | null }) {
   if (!board) return <p className="koth-empty mono">Loading…</p>;
-  const t = board.throne;
-  const lead = t ? leadPlayer(t) : null;
-  const last = board.challenges.find((c) => c.applied);
   return (
     <section>
-      <div className="koth-section-h mono">ONE THRONE FOR THE WHOLE WORLD · BEST-OF-5 TO TAKE IT</div>
-      {!t ? (
-        <p className="koth-empty mono">The throne is empty.</p>
+      <div className="koth-dateline mono">
+        <span>BEST CLIMB PER COACH</span>
+        <span className="fill" />
+        <span>THE UNDERDOG MULTIPLIER PAYS THE WEAKER ROSTER</span>
+      </div>
+      {board.runs.length === 0 ? (
+        <p className="koth-empty mono">No climb has been banked yet.</p>
       ) : (
-        <div className="koth-throne-card">
-          <div className="mono gold" style={{ fontSize: 10, letterSpacing: ".3em", fontWeight: 700 }}>
-            ♛ CURRENT KING · {defensesLabel(t.defenses)}
-          </div>
-          <div className="display" style={{ fontSize: 28, fontWeight: 900, marginTop: 4 }}>{t.team_name}</div>
-          <div className="mono dust" style={{ fontSize: 11, letterSpacing: ".12em", marginTop: 4 }}>
-            {lead && <>LED BY <b style={{ color: "var(--chalk)" }}>{lead.name} · {lead.season}</b> &nbsp;·&nbsp; </>}
-            COACH {t.holder_handle} · CROWNED {shortDate(t.claimed_at)}
-          </div>
-          {/* One player only, like the strip (Dan, 2026-09-02). The other
-              four stay behind the app door — the challenge reveals them. */}
-          <p className="mono dust" style={{ fontSize: 12, marginTop: 14 }}>
-            The rest of the King&apos;s five is revealed in the app. Challenge the throne to see who you&apos;re up against.
-          </p>
-          {last && (
-            <div className="mono dust" style={{ fontSize: 11, letterSpacing: ".1em", marginTop: 16 }}>
-              LAST CHALLENGE · {last.result === "defended"
-                ? `HELD OFF ${last.challenger_handle} ${last.wins_king}–${last.wins_you}`
-                : `${last.challenger_handle} TOOK THE THRONE ${last.wins_you}–${last.wins_king}`} · {shortDate(last.created_at)}
-            </div>
-          )}
-        </div>
-      )}
-
-      <div className="koth-section-h mono" style={{ marginTop: 28 }}>THE LINEAGE</div>
-      {board.lineage.length === 0 ? (
-        <p className="koth-empty mono">No King has fallen yet. The Gatekeepers await.</p>
-      ) : (
-        <table><tbody>
-          {board.lineage.map((r) => (
-            <tr key={r.id}>
-              <td className="display"><b>{r.team_name}</b> <span className="mono faint" style={{ fontSize: 10 }}>{r.holder_handle}</span></td>
-              <td className="mono num amber">{defensesLabel(r.defenses)}</td>
-              <td className="mono num dust hide-sm" style={{ fontSize: 11 }}>{shortDate(r.claimed_at)} – {shortDate(r.ended_at)}</td>
-              <td className="mono num faint" style={{ fontSize: 11 }}>FELL TO {r.dethroned_by_handle}</td>
+        <table>
+          <thead>
+            <tr className="mono">
+              <th>#</th><th>COACH</th><th>CLEARED</th>
+              <th className="num hide-sm">FINISHED</th><th className="num">SCORE</th>
             </tr>
-          ))}
-        </tbody></table>
+          </thead>
+          <tbody>
+            {board.runs.map((r, i) => (
+              <tr key={r.run_id}>
+                <td className={`rk mono ${i < 3 ? "top" : ""}`}>{i + 1}</td>
+                <td className="display">
+                  <CoachName coach={board.profiles[r.uid]?.coach ?? null} handle={r.coach_handle} />
+                </td>
+                <td className="mono dust" style={{ fontSize: 11 }}>
+                  {r.ran_the_table ? "RAN THE TABLE" : `${r.rungs_cleared} OF ${r.summit_tier}`}
+                  {r.top_rung && <span className="faint"> · {r.top_rung}</span>}
+                  {r.clean && <span className="teal"> · CLEAN</span>}
+                </td>
+                <td className="mono num faint hide-sm" style={{ fontSize: 11 }}>
+                  {shortDate(r.finished_at)}
+                </td>
+                <td className="mono num amber" style={{ fontWeight: 700 }}>{grouped(r.score)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       )}
     </section>
   );
