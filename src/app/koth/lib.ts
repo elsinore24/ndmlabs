@@ -55,18 +55,22 @@ export type DailyRaw = {
   margin: number;
   five: FiveEntry[] | null;
 };
-export type DailyRow = DailyRaw & { rank: number; handle: string; move: Move };
+export type DailyRow = DailyRaw & {
+  rank: number; handle: string; coach: string | null; move: Move;
+};
 export type Move = { kind: "up" | "down" | "same" | "new" | "none"; n: number };
 export type WeekRow = {
   rank: number;
   uid: string;
   handle: string;
+  coach: string | null;
   games: number;
   wins: number;
   margin: number;
 };
 export type SoloReign = {
   handle: string;
+  coach: string | null;
   team_name: string;
   defenses: number;
   crowned_at: string;
@@ -89,13 +93,20 @@ export async function rest<T = unknown>(path: string): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-export async function handleMap(uids: string[]): Promise<Record<string, string>> {
-  const unique = [...new Set(uids)];
+/** The two public names of one player. The handle is the unique, moderated
+    identity that records are pinned to; the coach is the person, read live,
+    and absent until they have set one. */
+export type Profile = { handle: string; coach: string | null };
+
+export async function profileMap(uids: string[]): Promise<Record<string, Profile>> {
+  const unique = [...new Set(uids.filter(Boolean))];
   if (unique.length === 0) return {};
-  const rows = await rest<{ uid: string; handle: string }[]>(
-    `profiles?uid=in.(${unique.join(",")})&select=uid,handle`
+  const rows = await rest<{ uid: string; handle: string; coach_name: string | null }[]>(
+    `profiles?uid=in.(${unique.join(",")})&select=uid,handle,coach_name`
   );
-  return Object.fromEntries(rows.map((r) => [r.uid, r.handle]));
+  return Object.fromEntries(
+    rows.map((r) => [r.uid, { handle: r.handle, coach: r.coach_name }])
+  );
 }
 
 // ---- Days. The daily is a UTC day (the app's DailySeed.dateKey), the week
