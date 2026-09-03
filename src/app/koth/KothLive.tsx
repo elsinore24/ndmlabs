@@ -32,8 +32,9 @@ type Board = {
   mostWins: { handle: string; wins: number }[];
   today: Venue;
   tomorrow: Venue;
-  /** How many days this month today's leader finished #1, today included. */
-  leaderTopFinishes: number;
+  /** COACH OF THE DAY: today's #1, or the latest day with results until
+      today's first post lands. */
+  coach: { row: DailyRow; day: string; venue: Venue; topFinishes: number } | null;
   handles: Record<string, string>;
   fetchedAt: number;
 };
@@ -105,12 +106,32 @@ export default function KothLive() {
         handle: nameOf(w.uid), scoreline: scoreline(w.score, w.score_opp), margin: w.margin, day: w.day,
       }));
 
-      const winnerByDay = new Map<string, string>();
-      for (const r of monthRaw) if (!winnerByDay.has(r.day)) winnerByDay.set(r.day, r.uid);
-      const leaderUid = dailyRaw[0]?.uid;
-      const leaderTopFinishes = leaderUid
-        ? [...winnerByDay.values()].filter((u) => u === leaderUid).length
-        : 0;
+      const todayVenue = venues.find((v) => v.day === today) ?? venueFallback(today);
+
+      // COACH OF THE DAY. Before today's first post, the latest finished
+      // board holds the card so the sidebar never opens empty.
+      let coach: Board["coach"] = null;
+      let coachDay = today;
+      let coachRaw: DailyRaw | undefined = dailyRaw[0];
+      if (!coachRaw) {
+        const latest = await rest<(DailyRaw & { day: string })[]>(
+          "daily_board?select=uid,day,score,score_opp,venue,created_at,won,margin,five&order=day.desc,won.desc,margin.desc,created_at.asc&limit=1"
+        );
+        if (latest[0]) { coachRaw = latest[0]; coachDay = latest[0].day; }
+      }
+      if (coachRaw) {
+        const winnerByDay = new Map<string, string>();
+        for (const r of monthRaw) if (!winnerByDay.has(r.day)) winnerByDay.set(r.day, r.uid);
+        const topFinishes = [...winnerByDay.values()].filter((u) => u === coachRaw!.uid).length;
+        const coachHandle = handles[coachRaw.uid] ?? (await handleMap([coachRaw.uid]))[coachRaw.uid] ?? "COACH";
+        const venue = coachDay === today
+          ? todayVenue
+          : (await rest<Venue[]>(`daily_venues?day=eq.${coachDay}&select=*`))[0] ?? venueFallback(coachDay);
+        coach = {
+          row: { ...coachRaw, rank: 1, handle: coachHandle, move: { kind: "none", n: 0 } },
+          day: coachDay, venue, topFinishes: Math.max(topFinishes, 1),
+        };
+      }
 
       setBoard({
         throne: throneRows[0] ?? null,
@@ -121,9 +142,9 @@ export default function KothLive() {
         solo: solo.map((r) => ({ ...r, handle: nameOf(r.uid) })),
         bestMargins,
         mostWins,
-        today: venues.find((v) => v.day === today) ?? venueFallback(today),
+        today: todayVenue,
         tomorrow: venues.find((v) => v.day === todayUTC(1)) ?? venueFallback(todayUTC(1)),
-        leaderTopFinishes,
+        coach,
         handles,
         fetchedAt: Date.now(),
       });
@@ -194,9 +215,7 @@ export default function KothLive() {
             {tab === "THE THRONE" && <ThroneTab board={board} />}
           </div>
           <aside className="side">
-            {board && board.daily[0] && (
-              <CoachOfTheDay row={board.daily[0]} venue={board.today} topFinishes={board.leaderTopFinishes} />
-            )}
+            {board?.coach && <CoachOfTheDay {...board.coach} today={todayUTC()} />}
             <div className="koth-card">
               <div className="h mono">TOMORROW</div>
               {board ? (
@@ -282,10 +301,13 @@ function KingStrip({ throne }: { throne: Throne }) {
 }
 
 // Today's #1: the daily's own headline, gold-trimmed like the King strip.
-function CoachOfTheDay({ row, venue, topFinishes }: { row: DailyRow; venue: Venue; topFinishes: number }) {
+function CoachOfTheDay({ row, day, venue, topFinishes, today }: {
+  row: DailyRow; day: string; venue: Venue; topFinishes: number; today: string;
+}) {
+  const isToday = day === today;
   return (
     <div className="koth-card koth-cotd">
-      <div className="h mono">COACH OF THE DAY</div>
+      <div className="h mono">COACH OF THE DAY{!isToday && ` · ${shortDate(`${day}T12:00:00Z`)}`}</div>
       <div className="display name">{row.handle}</div>
       <div className="mono dust" style={{ fontSize: 12, letterSpacing: ".1em", marginTop: 4 }}>
         {scoreline(row.score, row.score_opp)} AT {venueName(venue)} · {signed(row.margin)}
@@ -296,7 +318,7 @@ function CoachOfTheDay({ row, venue, topFinishes }: { row: DailyRow; venue: Venu
         </div>
       )}
       <div className="koth-badge mono">
-        ★ #1 TODAY
+        ★ #1 {isToday ? "TODAY" : shortDate(`${day}T12:00:00Z`)}
         {topFinishes > 1 && <> · {ordinal(topFinishes)} TOP FINISH THIS MONTH</>}
       </div>
     </div>
