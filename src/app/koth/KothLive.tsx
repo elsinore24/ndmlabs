@@ -13,7 +13,7 @@ import {
   type BestRun, type SoloReign, type Throne, type TopPlayer, type Venue, type WeekRow,
   type Profile,
   clockTime, defensesLabel, fiveLine, grouped, leadPlayer, longDate,
-  minutesAgo, mondayUTC, monthName, monthStartUTC, movement, ordinal, playerLabel,
+  handleNames, minutesAgo, mondayUTC, monthName, monthStartUTC, movement, ordinal, playerLabel,
   profileMap, rest, scoreline, statLine,
   shortDate, signed, todayUTC, venueChip, venueFallback, venueName,
 } from "./lib";
@@ -33,8 +33,11 @@ type Board = {
   daily: DailyRow[];
   week: WeekRow[];
   solo: SoloReign[];
-  bestMargins: { handle: string; scoreline: string; margin: number; day: string }[];
-  mostWins: { handle: string; wins: number }[];
+  bestMargins: { name: string; scoreline: string; margin: number; day: string }[];
+  mostWins: { name: string; wins: number }[];
+  /** handle → the name to print. The handle is identity, never display
+      (Dan, 2026-09-03): the franchise name belongs in the app, not here. */
+  names: Record<string, string>;
   topPlayers: TopPlayer[];
   runs: BestRun[];
   today: Venue;
@@ -129,10 +132,20 @@ export default function KothLive() {
       const mostWins = [...winCounts.entries()]
         .sort((a, b) => b[1] - a[1])
         .slice(0, 5)
-        .map(([uid, wins]) => ({ handle: nameOf(uid), wins }));
+        .map(([uid, wins]) => ({ name: coachOf(uid) ?? nameOf(uid), wins }));
       const bestMargins = winsRaw.slice(0, 5).map((w) => ({
-        handle: nameOf(w.uid), scoreline: scoreline(w.score, w.score_opp), margin: w.margin, day: w.day,
+        name: coachOf(w.uid) ?? nameOf(w.uid), scoreline: scoreline(w.score, w.score_opp),
+        margin: w.margin, day: w.day,
       }));
+
+      // Handles that arrive as snapshot strings with no uid beside them.
+      const names = await handleNames([
+        ...challenges.map((c) => c.challenger_handle),
+        ...lineage.flatMap((l) => [l.holder_handle, l.dethroned_by_handle]),
+        ...topPlayers.map((t) => t.coach_handle),
+        ...runs.map((r) => r.coach_handle),
+        ...(throneRows[0] ? [throneRows[0].holder_handle] : []),
+      ]);
 
       const todayVenue = venues.find((v) => v.day === today) ?? venueFallback(today);
 
@@ -180,6 +193,7 @@ export default function KothLive() {
         tomorrow: venues.find((v) => v.day === todayUTC(1)) ?? venueFallback(todayUTC(1)),
         coach,
         profiles,
+        names,
         throneCoach: throneRows[0] ? coachOf(throneRows[0].holder_uid) : null,
         fetchedAt: Date.now(),
       });
@@ -313,17 +327,13 @@ function Ticker({ items }: { items: string[][] }) {
   );
 }
 
-// The person, then the franchise. A coach who has not named themselves shows
-// their handle instead — which is the franchise name, and reads correctly
-// either way.
+// The coach, and only the coach. The franchise name is identity — it makes
+// handles unique and pins the records — but it is not what the boards are
+// about (Dan, 2026-09-03), so it never reaches the page. A coach who has
+// named nobody falls back to their handle, which IS their franchise name and
+// so still reads as a name.
 function CoachName({ coach, handle }: { coach: string | null; handle: string }) {
-  if (!coach) return <b>{handle}</b>;
-  return (
-    <>
-      <b>{coach}</b>
-      <span className="koth-club mono">{handle}</span>
-    </>
-  );
+  return <b>{coach ?? handle}</b>;
 }
 
 function KingStrip({ throne, coach }: { throne: Throne; coach: string | null }) {
@@ -341,7 +351,6 @@ function KingStrip({ throne, coach }: { throne: Throne; coach: string | null }) 
         <div className="meta mono">
           {lead && <span>LED BY <b>{lead.name} · {lead.season}</b></span>}
           <span>COACH {(coach ?? throne.holder_handle).toUpperCase()}</span>
-          {coach && <span>{throne.holder_handle}</span>}
           <span>CROWNED {shortDate(throne.claimed_at)}</span>
         </div>
       </div>
@@ -363,7 +372,6 @@ function CoachOfTheDayCard({ row, day, venue, topFinishes, today }: {
     <div className="koth-card koth-cotd">
       <div className="h mono">COACH OF THE DAY{!isToday && ` · ${shortDate(`${day}T12:00:00Z`)}`}</div>
       <div className="display name">{row.coach ?? row.handle}</div>
-      {row.coach && <div className="mono koth-club-line">{row.handle}</div>}
       <div className="mono dust" style={{ fontSize: 12, letterSpacing: ".1em", marginTop: 4 }}>
         {scoreline(row.score, row.score_opp)} AT {venueName(venue)} · {signed(row.margin)}
       </div>
@@ -477,10 +485,10 @@ function RecordsTab({ board }: { board: Board | null }) {
               <td className={`rk mono ${i < 3 ? "top" : ""}`}>{i + 1}</td>
               <td className="display">
                 <b>{playerLabel(p.player_name, p.player_season)}</b>
-                <div className="mono koth-club-line">{statLine(p)}</div>
+                <div className="mono koth-subline">{statLine(p)}</div>
               </td>
               <td className="mono num dust" style={{ fontSize: 11 }}>
-                COACH {p.coach_handle}
+                COACH {board.names[p.coach_handle] ?? p.coach_handle}
                 <div className="faint">{shortDate(`${p.played_on}T12:00:00Z`)}</div>
               </td>
             </tr>
@@ -496,7 +504,7 @@ function RecordsTab({ board }: { board: Board | null }) {
           {reigns.map((r, i) => (
             <tr key={i}>
               <td className={`rk mono ${i < 3 ? "top" : ""}`}>{i + 1}</td>
-              <td className="display"><b>{r.team_name}</b> <span className="mono faint" style={{ fontSize: 10 }}>{r.handle}{r.reigning ? " · REIGNING" : ""}</span></td>
+              <td className="display"><b>{r.team_name}</b>{r.reigning && <span className="mono gold" style={{ fontSize: 10, marginLeft: 8 }}>· REIGNING</span>}</td>
               <td className="mono num amber">{defensesLabel(r.defenses)}</td>
             </tr>
           ))}
@@ -511,7 +519,7 @@ function RecordsTab({ board }: { board: Board | null }) {
           {board.solo.slice(0, 10).map((r, i) => (
             <tr key={i}>
               <td className={`rk mono ${i < 3 ? "top" : ""}`}>{i + 1}</td>
-              <td className="display"><b>{r.team_name}</b> <span className="mono faint" style={{ fontSize: 10 }}>{r.handle}</span></td>
+              <td className="display"><b>{r.team_name}</b></td>
               <td className="mono num amber">{defensesLabel(r.defenses)}</td>
             </tr>
           ))}
@@ -526,7 +534,7 @@ function RecordsTab({ board }: { board: Board | null }) {
           {board.bestMargins.map((r, i) => (
             <tr key={i}>
               <td className={`rk mono ${i < 3 ? "top" : ""}`}>{i + 1}</td>
-              <td className="display"><b>{r.handle}</b> <span className="mono faint" style={{ fontSize: 10 }}>{shortDate(`${r.day}T12:00:00Z`)}</span></td>
+              <td className="display"><b>{r.name}</b> <span className="mono faint" style={{ fontSize: 10 }}>{shortDate(`${r.day}T12:00:00Z`)}</span></td>
               <td className="fin mono num w">{r.scoreline}</td>
               <td className="mono num">{signed(r.margin)}</td>
             </tr>
@@ -541,10 +549,10 @@ function RecordsTab({ board }: { board: Board | null }) {
         <table><tbody>
           {board.lineage.map((r) => (
             <tr key={r.id}>
-              <td className="display"><b>{r.team_name}</b> <span className="mono faint" style={{ fontSize: 10 }}>{r.holder_handle}</span></td>
+              <td className="display"><b>{r.team_name}</b></td>
               <td className="mono num amber">{defensesLabel(r.defenses)}</td>
               <td className="mono num dust hide-sm" style={{ fontSize: 11 }}>{shortDate(r.claimed_at)} – {shortDate(r.ended_at)}</td>
-              <td className="mono num faint" style={{ fontSize: 11 }}>FELL TO {r.dethroned_by_handle}</td>
+              <td className="mono num faint" style={{ fontSize: 11 }}>FELL TO {board.names[r.dethroned_by_handle] ?? r.dethroned_by_handle}</td>
             </tr>
           ))}
         </tbody></table>
@@ -558,7 +566,7 @@ function RecordsTab({ board }: { board: Board | null }) {
           {board.mostWins.map((r, i) => (
             <tr key={i}>
               <td className={`rk mono ${i < 3 ? "top" : ""}`}>{i + 1}</td>
-              <td className="display"><b>{r.handle}</b></td>
+              <td className="display"><b>{r.name}</b></td>
               <td className="mono num amber">{r.wins} {r.wins === 1 ? "WIN" : "WINS"}</td>
             </tr>
           ))}
@@ -592,7 +600,7 @@ function ClimbTab({ board }: { board: Board | null }) {
               <tr key={r.run_id}>
                 <td className={`rk mono ${i < 3 ? "top" : ""}`}>{i + 1}</td>
                 <td className="display">
-                  <CoachName coach={board.profiles[r.uid]?.coach ?? null} handle={r.coach_handle} />
+                  <CoachName coach={board.profiles[r.uid]?.coach ?? null} handle={board.names[r.coach_handle] ?? r.coach_handle} />
                 </td>
                 <td className="mono dust" style={{ fontSize: 11 }}>
                   {r.ran_the_table ? "RAN THE TABLE" : `${r.rungs_cleared} OF ${r.summit_tier}`}
@@ -616,11 +624,11 @@ function ClimbTab({ board }: { board: Board | null }) {
 
 function longestReigns(board: Board, limit = 5) {
   const rows = board.lineage.map((r) => ({
-    team_name: r.team_name, handle: r.holder_handle, defenses: r.defenses, reigning: false,
+    team_name: r.team_name, defenses: r.defenses, reigning: false,
   }));
   if (board.throne) {
     rows.push({
-      team_name: board.throne.team_name, handle: board.throne.holder_handle,
+      team_name: board.throne.team_name,
       defenses: board.throne.defenses, reigning: true,
     });
   }
@@ -637,22 +645,22 @@ function tickerItems(board: Board): string[][] {
 
   for (const c of board.challenges.filter((c) => c.applied).slice(0, 5)) {
     if (c.result === "defended") {
-      items.push([kingAt(c.throne_version), `held off ${c.challenger_handle}`, `${c.wins_king}–${c.wins_you}`]);
+      items.push([kingAt(c.throne_version), `held off ${board.names[c.challenger_handle] ?? c.challenger_handle}`, `${c.wins_king}–${c.wins_you}`]);
     } else {
-      items.push([c.challenger_handle, "took the throne", `${c.wins_you}–${c.wins_king}`]);
+      items.push([board.names[c.challenger_handle] ?? c.challenger_handle, "took the throne", `${c.wins_you}–${c.wins_king}`]);
     }
   }
   if (board.throne && board.throne.defenses > 0) {
     items.unshift([board.throne.team_name, "defended the throne", `${ordinal(board.throne.defenses)} STRAIGHT`]);
   }
   const leader = board.daily[0];
-  if (leader) items.push([leader.handle, "tops today's board", scoreline(leader.score, leader.score_opp)]);
+  if (leader) items.push([leader.coach ?? leader.handle, "tops today's board", scoreline(leader.score, leader.score_opp)]);
   for (const r of board.daily.filter((r) => !r.won).slice(0, 2)) {
-    items.push([r.handle, `fell at ${board.today.short_name}`, scoreline(r.score, r.score_opp)]);
+    items.push([r.coach ?? r.handle, `fell at ${board.today.short_name}`, scoreline(r.score, r.score_opp)]);
   }
   items.push(["", "TODAY'S VENUE", venueChip(board.today)]);
   for (const r of board.daily.filter((r) => r.move.kind === "new").slice(0, 2)) {
-    items.push([r.handle, "enters the daily board", ""]);
+    items.push([r.coach ?? r.handle, "enters the daily board", ""]);
   }
   if (items.length < 4) items.push(["", "TOMORROW", venueChip(board.tomorrow)]);
   return items.slice(0, 10);

@@ -124,6 +124,21 @@ export async function rest<T = unknown>(path: string): Promise<T> {
     and absent until they have set one. */
 export type Profile = { handle: string; coach: string | null };
 
+/** handle → the name to print for it: the coach if they have set one, else
+    the handle itself. For rows that store a handle string and no uid —
+    challenges, `dethroned_by_handle`, the boards' `coach_handle` — which is
+    every place the handle is a snapshot rather than a join. */
+export async function handleNames(handles: string[]): Promise<Record<string, string>> {
+  const unique = [...new Set(handles.filter(Boolean))];
+  if (unique.length === 0) return {};
+  const rows = await rest<{ handle: string; coach_name: string | null }[]>(
+    `profiles?handle=in.(${unique.map(encodeURIComponent).join(",")})&select=handle,coach_name`
+  );
+  const out: Record<string, string> = Object.fromEntries(unique.map((h) => [h, h]));
+  for (const r of rows) if (r.coach_name) out[r.handle] = r.coach_name;
+  return out;
+}
+
 export async function profileMap(uids: string[]): Promise<Record<string, Profile>> {
   const unique = [...new Set(uids.filter(Boolean))];
   if (unique.length === 0) return {};

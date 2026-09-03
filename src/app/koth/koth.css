@@ -255,10 +255,8 @@
 .koth .fin { font-weight: 700; }
 .koth .fin.w { color: var(--teal); }
 .koth .fin.l { color: var(--red); }
-/* The franchise, trailing the coach's own name — the person leads, the club
-   follows, and a coach who has named neither shows the handle alone. */
-.koth-club { margin-left: 8px; font-size: 10px; letter-spacing: 0.12em; color: var(--faint); }
-.koth-club-line { font-size: 11px; letter-spacing: 0.14em; color: var(--faint); margin-top: 2px; }
+/* A quiet second line under a name — the stat line that earned a placing. */
+.koth-subline { font-size: 11px; letter-spacing: 0.14em; color: var(--faint); margin-top: 2px; }
 .koth .num { text-align: right; }
 .koth .faint { color: var(--faint); }
 .koth .dust { color: var(--dust); }
