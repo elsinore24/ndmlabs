@@ -1,0 +1,267 @@
+/* The GOAT Index — ndmlabs.net/goat. Same ink/chalk/dust vocabulary as /koth,
+   so the two boards read as one product: mono for every numeral and label,
+   amber for rank and emphasis, gold for the top of the list. The difference is
+   density — this page is a 500-row table, so it drops the arena photograph and
+   keeps a flat ground. A backdrop behind a scrolling table of small numerals
+   costs legibility and buys nothing. */
+
+.goat {
+  --ink: #08090c;
+  --ink-2: #0b0c0f;
+  --panel: #0d0f14;
+  --edge: rgba(255, 255, 255, 0.08);
+  --hair: rgba(255, 255, 255, 0.05);
+  --chalk: #e8e6e1;
+  --dust: #9aa6b8;
+  --faint: #5a6478;
+  --amber: #ffb020;
+  --gold: #d9b24a;
+  --teal: #5ee0b8;
+  --red: #f05a5a;
+  background: var(--ink);
+  color: var(--chalk);
+  min-height: 100vh;
+  overflow-x: clip;
+}
+
+.goat-mono {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+}
+
+/* The 10px tracked-out label that names everything on both boards. */
+.goat-label {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+.goat-wrap {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 0 16px 96px;
+}
+
+/* --- hero --- */
+
+.goat-hero {
+  padding: 40px 0 28px;
+  border-bottom: 1px solid var(--edge);
+}
+.goat-hero h1 {
+  font-size: clamp(38px, 7vw, 62px);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  margin: 10px 0 14px;
+}
+.goat-hero p {
+  color: var(--dust);
+  max-width: 62ch;
+  line-height: 1.65;
+  font-size: 15px;
+  margin: 0;
+}
+.goat-hero .goat-amber { color: var(--amber); }
+
+.goat-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 28px;
+  margin-top: 22px;
+}
+.goat-fact b {
+  display: block;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--chalk);
+}
+
+/* --- controls --- */
+
+.goat-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  padding: 18px 0 14px;
+}
+.goat-search {
+  flex: 1 1 240px;
+  min-width: 0;
+  background: var(--panel);
+  border: 1px solid var(--edge);
+  border-radius: 10px;
+  padding: 9px 12px;
+  color: var(--chalk);
+  font: inherit;
+  font-size: 14px;
+}
+.goat-search::placeholder { color: var(--faint); }
+.goat-search:focus {
+  outline: none;
+  border-color: rgba(255, 176, 32, 0.5);
+}
+.goat-chip {
+  background: transparent;
+  border: 1px solid var(--edge);
+  border-radius: 999px;
+  padding: 7px 13px;
+  color: var(--dust);
+  cursor: pointer;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.goat-chip:hover { color: var(--chalk); border-color: rgba(255, 255, 255, 0.2); }
+.goat-chip[aria-pressed="true"] {
+  color: var(--ink);
+  background: var(--amber);
+  border-color: var(--amber);
+  font-weight: 700;
+}
+
+/* --- table --- */
+
+.goat-scroll { overflow-x: auto; }
+.goat-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 760px;
+}
+.goat-table th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--ink);
+  border-bottom: 1px solid var(--edge);
+  padding: 10px 8px;
+  text-align: right;
+  white-space: nowrap;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--faint);
+  cursor: pointer;
+  user-select: none;
+}
+.goat-table th:hover { color: var(--chalk); }
+.goat-table th[aria-sort]:not([aria-sort="none"]) { color: var(--amber); }
+.goat-table th.goat-left,
+.goat-table td.goat-left { text-align: left; }
+
+.goat-table td {
+  padding: 9px 8px;
+  text-align: right;
+  border-bottom: 1px solid var(--hair);
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  font-size: 13px;
+  white-space: nowrap;
+  color: var(--dust);
+}
+.goat-row { cursor: pointer; }
+.goat-row:hover td { background: rgba(255, 255, 255, 0.035); }
+.goat-row[aria-expanded="true"] td { background: rgba(255, 176, 32, 0.06); }
+
+.goat-rank { color: var(--faint); width: 46px; }
+.goat-row:nth-child(-n + 6) .goat-rank { color: var(--gold); }
+.goat-name {
+  color: var(--chalk);
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: normal;
+}
+.goat-span { color: var(--faint); font-size: 11px; }
+.goat-score { color: var(--amber); font-weight: 700; }
+
+/* Category cells carry a bar behind the number: the z-score's sign and size are
+   readable at a glance without making the reader parse 9 decimals per row. */
+.goat-cat { position: relative; }
+.goat-cat i {
+  position: absolute;
+  right: 6px;
+  bottom: 3px;
+  height: 2px;
+  background: var(--teal);
+  opacity: 0.55;
+  border-radius: 1px;
+}
+.goat-cat.goat-neg i { background: var(--red); }
+.goat-cat.goat-null { color: var(--faint); }
+
+/* --- expanded detail --- */
+
+.goat-detail td { padding: 0; border-bottom: 1px solid var(--edge); }
+.goat-detail-inner {
+  background: rgba(13, 15, 20, 0.9);
+  padding: 18px 14px 22px;
+}
+.goat-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 14px 22px;
+  margin-top: 12px;
+}
+.goat-attr {
+  display: grid;
+  grid-template-columns: 1fr auto auto auto;
+  gap: 8px;
+  align-items: baseline;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--hair);
+}
+.goat-attr span:first-child {
+  font-size: 11px;
+  color: var(--dust);
+  font-family: system-ui, -apple-system, sans-serif;
+}
+.goat-attr b {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--chalk);
+  min-width: 40px;
+  text-align: right;
+}
+.goat-attr b.goat-dim { color: var(--faint); }
+
+.goat-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  margin-bottom: 4px;
+}
+.goat-counts div b {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  color: var(--amber);
+  font-size: 15px;
+}
+
+.goat-note {
+  color: var(--faint);
+  font-size: 12px;
+  line-height: 1.7;
+  margin-top: 26px;
+  max-width: 78ch;
+}
+.goat-note a { color: var(--dust); text-decoration: underline; }
+
+.goat-empty {
+  padding: 40px 0;
+  text-align: center;
+  color: var(--faint);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .goat * { transition: none !important; animation: none !important; }
+}
+
+/* Career rows print the count first and the pool z second, so the grid is one
+   column narrower than the season rows above it. */
+.goat-attr-career { grid-template-columns: 1fr auto auto; }
+.goat-attr b.goat-z { color: var(--dust); }
