@@ -38,7 +38,7 @@
   inset: 0;
   z-index: -1;
   background:
-    linear-gradient(180deg, rgba(8, 9, 12, 0.94) 0%, rgba(8, 9, 12, 0.82) 45%, rgba(8, 9, 12, 0.96) 100%),
+    linear-gradient(180deg, rgba(8, 9, 12, 0.84) 0%, rgba(8, 9, 12, 0.55) 42%, rgba(8, 9, 12, 0.88) 100%),
     url("/koth-court.jpg") center 30% / cover no-repeat;
   pointer-events: none;
 }
@@ -47,10 +47,26 @@
      floorboards. Darker still, so what survives reads as texture. */
   .koth::before {
     background:
-      linear-gradient(180deg, rgba(8, 9, 12, 0.95) 0%, rgba(8, 9, 12, 0.9) 100%),
+      linear-gradient(180deg, rgba(8, 9, 12, 0.9) 0%, rgba(8, 9, 12, 0.78) 100%),
       url("/koth-court.jpg") center / cover no-repeat;
   }
 }
+
+/* With the arena showing through, the reading columns need their own ground:
+   14px chalk survives a lit court, but 10px tracked-out mono at --faint does
+   not. A translucent panel behind the board keeps the photograph visible
+   around it and legibility absolute on it. */
+.koth-grid > div:first-child,
+.koth-card {
+  background: rgba(11, 12, 15, 0.82);
+  backdrop-filter: blur(3px);
+}
+.koth-grid > div:first-child {
+  border: 1px solid var(--edge);
+  border-radius: 16px;
+  padding: 16px 18px;
+}
+.koth-cotd { background: linear-gradient(180deg, rgba(22, 19, 12, 0.9), rgba(13, 15, 20, 0.88) 70%); }
 .koth-grid > * { min-width: 0; }
 .koth .mono {
   font-family: "SF Mono", "JetBrains Mono", ui-monospace, Menlo, monospace;
@@ -188,7 +204,9 @@
 .koth-tab:hover { color: var(--chalk); }
 
 /* ── Grid, table, cards ── */
-.koth-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 26px; margin-top: 26px; }
+/* start, not stretch: with the board panel now drawn, a thin day would
+   otherwise leave a tall empty box down the side of the page. */
+.koth-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 26px; margin-top: 26px; align-items: start; }
 .koth-dateline {
   display: flex;
   flex-wrap: wrap;
