@@ -53,6 +53,7 @@ export type DailyRaw = {
   created_at: string;
   won: boolean;
   margin: number;
+  five: FiveEntry[] | null;
 };
 export type DailyRow = DailyRaw & { rank: number; handle: string; move: Move };
 export type Move = { kind: "up" | "down" | "same" | "new" | "none"; n: number };
@@ -226,8 +227,23 @@ export function venueFallback(day: string): Venue {
   const v = VENUE_PRESETS[pick - 1];
   return { day, venue_id: v.id, display_name: v.display_name, short_name: v.short_name, year: v.year, rule_tags: v.rule_tags };
 }
+/** `THE GARDEN` — the building without its year. */
+export function venueName(v: Venue): string {
+  return v.short_name.replace(/\s*'\d\d$/, "");
+}
 /** `THE GARDEN · 1988` — the venue chip. */
 export function venueChip(v: Venue): string {
-  const name = v.short_name.replace(/\s*'\d\d$/, "");
+  const name = venueName(v);
   return v.year ? `${name} · ${v.year}` : name;
+}
+/** First day of the current UTC month, `YYYY-MM-01`. */
+export function monthStartUTC(): string {
+  return `${todayUTC().slice(0, 7)}-01`;
+}
+/** `Curry '16` — a five entry as surname-less display text. */
+export function fiveLine(five: FiveEntry[]): string {
+  return five
+    .filter((f) => f.name)
+    .map((f) => `${(f.name ?? "").split(" ").slice(-1)[0]} ${seasonOf(f.pid)}`)
+    .join(" · ");
 }

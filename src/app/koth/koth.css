@@ -201,6 +201,21 @@
 .koth-card .h { font-size: 10px; letter-spacing: 0.24em; color: var(--dust); margin-bottom: 10px; }
 .koth-line { display: flex; justify-content: space-between; gap: 12px; font-size: 12px; padding: 7px 0; border-top: 1px solid var(--hair); color: var(--dust); }
 .koth-line b { color: var(--chalk); text-align: right; }
+.koth-cotd {
+  border-color: rgba(217, 178, 74, 0.45);
+  background: linear-gradient(180deg, #16130c, #0d0f14 70%);
+}
+.koth-cotd .name { font-size: 26px; font-weight: 900; letter-spacing: -0.01em; line-height: 1.1; overflow-wrap: anywhere; }
+.koth-badge {
+  display: inline-block;
+  margin-top: 14px;
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  color: var(--amber);
+  border: 1px solid rgba(255, 176, 32, 0.45);
+  border-radius: 8px;
+  padding: 6px 10px;
+}
 .koth-section-h { font-size: 11px; letter-spacing: 0.2em; color: var(--dust); margin: 6px 0 10px; }
 .koth-throne-card {
   margin-top: 14px;

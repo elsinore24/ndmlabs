@@ -11,9 +11,9 @@ import {
   APP_STORE_URL,
   type Challenge, type DailyRaw, type DailyRow, type LineageEntry, type Move,
   type SoloReign, type Throne, type Venue, type WeekRow,
-  clockTime, defensesLabel, handleMap, leadPlayer, longDate,
-  minutesAgo, mondayUTC, movement, ordinal, rest, scoreline,
-  shortDate, signed, todayUTC, venueChip, venueFallback,
+  clockTime, defensesLabel, fiveLine, handleMap, leadPlayer, longDate,
+  minutesAgo, mondayUTC, monthStartUTC, movement, ordinal, rest, scoreline,
+  shortDate, signed, todayUTC, venueChip, venueFallback, venueName,
 } from "./lib";
 import "./koth.css";
 
@@ -32,6 +32,8 @@ type Board = {
   mostWins: { handle: string; wins: number }[];
   today: Venue;
   tomorrow: Venue;
+  /** How many days this month today's leader finished #1, today included. */
+  leaderTopFinishes: number;
   handles: Record<string, string>;
   fetchedAt: number;
 };
@@ -46,7 +48,7 @@ export default function KothLive() {
   const load = useCallback(async () => {
     try {
       const today = todayUTC();
-      const [throneRows, lineage, challenges, dailyRaw, weekRaw, solo, venues, winsRaw] =
+      const [throneRows, lineage, challenges, dailyRaw, weekRaw, solo, venues, winsRaw, monthRaw] =
         await Promise.all([
           rest<Throne[]>(
             "throne?id=eq.1&select=version,holder_uid,holder_handle,team_name,defenses,claimed_at,five,lead_player"
@@ -60,7 +62,7 @@ export default function KothLive() {
           // Winners first, then margin — the daily_board view computes both
           // so the ordering happens server-side (Dan, 2026-09-02).
           rest<DailyRaw[]>(
-            `daily_board?day=eq.${today}&select=uid,score,score_opp,venue,created_at,won,margin&order=won.desc,margin.desc,created_at.asc&limit=100`
+            `daily_board?day=eq.${today}&select=uid,score,score_opp,venue,created_at,won,margin,five&order=won.desc,margin.desc,created_at.asc&limit=100`
           ),
           rest<Omit<WeekRow, "rank" | "handle">[]>(
             `weekly_board?week=eq.${mondayUTC()}&select=uid,games,wins,margin&order=wins.desc,margin.desc,first_played.asc&limit=100`
@@ -71,6 +73,11 @@ export default function KothLive() {
           rest<Venue[]>(`daily_venues?day=in.(${today},${todayUTC(1)})&select=*`),
           rest<{ uid: string; day: string; score: number; score_opp: number; margin: number }[]>(
             "daily_board?won=is.true&select=uid,day,score,score_opp,margin&order=margin.desc&limit=1000"
+          ),
+          // This month's boards in board order, so the first row per day is
+          // that day's #1 — the COACH OF THE DAY badge counts those.
+          rest<{ uid: string; day: string }[]>(
+            `daily_board?day=gte.${monthStartUTC()}&select=uid,day&order=day.desc,won.desc,margin.desc,created_at.asc&limit=3000`
           ),
         ]);
 
@@ -98,6 +105,13 @@ export default function KothLive() {
         handle: nameOf(w.uid), scoreline: scoreline(w.score, w.score_opp), margin: w.margin, day: w.day,
       }));
 
+      const winnerByDay = new Map<string, string>();
+      for (const r of monthRaw) if (!winnerByDay.has(r.day)) winnerByDay.set(r.day, r.uid);
+      const leaderUid = dailyRaw[0]?.uid;
+      const leaderTopFinishes = leaderUid
+        ? [...winnerByDay.values()].filter((u) => u === leaderUid).length
+        : 0;
+
       setBoard({
         throne: throneRows[0] ?? null,
         lineage,
@@ -109,6 +123,7 @@ export default function KothLive() {
         mostWins,
         today: venues.find((v) => v.day === today) ?? venueFallback(today),
         tomorrow: venues.find((v) => v.day === todayUTC(1)) ?? venueFallback(todayUTC(1)),
+        leaderTopFinishes,
         handles,
         fetchedAt: Date.now(),
       });
@@ -179,6 +194,9 @@ export default function KothLive() {
             {tab === "THE THRONE" && <ThroneTab board={board} />}
           </div>
           <aside className="side">
+            {board && board.daily[0] && (
+              <CoachOfTheDay row={board.daily[0]} venue={board.today} topFinishes={board.leaderTopFinishes} />
+            )}
             <div className="koth-card">
               <div className="h mono">TOMORROW</div>
               {board ? (
@@ -259,6 +277,28 @@ function KingStrip({ throne }: { throne: Throne }) {
         <div className="l mono">DEFENSES</div>
       </div>
       <a className="koth-cta mono" href={APP_STORE_URL}>CHALLENGE THE KING →</a>
+    </div>
+  );
+}
+
+// Today's #1: the daily's own headline, gold-trimmed like the King strip.
+function CoachOfTheDay({ row, venue, topFinishes }: { row: DailyRow; venue: Venue; topFinishes: number }) {
+  return (
+    <div className="koth-card koth-cotd">
+      <div className="h mono">COACH OF THE DAY</div>
+      <div className="display name">{row.handle}</div>
+      <div className="mono dust" style={{ fontSize: 12, letterSpacing: ".1em", marginTop: 4 }}>
+        {scoreline(row.score, row.score_opp)} AT {venueName(venue)} · {signed(row.margin)}
+      </div>
+      {row.five && row.five.length > 0 && (
+        <div className="mono dust" style={{ fontSize: 12, letterSpacing: ".06em", marginTop: 12, lineHeight: 1.7 }}>
+          FIVE: <b style={{ color: "var(--chalk)" }}>{fiveLine(row.five)}</b>
+        </div>
+      )}
+      <div className="koth-badge mono">
+        ★ #1 TODAY
+        {topFinishes > 1 && <> · {ordinal(topFinishes)} TOP FINISH THIS MONTH</>}
+      </div>
     </div>
   );
 }
