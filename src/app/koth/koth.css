@@ -22,6 +22,34 @@
   color: var(--chalk);
   min-height: 100vh;
   overflow-x: clip;
+  position: relative;
+  isolation: isolate;
+}
+
+/* The empty arena, held behind everything.
+   Fixed so the board scrolls over a still building rather than dragging the
+   photograph with it; heavily dimmed and scrimmed top-to-bottom, because this
+   has to sit under 10px tracked-out mono without ever competing with it. The
+   scrim is what makes that safe, so it is part of the same layer, not an
+   afterthought a future edit can remove on its own. */
+.koth::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background:
+    linear-gradient(180deg, rgba(8, 9, 12, 0.94) 0%, rgba(8, 9, 12, 0.82) 45%, rgba(8, 9, 12, 0.96) 100%),
+    url("/koth-court.jpg") center 30% / cover no-repeat;
+  pointer-events: none;
+}
+@media (max-width: 820px) {
+  /* Cover on a tall, narrow viewport crops the court down to a slab of
+     floorboards. Darker still, so what survives reads as texture. */
+  .koth::before {
+    background:
+      linear-gradient(180deg, rgba(8, 9, 12, 0.95) 0%, rgba(8, 9, 12, 0.9) 100%),
+      url("/koth-court.jpg") center / cover no-repeat;
+  }
 }
 .koth-grid > * { min-width: 0; }
 .koth .mono {
