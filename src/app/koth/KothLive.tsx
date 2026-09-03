@@ -226,7 +226,7 @@ export default function KothLive() {
   return (
     <div className="koth">
       <Ticker items={ticker} />
-      <Header fixed={false} />
+      <Header fixed={false} transparent />
       <div className="max-w-[1080px] mx-auto px-4 sm:px-6 pb-20">
         {board?.throne && <KingStrip throne={board.throne} coach={board.throneCoach} />}
 
