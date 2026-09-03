@@ -221,8 +221,10 @@
   .koth .hide-sm { display: none; }
 }
 
+/* Reduce Motion stills the LIVE blink but not the ticker: a frozen ticker
+   reads as broken (Dan, 2026-09-02, with Reduce Motion on). It slows down
+   instead, and hover still pauses it. */
 @media (prefers-reduced-motion: reduce) {
-  .koth-ticker .tk { animation: none; }
-  .koth-ticker .tk span:nth-child(n + 5) { display: none; }
+  .koth-ticker .tk { animation-duration: 60s; }
   .koth-live .dot { animation: none; }
 }
