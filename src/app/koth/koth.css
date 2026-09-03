@@ -41,7 +41,7 @@
 .koth-ticker .tk {
   display: inline-block;
   padding: 10px 0;
-  animation: koth-scroll 36s linear infinite;
+  animation: koth-scroll 18s linear infinite;
 }
 .koth-ticker:hover .tk { animation-play-state: paused; }
 .koth-ticker .tk span { margin-right: 44px; color: var(--dust); }
@@ -225,6 +225,6 @@
    reads as broken (Dan, 2026-09-02, with Reduce Motion on). It slows down
    instead, and hover still pauses it. */
 @media (prefers-reduced-motion: reduce) {
-  .koth-ticker .tk { animation-duration: 60s; }
+  .koth-ticker .tk { animation-duration: 30s; }
   .koth-live .dot { animation: none; }
 }
