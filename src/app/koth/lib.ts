@@ -76,6 +76,18 @@ export type SoloReign = {
   crowned_at: string;
   ended_at: string | null;
 };
+/** One row of TOP 10 THIS MONTH: a player-season's best game this month. */
+export type TopPlayer = {
+  player_id: string;
+  player_name: string;
+  player_season: string;
+  coach_handle: string;
+  uid: string;
+  played_on: string;
+  pts: number; reb: number; ast: number; stl: number; blk: number;
+  composite: number;
+};
+
 export type Venue = {
   day: string;
   venue_id: string | null;
@@ -250,6 +262,27 @@ export function venueChip(v: Venue): string {
 /** First day of the current UTC month, `YYYY-MM-01`. */
 export function monthStartUTC(): string {
   return `${todayUTC().slice(0, 7)}-01`;
+}
+const MONTHS_LONG = ["JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE", "JULY",
+  "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER"];
+export function monthName(): string {
+  return MONTHS_LONG[Number(todayUTC().slice(5, 7)) - 1];
+}
+/** `Michael Jordan '96` — a player-season as the boards name one. */
+export function playerLabel(name: string, season: string): string {
+  return season ? `${name} '${season.slice(2)}` : name;
+}
+/** `35 PTS · 7 REB · 5 AST` — the line that earned the placing, trimmed to
+    what actually happened: a zero steals line says nothing worth the width. */
+export function statLine(r: {
+  pts: number; reb: number; ast: number; stl: number; blk: number;
+}): string {
+  const parts = [`${r.pts} PTS`];
+  if (r.reb) parts.push(`${r.reb} REB`);
+  if (r.ast) parts.push(`${r.ast} AST`);
+  if (r.stl) parts.push(`${r.stl} STL`);
+  if (r.blk) parts.push(`${r.blk} BLK`);
+  return parts.join(" · ");
 }
 /** `Curry '16` — a five entry as surname-less display text. */
 export function fiveLine(five: FiveEntry[]): string {

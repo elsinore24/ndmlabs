@@ -10,10 +10,11 @@ import Header from "@/components/Header";
 import {
   APP_STORE_URL,
   type Challenge, type DailyRaw, type DailyRow, type LineageEntry, type Move,
-  type SoloReign, type Throne, type Venue, type WeekRow,
+  type SoloReign, type Throne, type TopPlayer, type Venue, type WeekRow,
   type Profile,
   clockTime, defensesLabel, fiveLine, leadPlayer, longDate,
-  minutesAgo, mondayUTC, monthStartUTC, movement, ordinal, profileMap, rest, scoreline,
+  minutesAgo, mondayUTC, monthName, monthStartUTC, movement, ordinal, playerLabel,
+  profileMap, rest, scoreline, statLine,
   shortDate, signed, todayUTC, venueChip, venueFallback, venueName,
 } from "./lib";
 import "./koth.css";
@@ -31,6 +32,7 @@ type Board = {
   solo: SoloReign[];
   bestMargins: { handle: string; scoreline: string; margin: number; day: string }[];
   mostWins: { handle: string; wins: number }[];
+  topPlayers: TopPlayer[];
   today: Venue;
   tomorrow: Venue;
   /** COACH OF THE DAY: today's #1, or the latest day with results until
@@ -52,7 +54,8 @@ export default function KothLive() {
   const load = useCallback(async () => {
     try {
       const today = todayUTC();
-      const [throneRows, lineage, challenges, dailyRaw, weekRaw, solo, venues, winsRaw, monthRaw] =
+      const [throneRows, lineage, challenges, dailyRaw, weekRaw, solo, venues, winsRaw, monthRaw,
+             topPlayers] =
         await Promise.all([
           rest<Throne[]>(
             "throne?id=eq.1&select=version,holder_uid,holder_handle,team_name,defenses,claimed_at,five,lead_player"
@@ -82,6 +85,11 @@ export default function KothLive() {
           // that day's #1 — the COACH OF THE DAY badge counts those.
           rest<{ uid: string; day: string }[]>(
             `daily_board?day=gte.${monthStartUTC()}&select=uid,day&order=day.desc,won.desc,margin.desc,created_at.asc&limit=3000`
+          ),
+          // The view has already kept each player-season's best game this
+          // month, so ten rows here are ten different men.
+          rest<TopPlayer[]>(
+            "top_players_month?select=player_id,player_name,player_season,coach_handle,uid,played_on,pts,reb,ast,stl,blk,composite&order=composite.desc&limit=10"
           ),
         ]);
 
@@ -156,6 +164,7 @@ export default function KothLive() {
         solo: solo.map((r) => ({ ...r, handle: nameOf(r.uid), coach: coachOf(r.uid) })),
         bestMargins,
         mostWins,
+        topPlayers,
         today: todayVenue,
         tomorrow: venues.find((v) => v.day === todayUTC(1)) ?? venueFallback(todayUTC(1)),
         coach,
@@ -445,7 +454,30 @@ function RecordsTab({ board }: { board: Board | null }) {
   const reigns = longestReigns(board, 10);
   return (
     <section>
-      <div className="koth-section-h mono">LONGEST REIGNS · THE WORLD</div>
+      <div className="koth-section-h mono">
+        TOP 10 THIS MONTH · {monthName()} · RANKED BY A GAME&apos;S WORTH OF IMPACT
+      </div>
+      {board.topPlayers.length === 0 ? (
+        <p className="koth-empty mono">No game has been played this month yet.</p>
+      ) : (
+        <table><tbody>
+          {board.topPlayers.map((p, i) => (
+            <tr key={p.player_id}>
+              <td className={`rk mono ${i < 3 ? "top" : ""}`}>{i + 1}</td>
+              <td className="display">
+                <b>{playerLabel(p.player_name, p.player_season)}</b>
+                <div className="mono koth-club-line">{statLine(p)}</div>
+              </td>
+              <td className="mono num dust" style={{ fontSize: 11 }}>
+                COACH {p.coach_handle}
+                <div className="faint">{shortDate(`${p.played_on}T12:00:00Z`)}</div>
+              </td>
+            </tr>
+          ))}
+        </tbody></table>
+      )}
+
+      <div className="koth-section-h mono" style={{ marginTop: 28 }}>LONGEST REIGNS · THE WORLD</div>
       {reigns.length === 0 ? (
         <p className="koth-empty mono">No reign on record yet.</p>
       ) : (
