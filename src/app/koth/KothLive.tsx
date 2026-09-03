@@ -183,7 +183,7 @@ export default function KothLive() {
 
         <div className="koth-mast">
           <div>
-            <div className="mono" style={{ fontSize: 10, letterSpacing: ".3em", color: "var(--amber)" }}>
+            <div className="mono" style={{ fontSize: 10, letterSpacing: ".3em", color: "var(--amber)", fontWeight: 700 }}>
               COACH OF THE YEAR
             </div>
             <h1 className="display">The Board</h1>
