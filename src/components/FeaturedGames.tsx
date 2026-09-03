@@ -1,6 +1,18 @@
 import CurrentKing from "./CurrentKing";
 
-const games = [
+type Game = {
+  id: number;
+  title: string;
+  description: string;
+  icon: string | null;
+  status: string;
+  url: string | null;
+  external: boolean;
+  live?: boolean;
+  cta?: string;
+};
+
+const games: Game[] = [
   {
     id: 1,
     title: "Starscapes: Visual Riddles",
@@ -8,23 +20,21 @@ const games = [
     icon: "/starscapes-icon.png",
     status: "Available",
     url: "https://apps.apple.com/us/app/starscapes-visual-riddles/id6756834182",
+    external: true,
+    cta: "Download on the App Store",
   },
   {
+    // The Coach of the Year card carries the live King as its subtitle —
+    // the homepage's marketing asset — and links to the board.
     id: 4,
     title: "Coach of the Year",
-    description:
-      "Draft eleven across the eras and outcoach history. Daily challenge leaderboard live now.",
+    description: "Draft eleven across the eras and outcoach history. One throne for the whole world.",
     icon: null,
     status: "In Development",
     url: "/koth",
-  },
-  {
-    id: 2,
-    title: "Project Alpha",
-    description: "An innovative gaming experience that redefines the genre.",
-    icon: null,
-    status: "Announced",
-    url: null,
+    external: false,
+    live: true,
+    cta: "See the Board",
   },
   {
     id: 3,
@@ -33,6 +43,7 @@ const games = [
     icon: null,
     status: "Concept",
     url: null,
+    external: false,
   },
 ];
 
@@ -55,7 +66,9 @@ export default function FeaturedGames() {
           {games.map((game) => {
             const CardWrapper = game.url ? "a" : "div";
             const wrapperProps = game.url
-              ? { href: game.url, target: "_blank" as const, rel: "noopener noreferrer" }
+              ? game.external
+                ? { href: game.url, target: "_blank" as const, rel: "noopener noreferrer" }
+                : { href: game.url }
               : {};
 
             return (
@@ -72,6 +85,8 @@ export default function FeaturedGames() {
                       alt={game.title}
                       className="w-24 h-24 rounded-2xl object-cover"
                     />
+                  ) : game.live ? (
+                    <div className="text-6xl text-[#D9B24A]">♛</div>
                   ) : (
                     <div className="text-6xl text-gray-700">🎮</div>
                   )}
@@ -87,6 +102,9 @@ export default function FeaturedGames() {
                       {game.status}
                     </span>
                   </div>
+                  {game.live ? (
+                    <p className="mb-2"><CurrentKing fallback={game.description} /></p>
+                  ) : null}
                   <p className="text-gray-400">{game.description}</p>
                 </div>
 
@@ -94,7 +112,7 @@ export default function FeaturedGames() {
                 {game.url && (
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-6">
                     <span className="w-full py-3 bg-[#00ff88] text-black font-semibold rounded-lg text-center block">
-                      Download on the App Store
+                      {game.cta}
                     </span>
                   </div>
                 )}
@@ -103,7 +121,6 @@ export default function FeaturedGames() {
           })}
         </div>
       </div>
-      <CurrentKing />
     </section>
   );
 }

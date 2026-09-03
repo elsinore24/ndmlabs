@@ -1,0 +1,228 @@
+/* The Board — ndmlabs.net/koth. Same product as the app: ink, chalk, dust,
+   amber for the CTA and top ranks, gold for the King's trim. Mono for every
+   numeral and label. Motion is the ticker, the LIVE dot and row hover; all
+   of it honors reduced motion. */
+
+.koth {
+  --ink: #08090c;
+  --ink-2: #0b0c0f;
+  --panel: #0d0f14;
+  --edge: rgba(255, 255, 255, 0.08);
+  --hair: rgba(255, 255, 255, 0.05);
+  --chalk: #e8e6e1;
+  --dust: #8a8f98;
+  --faint: #4a4f58;
+  --amber: #ffb020;
+  --gold: #d9b24a;
+  --teal: #5ee0b8;
+  --red: #f05a5a;
+  background: var(--ink);
+  color: var(--chalk);
+  min-height: 100vh;
+  overflow-x: clip;
+}
+.koth-grid > * { min-width: 0; }
+.koth .mono {
+  font-family: "SF Mono", "JetBrains Mono", ui-monospace, Menlo, monospace;
+  font-variant-numeric: tabular-nums;
+}
+.koth .display {
+  font-family: "SF Pro Display", var(--font-inter), Inter, system-ui, sans-serif;
+}
+
+/* ── Ticker ── */
+.koth-ticker {
+  background: #111318;
+  border-bottom: 1px solid var(--edge);
+  overflow: hidden;
+  white-space: nowrap;
+  font-size: 12px;
+}
+.koth-ticker .tk {
+  display: inline-block;
+  padding: 10px 0;
+  animation: koth-scroll 36s linear infinite;
+}
+.koth-ticker:hover .tk { animation-play-state: paused; }
+.koth-ticker .tk span { margin-right: 44px; color: var(--dust); }
+.koth-ticker .tk b { color: var(--chalk); font-weight: 700; }
+.koth-ticker .tk i { font-style: normal; color: var(--amber); }
+@keyframes koth-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+/* ── King strip ── */
+.koth-king {
+  margin-top: 26px;
+  border: 1px solid rgba(217, 178, 74, 0.35);
+  border-radius: 18px;
+  background: linear-gradient(90deg, #16130c, #0e1013 70%);
+  padding: 22px 28px;
+  display: flex;
+  align-items: center;
+  gap: 26px;
+  position: relative;
+  overflow: hidden;
+}
+.koth-king::before {
+  content: "";
+  position: absolute;
+  left: -120px;
+  top: -140px;
+  width: 420px;
+  height: 420px;
+  background: radial-gradient(circle, rgba(255, 176, 32, 0.16), transparent 65%);
+  pointer-events: none;
+}
+.koth-king .crown { font-size: 28px; line-height: 1; color: var(--gold); }
+.koth-king .text { flex: 1; min-width: 0; position: relative; }
+.koth-king .kicker { font-size: 10px; letter-spacing: 0.3em; color: var(--gold); font-weight: 700; }
+.koth-king .name {
+  font-size: 34px;
+  font-weight: 900;
+  letter-spacing: -0.01em;
+  margin-top: 4px;
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+}
+.koth-king .meta { font-size: 11px; color: var(--dust); letter-spacing: 0.12em; margin-top: 6px; }
+.koth-king .meta b { color: var(--chalk); letter-spacing: 0.02em; font-size: 12px; }
+.koth-king .def {
+  text-align: center;
+  padding: 0 18px;
+  border-left: 1px solid var(--edge);
+  border-right: 1px solid var(--edge);
+}
+.koth-king .def .n { font-size: 48px; font-weight: 900; color: var(--amber); line-height: 1; }
+.koth-king .def .l { font-size: 9px; letter-spacing: 0.28em; color: var(--gold); margin-top: 4px; }
+.koth-cta {
+  display: inline-block;
+  background: linear-gradient(180deg, #ffc24a, #f5a310);
+  color: #1a1205;
+  font-weight: 800;
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  padding: 15px 26px;
+  border-radius: 14px;
+  white-space: nowrap;
+  cursor: pointer;
+  border: 0;
+  text-align: center;
+}
+.koth-cta:hover { filter: brightness(1.06); }
+@media (max-width: 820px) {
+  .koth-king { flex-wrap: wrap; padding: 20px; }
+  .koth-king .def { border: none; padding: 0; }
+  .koth-king .name { font-size: 28px; }
+  .koth-cta { width: 100%; }
+}
+
+/* ── Masthead + tabs ── */
+.koth-mast {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 34px 0 18px;
+  border-bottom: 3px solid var(--amber);
+}
+.koth-mast h1 { font-size: 40px; font-weight: 900; letter-spacing: -0.01em; line-height: 1; margin-top: 4px; }
+.koth-live { display: flex; align-items: center; gap: 8px; font-size: 11px; letter-spacing: 0.2em; color: var(--dust); white-space: nowrap; }
+.koth-live .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--red); animation: koth-blink 1.2s infinite; }
+@keyframes koth-blink { 50% { opacity: 0.25; } }
+.koth-tabs { display: flex; border-bottom: 1px solid var(--edge); overflow-x: auto; }
+.koth-tab {
+  padding: 14px 22px;
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  color: var(--dust);
+  border: 0;
+  border-bottom: 3px solid transparent;
+  background: none;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.koth-tab.on { color: #fff; border-color: var(--amber); }
+.koth-tab:hover { color: var(--chalk); }
+
+/* ── Grid, table, cards ── */
+.koth-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 26px; margin-top: 26px; }
+.koth-dateline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  color: var(--dust);
+  margin: 6px 0 10px;
+}
+.koth-dateline .fill { flex: 1; }
+.koth-venue {
+  display: inline-block;
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  color: var(--gold);
+  border: 1px solid rgba(217, 178, 74, 0.35);
+  border-radius: 6px;
+  padding: 3px 8px;
+}
+.koth table { width: 100%; border-collapse: collapse; }
+.koth th {
+  text-align: left;
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  color: var(--faint);
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--edge);
+  font-weight: 700;
+}
+.koth td { padding: 13px 12px; border-bottom: 1px solid var(--hair); font-size: 14px; }
+.koth tbody tr:hover td { background: rgba(255, 255, 255, 0.025); }
+.koth .rk { color: var(--faint); width: 40px; }
+.koth .rk.top { color: var(--amber); font-weight: 800; }
+.koth .mv { font-size: 11px; color: var(--faint); }
+.koth .mv.up { color: var(--teal); }
+.koth .mv.down { color: var(--red); }
+.koth .mv.new { color: var(--amber); }
+.koth .fin { font-weight: 700; }
+.koth .fin.w { color: var(--teal); }
+.koth .fin.l { color: var(--red); }
+.koth .num { text-align: right; }
+.koth .faint { color: var(--faint); }
+.koth .dust { color: var(--dust); }
+.koth .amber { color: var(--amber); }
+.koth .gold { color: var(--gold); }
+.koth .teal { color: var(--teal); }
+.koth .red { color: var(--red); }
+.koth .side { display: flex; flex-direction: column; gap: 14px; }
+.koth-card { border: 1px solid var(--edge); border-radius: 14px; padding: 16px 18px; background: var(--panel); }
+.koth-card .h { font-size: 10px; letter-spacing: 0.24em; color: var(--dust); margin-bottom: 10px; }
+.koth-line { display: flex; justify-content: space-between; gap: 12px; font-size: 12px; padding: 7px 0; border-top: 1px solid var(--hair); color: var(--dust); }
+.koth-line b { color: var(--chalk); text-align: right; }
+.koth-section-h { font-size: 11px; letter-spacing: 0.2em; color: var(--dust); margin: 6px 0 10px; }
+.koth-throne-card {
+  margin-top: 14px;
+  border: 1px solid rgba(217, 178, 74, 0.35);
+  border-radius: 18px;
+  background: linear-gradient(180deg, #16130c, #0e1013 60%);
+  padding: 22px 26px;
+}
+.koth-empty { padding: 24px 0; font-size: 13px; color: var(--dust); }
+.koth-foot { margin-top: 40px; text-align: center; font-size: 11px; color: var(--faint); }
+
+@media (max-width: 820px) {
+  .koth-grid { grid-template-columns: 1fr; }
+  .koth-mast { flex-wrap: wrap; align-items: flex-start; padding-top: 26px; }
+  .koth-mast h1 { font-size: 32px; }
+  .koth-live { width: 100%; }
+  .koth td, .koth th { padding-left: 8px; padding-right: 8px; }
+  .koth .hide-sm { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .koth-ticker .tk { animation: none; }
+  .koth-ticker .tk span:nth-child(n + 5) { display: none; }
+  .koth-live .dot { animation: none; }
+}
