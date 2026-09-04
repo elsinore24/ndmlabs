@@ -189,7 +189,7 @@ export default function GoatBoard() {
 
   return (
     <div className="goat">
-      <Header fixed={false} />
+      <Header fixed={false} brand={{ label: "Coach of the Year", href: "/koth" }} />
 
       <div className="goat-wrap">
         <section className="goat-hero">

@@ -13,10 +13,20 @@ import Link from "next/link";
 // own backdrop shows through from the ticker down rather than being cut by a
 // black band. The nav sits on whatever is behind it, which on /koth is the
 // darkest part of the arena scrim.
+// `brand` replaces the NDMLABS wordmark. The GOAT board uses it to point back
+// at Coach of the Year, which is the page a reader arrived from and the one
+// they want to return to — NDMLABS is not that destination. Both boards are
+// expected to move to their own site eventually; this keeps them navigable to
+// each other until they do.
 export default function Header({
   fixed = true,
   transparent = false,
-}: { fixed?: boolean; transparent?: boolean }) {
+  brand,
+}: {
+  fixed?: boolean;
+  transparent?: boolean;
+  brand?: { label: string; href: string };
+}) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
@@ -29,12 +39,24 @@ export default function Header({
     >
       <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          {/* Logo */}
-          <Link href="/" className="flex items-center space-x-2">
-            <span className="text-2xl font-bold text-white">
-              NDM<span className="text-[#00ff88]">LABS</span>
-            </span>
-          </Link>
+          {/* Logo, or whatever the page nominates in its place */}
+          {brand ? (
+            <Link
+              href={brand.href}
+              className="flex items-center gap-2 text-gray-300 hover:text-white transition-colors min-w-0"
+            >
+              <span aria-hidden="true" className="text-lg leading-none">&larr;</span>
+              <span className="text-lg sm:text-xl font-bold text-white truncate">
+                {brand.label}
+              </span>
+            </Link>
+          ) : (
+            <Link href="/" className="flex items-center space-x-2">
+              <span className="text-2xl font-bold text-white">
+                NDM<span className="text-[#00ff88]">LABS</span>
+              </span>
+            </Link>
+          )}
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-8">
