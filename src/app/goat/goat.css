@@ -161,13 +161,17 @@
   font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
   font-size: 13px;
   white-space: nowrap;
-  color: var(--dust);
+  /* Full-strength chalk, not the muted --dust the labels use. These numerals
+     ARE the page — nine of them per row at 13px mono — and reading a table is
+     comparing values across rows, which muted text makes needlessly hard.
+     Hierarchy is carried by colour on rank and score instead. */
+  color: var(--chalk);
 }
 .goat-row { cursor: pointer; }
 .goat-row:hover td { background: rgba(255, 255, 255, 0.035); }
 .goat-row[aria-expanded="true"] td { background: rgba(255, 176, 32, 0.06); }
 
-.goat-rank { color: var(--faint); width: 46px; }
+.goat-rank { color: var(--dust); width: 46px; }
 .goat-row:nth-child(-n + 6) .goat-rank { color: var(--gold); }
 .goat-name {
   color: var(--chalk);
@@ -176,7 +180,7 @@
   font-weight: 600;
   white-space: normal;
 }
-.goat-span { color: var(--faint); font-size: 11px; }
+.goat-span { color: var(--dust); font-size: 11px; }
 .goat-score { color: var(--amber); font-weight: 700; }
 
 /* Category cells carry a bar behind the number: the z-score's sign and size are
@@ -192,7 +196,7 @@
   border-radius: 1px;
 }
 .goat-cat.goat-neg i { background: var(--red); }
-.goat-cat.goat-null { color: var(--faint); }
+.goat-cat.goat-null { color: var(--faint); }   /* an absence, not a value */
 
 /* --- expanded detail --- */
 
