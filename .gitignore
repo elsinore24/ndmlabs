@@ -42,3 +42,11 @@ next-env.d.ts
 # IDE
 .idea
 .vscode
+
+# iCloud conflict copies. This repo lives under ~/Documents, which is synced by
+# iCloud Drive (Desktop & Documents). A burst of file writes — `goat export-web`
+# writes 500 JSON files into public/goat/players — makes the file provider drop
+# numbered copies ("abdulka01 2.json") beside the originals. They are never real
+# content and must never be committed.
+* [0-9].*
+* [0-9][0-9].*
