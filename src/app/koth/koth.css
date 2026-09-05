@@ -145,6 +145,10 @@
 }
 .koth-king .meta { font-size: 11px; color: var(--dust); letter-spacing: 0.12em; margin-top: 6px; }
 .koth-king .meta b { color: var(--chalk); letter-spacing: 0.02em; font-size: 12px; }
+/* The coach on the king card, bright like every other coach name on the
+   page (Dan, 2026-09-05: "still dull or chalky"). Keeps the meta's tracking
+   and size — it is the same line, one word lit. */
+.koth-king .meta b.who { color: #ffffff; letter-spacing: 0.12em; font-size: 11px; }
 /* Each fact is one unbreakable span, separated by a drawn middot, so the line
    wraps between facts and never inside one.
    A flex row, not inline spans: adjacent JSX elements have no whitespace

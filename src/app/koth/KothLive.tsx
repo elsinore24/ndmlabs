@@ -350,7 +350,7 @@ function KingStrip({ throne, coach }: { throne: Throne; coach: string | null }) 
             tracked-out caps, and a mixed-case name sits in it like a typo. */}
         <div className="meta mono">
           {lead && <span>LED BY <b>{lead.name} · {lead.season}</b></span>}
-          <span>COACH {(coach ?? throne.holder_handle).toUpperCase()}</span>
+          <span>COACH <b className="who">{(coach ?? throne.holder_handle).toUpperCase()}</b></span>
           <span>CROWNED {shortDate(throne.claimed_at)}</span>
         </div>
       </div>
