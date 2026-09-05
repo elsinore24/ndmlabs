@@ -107,7 +107,13 @@
   margin-top: 26px;
   border: 1px solid rgba(217, 178, 74, 0.35);
   border-radius: 18px;
-  background: linear-gradient(90deg, #16130c, #0e1013 70%);
+  /* Translucent, like the panels below it, so the arena bleeds through
+     (Dan, 2026-09-05: "I want the background image to bleed through a
+     little"). The warm left end keeps its tint; the right end is the
+     panel glass. */
+  background: linear-gradient(90deg, rgba(22, 19, 12, 0.72), rgba(14, 16, 19, 0.62) 70%);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
   padding: 22px 28px;
   display: flex;
   align-items: center;
