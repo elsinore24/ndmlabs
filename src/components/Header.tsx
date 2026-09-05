@@ -6,8 +6,16 @@ import Link from "next/link";
 // `fixed` is the homepage's floating bar; /koth stacks the nav under its
 // ticker, so it flows in the document instead.
 //
-// GOAT is a real route (/goat), not a homepage anchor like the rest — the
-// ranking is its own page, so it cannot scroll to a section here.
+// GOAT and Genome are real routes, not homepage anchors like the rest. GOAT
+// is /goat in this repo. Genome is the Athletic Genome site, a separate Astro
+// project proxied in under /genome by public/_redirects — it stays its own repo
+// because a Python engine generates its data; this nav just points at it.
+// (Apps used to point at #apps, a section the homepage never had.)
+//
+// Genome is a plain <a>, not <Link>: Link would soft-navigate to a route this
+// app does not have and show Next's 404 instead of letting the request reach
+// the proxy, and it strips the trailing slash the Astro site treats as
+// canonical.
 //
 // `transparent` drops the bar's own ground entirely, so a page that draws its
 // own backdrop shows through from the ticker down rather than being cut by a
@@ -63,9 +71,9 @@ export default function Header({
             <Link href="/goat" className="text-gray-300 hover:text-white transition-colors">
               GOAT
             </Link>
-            <Link href="#apps" className="text-gray-300 hover:text-white transition-colors">
-              Apps
-            </Link>
+            <a href="/genome/proto/profile/" className="text-gray-300 hover:text-white transition-colors">
+              Genome
+            </a>
             <Link href="#about" className="text-gray-300 hover:text-white transition-colors">
               About
             </Link>
@@ -102,9 +110,9 @@ export default function Header({
               <Link href="/goat" className="text-gray-300 hover:text-white transition-colors">
                 GOAT
               </Link>
-              <Link href="#apps" className="text-gray-300 hover:text-white transition-colors">
-                Apps
-              </Link>
+              <a href="/genome/proto/profile/" className="text-gray-300 hover:text-white transition-colors">
+                Genome
+              </a>
               <Link href="#about" className="text-gray-300 hover:text-white transition-colors">
                 About
               </Link>

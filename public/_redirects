@@ -1,0 +1,11 @@
+# Athletic Genome lives in its own repo and its own Netlify site, because a
+# Python engine generates its data and that pipeline should not be forked.
+# Serve it here under /genome anyway: Netlify fetches the page from the other
+# site and returns it as if it were ours (status 200 = rewrite, not redirect),
+# so the URL bar stays on ndmlabs.net. That site is built with Astro
+# base '/genome', so all its links and assets already carry the prefix and
+# come back through this same rule.
+/genome/*  https://athletic-genome.netlify.app/genome/:splat  200
+
+# Bare /genome has no splat to match; send it to the mounted root.
+/genome  /genome/  301

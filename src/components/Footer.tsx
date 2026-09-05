@@ -46,9 +46,9 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="#apps" className="text-gray-400 hover:text-[#00ff88] transition-colors">
-                  Apps
-                </Link>
+                <a href="/genome/proto/profile/" className="text-gray-400 hover:text-[#00ff88] transition-colors">
+                  Genome
+                </a>
               </li>
               <li>
                 <Link href="#about" className="text-gray-400 hover:text-[#00ff88] transition-colors">
