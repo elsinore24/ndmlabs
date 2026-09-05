@@ -58,7 +58,7 @@
    around it and legibility absolute on it. */
 .koth-grid > div:first-child,
 .koth-card {
-  background: rgba(11, 12, 15, 0.66);
+  background: rgba(11, 12, 15, 0.71);
   backdrop-filter: blur(3px);
   -webkit-backdrop-filter: blur(3px);
 }
@@ -67,7 +67,7 @@
   border-radius: 16px;
   padding: 16px 18px;
 }
-.koth-cotd { background: linear-gradient(180deg, rgba(22, 19, 12, 0.72), rgba(13, 15, 20, 0.62) 70%); }
+.koth-cotd { background: linear-gradient(180deg, rgba(22, 19, 12, 0.77), rgba(13, 15, 20, 0.67) 70%); }
 .koth-grid > * { min-width: 0; }
 .koth .mono {
   font-family: "SF Mono", "JetBrains Mono", ui-monospace, Menlo, monospace;
@@ -112,7 +112,7 @@
      (Dan, 2026-09-05: "I want the background image to bleed through a
      little"). The warm left end keeps its tint; the right end is the
      panel glass. */
-  background: linear-gradient(90deg, rgba(22, 19, 12, 0.72), rgba(14, 16, 19, 0.62) 70%);
+  background: linear-gradient(90deg, rgba(22, 19, 12, 0.77), rgba(14, 16, 19, 0.67) 70%);
   backdrop-filter: blur(2px);
   -webkit-backdrop-filter: blur(2px);
   padding: 22px 28px;
@@ -285,7 +285,7 @@
 .koth-line b { color: var(--chalk); text-align: right; }
 .koth-cotd {
   border-color: rgba(217, 178, 74, 0.45);
-  background: linear-gradient(180deg, rgba(22, 19, 12, 0.72), rgba(13, 15, 20, 0.62) 70%);
+  background: linear-gradient(180deg, rgba(22, 19, 12, 0.77), rgba(13, 15, 20, 0.67) 70%);
 }
 .koth-cotd .name { font-size: 26px; font-weight: 900; letter-spacing: -0.01em; line-height: 1.1; overflow-wrap: anywhere; }
 /* The coach's name is the one thing on the board that is a person: bright
@@ -308,7 +308,7 @@
   margin-top: 14px;
   border: 1px solid rgba(217, 178, 74, 0.35);
   border-radius: 18px;
-  background: linear-gradient(180deg, rgba(22, 19, 12, 0.72), rgba(14, 16, 19, 0.62) 60%);
+  background: linear-gradient(180deg, rgba(22, 19, 12, 0.77), rgba(14, 16, 19, 0.67) 60%);
   backdrop-filter: blur(2px);
   -webkit-backdrop-filter: blur(2px);
   padding: 22px 26px;
