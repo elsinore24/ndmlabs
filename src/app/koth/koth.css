@@ -65,7 +65,10 @@
   -webkit-backdrop-filter: blur(3px);
 }
 .koth-grid > div:first-child {
-  border: 1px solid var(--edge);
+  /* The same gold the Coach of the Day card and the King strip wear (Dan,
+     2026-09-05): the board is the page's subject, and a grey edge made it read
+     as the background to its own sidebar. */
+  border: 1px solid rgba(217, 178, 74, 0.45);
   border-radius: 16px;
   padding: 16px 18px;
 }

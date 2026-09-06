@@ -22,7 +22,12 @@ import "./koth.css";
 // No THE THRONE tab: the King strip at the top of the page IS the throne
 // (Dan, 2026-09-03), and a tab repeating it was the same fact twice. Its
 // lineage moved into RECORDS, where the rest of the history lives.
-const TABS = ["DAILY", "THE WEEK", "THE CLIMB", "RECORDS"] as const;
+//
+// TOURNAMENT CHALLENGE was THE CLIMB until 2026-09-05, when the app renamed
+// the mode (its hub door went from "New run" to "Tournament challenge"); the
+// board's tab follows the app so the same thing has one name everywhere.
+// The component is still ClimbTab — the ladder is what the mode is made of.
+const TABS = ["DAILY", "THE WEEK", "TOURNAMENT CHALLENGE", "RECORDS"] as const;
 type Tab = (typeof TABS)[number];
 const POLL_MS = 60_000;
 
@@ -261,7 +266,7 @@ export default function KothLive() {
             {tab === "DAILY" && <DailyTab board={board} />}
             {tab === "THE WEEK" && <WeekTab board={board} />}
             {tab === "RECORDS" && <RecordsTab board={board} />}
-            {tab === "THE CLIMB" && <ClimbTab board={board} />}
+            {tab === "TOURNAMENT CHALLENGE" && <ClimbTab board={board} />}
           </div>
           <aside className="side">
             {board?.coach && <CoachOfTheDayCard {...board.coach} today={todayUTC()} />}
