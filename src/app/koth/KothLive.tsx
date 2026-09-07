@@ -23,11 +23,11 @@ import "./koth.css";
 // (Dan, 2026-09-03), and a tab repeating it was the same fact twice. Its
 // lineage moved into RECORDS, where the rest of the history lives.
 //
-// TOURNAMENT CHALLENGE was THE CLIMB until 2026-09-05, when the app renamed
-// the mode (its hub door went from "New run" to "Tournament challenge"); the
-// board's tab follows the app so the same thing has one name everywhere.
-// The component is still ClimbTab — the ladder is what the mode is made of.
-const TABS = ["DAILY", "THE WEEK", "TOURNAMENT CHALLENGE", "RECORDS"] as const;
+// POST SEASON was TOURNAMENT CHALLENGE (2026-09-05) and THE CLIMB before that:
+// the tab follows the app's hub door, so the mode has one name everywhere,
+// and the app settled on "Post season" on 2026-09-06. The component is still
+// ClimbTab — the ladder is what the mode is made of, whatever it is called.
+const TABS = ["DAILY", "THE WEEK", "POST SEASON", "RECORDS"] as const;
 type Tab = (typeof TABS)[number];
 const POLL_MS = 60_000;
 
@@ -266,7 +266,7 @@ export default function KothLive() {
             {tab === "DAILY" && <DailyTab board={board} />}
             {tab === "THE WEEK" && <WeekTab board={board} />}
             {tab === "RECORDS" && <RecordsTab board={board} />}
-            {tab === "TOURNAMENT CHALLENGE" && <ClimbTab board={board} />}
+            {tab === "POST SEASON" && <ClimbTab board={board} />}
           </div>
           <aside className="side">
             {board?.coach && <CoachOfTheDayCard {...board.coach} today={todayUTC()} />}
