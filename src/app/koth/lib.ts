@@ -87,6 +87,9 @@ export type SoloReign = {
   defenses: number;
   crowned_at: string;
   ended_at: string | null;
+  /** Which hill it was won on. `solo` is the user-built hill LEGENDS
+   *  replaced, and is the default for every row written before the split. */
+  mode: "solo" | "legends";
 };
 /** One coach's best climb: what the ladder run was worth. */
 export type BestRun = {

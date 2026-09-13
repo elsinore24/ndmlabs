@@ -87,7 +87,7 @@ export default function KothLive() {
             `weekly_board?week=eq.${mondayUTC()}&select=uid,games,wins,margin&order=wins.desc,margin.desc,first_played.asc&limit=100`
           ),
           rest<(SoloReign & { uid: string })[]>(
-            "koth_solo?select=uid,team_name,defenses,crowned_at,ended_at&order=defenses.desc,crowned_at.asc&limit=25"
+            "koth_solo?select=uid,team_name,defenses,crowned_at,ended_at,mode&order=defenses.desc,crowned_at.asc&limit=50"
           ),
           rest<Venue[]>(`daily_venues?day=in.(${today},${todayUTC(1)})&select=*`),
           rest<{ uid: string; day: string; score: number; score_opp: number; margin: number }[]>(
@@ -483,6 +483,10 @@ function WeekTab({ board }: { board: Board | null }) {
 function RecordsTab({ board }: { board: Board | null }) {
   if (!board) return <p className="koth-empty mono">Loading…</p>;
   const reigns = longestReigns(board, 10);
+  // Split on the hill it was won on. A row written before the modes split
+  // carries no mode at all and reads as the legacy hill, which is what it is.
+  const legendReigns = board.solo.filter((r) => r.mode === "legends");
+  const legacyReigns = board.solo.filter((r) => r.mode !== "legends");
   return (
     <section>
       <div className="koth-section-h mono">
@@ -508,7 +512,7 @@ function RecordsTab({ board }: { board: Board | null }) {
         </tbody></table>
       )}
 
-      <div className="koth-section-h mono" style={{ marginTop: 28 }}>LONGEST REIGNS · THE WORLD</div>
+      <div className="koth-section-h mono" style={{ marginTop: 28 }}>LONGEST REIGNS · ALL-STARS</div>
       {reigns.length === 0 ? (
         <p className="koth-empty mono">No reign on record yet.</p>
       ) : (
@@ -523,12 +527,21 @@ function RecordsTab({ board }: { board: Board | null }) {
         </tbody></table>
       )}
 
-      <div className="koth-section-h mono" style={{ marginTop: 28 }}>LONGEST REIGNS · MY HILL</div>
-      {board.solo.length === 0 ? (
-        <p className="koth-empty mono">No finished solo reigns yet.</p>
+      {/* **Titled for what it measures.** The player picks each challenger
+          and coaches it, so a defence is recorded when the *player* loses:
+          this ranks which champion turned challengers back, not who coached
+          well. Saying so costs a line and stops the board claiming something
+          it cannot support. See `passdown/legends-passdown.md` §3 in the app
+          repo. */}
+      <div className="koth-section-h mono" style={{ marginTop: 28 }}>LONGEST CHAMPION REIGNS</div>
+      <p className="koth-empty mono" style={{ marginTop: -4 }}>
+        Champions that proved hardest to dethrone.
+      </p>
+      {legendReigns.length === 0 ? (
+        <p className="koth-empty mono">No champion has been dethroned yet.</p>
       ) : (
         <table><tbody>
-          {board.solo.slice(0, 10).map((r, i) => (
+          {legendReigns.slice(0, 10).map((r, i) => (
             <tr key={i}>
               <td className={`rk mono ${i < 3 ? "top" : ""}`}>{i + 1}</td>
               <td className="display"><b>{r.team_name}</b></td>
@@ -536,6 +549,24 @@ function RecordsTab({ board }: { board: Board | null }) {
             </tr>
           ))}
         </tbody></table>
+      )}
+
+      {/* Only while anyone still has one. The user-built local hill closed
+          when LEGENDS took its place, so this list can only shrink in
+          relevance and never grows. */}
+      {legacyReigns.length > 0 && (
+        <>
+          <div className="koth-section-h mono" style={{ marginTop: 28 }}>EARLIER HILL REIGNS</div>
+          <table><tbody>
+            {legacyReigns.slice(0, 10).map((r, i) => (
+              <tr key={i}>
+                <td className={`rk mono ${i < 3 ? "top" : ""}`}>{i + 1}</td>
+                <td className="display"><b>{r.team_name}</b></td>
+                <td className="mono num amber">{defensesLabel(r.defenses)}</td>
+              </tr>
+            ))}
+          </tbody></table>
+        </>
       )}
 
       <div className="koth-section-h mono" style={{ marginTop: 28 }}>BEST DAILY MARGIN</div>
