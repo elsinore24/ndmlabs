@@ -8,7 +8,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Header from "@/components/Header";
 import {
-  APP_STORE_URL,
+  APP_STORE_URL, RETIRED_HANDLE,
   type Challenge, type DailyRaw, type DailyRow, type LineageEntry, type Move,
   type BestRun, type SoloReign, type Throne, type TopPlayer, type Venue, type WeekRow,
   type Profile,
@@ -343,6 +343,12 @@ function CoachName({ coach, handle }: { coach: string | null; handle: string }) 
 
 function KingStrip({ throne, coach }: { throne: Throne; coach: string | null }) {
   const lead = leadPlayer(throne);
+  // A king who deleted their account has no coach to name. The line below
+  // falls back to the handle when no coach name is set, which reads as a
+  // name for a live player — but for a retired one it would print the
+  // placeholder twice ("COACH RETIRED COACH"), so the phrase is dropped
+  // instead. The reign itself stays: the five is still there to beat.
+  const retired = throne.holder_handle === RETIRED_HANDLE;
   return (
     <div className="koth-king">
       <div className="crown" aria-hidden>♛</div>
@@ -355,7 +361,8 @@ function KingStrip({ throne, coach }: { throne: Throne; coach: string | null }) 
             tracked-out caps, and a mixed-case name sits in it like a typo. */}
         <div className="meta mono">
           {lead && <span>LED BY <b>{lead.name} · {lead.season}</b></span>}
-          <span>COACH <b className="who">{(coach ?? throne.holder_handle).toUpperCase()}</b></span>
+          {!retired &&
+            <span>COACH <b className="who">{(coach ?? throne.holder_handle).toUpperCase()}</b></span>}
           <span>CROWNED {shortDate(throne.claimed_at)}</span>
         </div>
       </div>

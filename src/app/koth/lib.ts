@@ -12,6 +12,18 @@ export const SUPABASE_KEY = "sb_publishable_Jy4XRKu11PdztPoCSZfduw_kHed6SyY";
 // games section rather than a dead store link.
 export const APP_STORE_URL = "/#games";
 
+// The name a deleted account leaves behind on shared history.
+//
+// Deleting an account (guideline 5.1.1(v)) does not erase the throne's
+// lineage — it is every other player's record too — so the app's
+// `delete_account_tx` replaces each name the player chose with these and
+// keeps the counts, the dates and the five. The profile row goes, so the
+// live coach-name lookup finds nothing and the page falls back to the
+// handle, which is this. See `supabase/migrations/0008_account_deletion.sql`
+// in the app repo; change these only together with that function.
+export const RETIRED_HANDLE = "RETIRED COACH";
+export const RETIRED_TEAM = "RETIRED FIVE";
+
 export type FiveEntry = { slot: string; pid: string; name?: string; lead?: boolean };
 export type Throne = {
   version: number;
