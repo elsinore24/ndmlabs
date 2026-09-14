@@ -15,7 +15,7 @@ import {
   clockTime, defensesLabel, fiveLine, grouped, leadPlayer, longDate,
   handleNames, minutesAgo, mondayUTC, monthName, monthStartUTC, movement, ordinal, playerLabel,
   profileMap, rest, scoreline, statLine,
-  shortDate, signed, todayUTC, venueChip, venueFallback, venueName,
+  shortDate, signed, todayUTC, venueChip, venueFallback, venueKnown, venueName,
 } from "./lib";
 import "./koth.css";
 
@@ -274,9 +274,12 @@ export default function KothLive() {
               <div className="h mono">TOMORROW</div>
               {board ? (
                 <>
-                  <div className="mono" style={{ fontSize: 13 }}>{venueChip(board.tomorrow)}</div>
+                  <div className="mono" style={{ fontSize: 13 }}>
+                    {venueKnown(board.tomorrow) ? venueChip(board.tomorrow) : "NOT ANNOUNCED"}
+                  </div>
                   <div className="mono faint" style={{ fontSize: 10, marginTop: 4, letterSpacing: ".06em" }}>
-                    {[...board.tomorrow.rule_tags.slice(0, 2), "POOL FLIPS AT MIDNIGHT UTC"].join(" · ")}
+                    {[...(venueKnown(board.tomorrow) ? board.tomorrow.rule_tags.slice(0, 2) : []),
+                      "POOL FLIPS AT MIDNIGHT UTC"].join(" · ")}
                   </div>
                 </>
               ) : (
@@ -415,7 +418,8 @@ function DailyTab({ board }: { board: Board | null }) {
     <section>
       <div className="koth-dateline mono">
         <span>{longDate(today)}</span>
-        {board && <span className="koth-venue">{venueChip(board.today)}</span>}
+        {board && venueKnown(board.today) &&
+          <span className="koth-venue">{venueChip(board.today)}</span>}
         <span className="fill" />
         <span>EVERYBODY PLAYS THE SAME GAME</span>
       </div>
@@ -699,12 +703,16 @@ function tickerItems(board: Board): string[][] {
   const leader = board.daily[0];
   if (leader) items.push([leader.coach ?? leader.handle, "tops today's board", scoreline(leader.score, leader.score_opp)]);
   for (const r of board.daily.filter((r) => !r.won).slice(0, 2)) {
-    items.push([r.coach ?? r.handle, `fell at ${board.today.short_name}`, scoreline(r.score, r.score_opp)]);
+    items.push([r.coach ?? r.handle,
+                venueKnown(board.today) ? `fell at ${board.today.short_name}` : "fell today",
+                scoreline(r.score, r.score_opp)]);
   }
-  items.push(["", "TODAY'S VENUE", venueChip(board.today)]);
+  if (venueKnown(board.today)) items.push(["", "TODAY'S VENUE", venueChip(board.today)]);
   for (const r of board.daily.filter((r) => r.move.kind === "new").slice(0, 2)) {
     items.push([r.coach ?? r.handle, "enters the daily board", ""]);
   }
-  if (items.length < 4) items.push(["", "TOMORROW", venueChip(board.tomorrow)]);
+  if (items.length < 4 && venueKnown(board.tomorrow)) {
+    items.push(["", "TOMORROW", venueChip(board.tomorrow)]);
+  }
   return items.slice(0, 10);
 }

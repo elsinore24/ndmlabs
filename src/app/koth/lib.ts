@@ -274,36 +274,35 @@ export function movement(day: string, ordered: string[]): Move[] {
 // is missing from it, this is the app's DailySeed.venue, ported exactly
 // (FNV-1a 64 folded to 32, keyed on `<day>|venue`), over the shipped presets.
 
-const VENUE_PRESETS = [
-  { id: "msg88", display_name: "MADISON SQUARE GARDEN", short_name: "THE GARDEN '88", year: 1988,
-    rule_tags: ["HAND-CHECKS LEGAL", "LONG LINE", "THEY LET THEM PLAY"] },
-  { id: "oracle16", display_name: "ORACLE ARENA", short_name: "ORACLE '16", year: 2016,
-    rule_tags: ["SPLASH ERA", "OPEN LANES", "QUICK WHISTLE OUTSIDE"] },
-];
-function fnv32(key: string): number {
-  // BigInt() calls rather than literals: the tsconfig targets ES2017.
-  const M64 = (BigInt(1) << BigInt(64)) - BigInt(1);
-  let h = BigInt("0xcbf29ce484222325");
-  for (const b of new TextEncoder().encode(key)) {
-    h ^= BigInt(b);
-    h = (h * BigInt("0x100000001b3")) & M64;
-  }
-  return Number((h ^ (h >> BigInt(32))) & BigInt("0xffffffff"));
-}
+/** A day the calendar has not reached yet.
+ *
+ * **It names nothing.** This used to hold two arena presets and draw one by
+ * hashing the date, which was right when the app drew its venue the same
+ * independent way. Two things have since made it wrong. The venue now follows
+ * the day's opponent, so a hash here would contradict the app; and the two
+ * presets it held were real arenas, whose names were removed from the game
+ * because they are trademarks their owners enforce — leaving them here meant
+ * the site would start printing them again the day the calendar lapsed.
+ *
+ * So an unknown day is unknown: no id, no name, no rules, and every surface
+ * that shows a venue checks {@link venueKnown} and says nothing instead of
+ * guessing. Extending `daily_venues` is what fixes a blank, not this.
+ */
 export function venueFallback(day: string): Venue {
-  const pick = fnv32(`${day}|venue`) % (VENUE_PRESETS.length + 1);
-  if (pick === 0) {
-    return { day, venue_id: null, display_name: "HOUSE ARENA", short_name: "THE HOUSE", year: null, rule_tags: [] };
-  }
-  const v = VENUE_PRESETS[pick - 1];
-  return { day, venue_id: v.id, display_name: v.display_name, short_name: v.short_name, year: v.year, rule_tags: v.rule_tags };
+  return { day, venue_id: null, display_name: "", short_name: "", year: null, rule_tags: [] };
 }
-/** `THE GARDEN` — the building without its year. */
+
+/** False for a day the calendar has not reached — see {@link venueFallback}. */
+export function venueKnown(v: Venue | null | undefined): boolean {
+  return !!v && v.short_name.length > 0;
+}
+
 export function venueName(v: Venue): string {
   return v.short_name.replace(/\s*'\d\d$/, "");
 }
-/** `THE GARDEN · 1988` — the venue chip. */
+/** `CHICAGO · 1996` — the venue chip, or empty for a day not yet scheduled. */
 export function venueChip(v: Venue): string {
+  if (!venueKnown(v)) return "";
   const name = venueName(v);
   return v.year ? `${name} · ${v.year}` : name;
 }
