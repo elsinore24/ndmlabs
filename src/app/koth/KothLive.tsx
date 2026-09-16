@@ -405,9 +405,9 @@ function KingStrip({ hill, kicker, cta }: { hill: Hill; kicker: string; cta: str
   // The house is the same case from the other side: nobody chose its five,
   // so "COACH THE GATEKEEPERS" is a sentence with no subject.
   const nobody = throne.holder_handle === RETIRED_HANDLE || throne.holder_uid === HOUSE_UID;
-  // On LEGENDS the coach chose the champion and coaches nobody — the '07
-  // Spurs are not coached by Captain Dan, they are held by him.
-  const verb = hill.id === 2 ? "HELD BY" : "COACH";
+  // COACH on both hills (Dan, 2026-09-16, over HELD BY for LEGENDS): one
+  // word for the person behind a King, whichever hill it stands on.
+  const verb = "COACH";
   return (
     <div className="koth-king">
       <div className="crown" aria-hidden>♛</div>
