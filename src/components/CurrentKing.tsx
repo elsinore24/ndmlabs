@@ -47,7 +47,10 @@ export default function CurrentKing({ fallback }: { fallback: string }) {
             <span className="text-white font-bold">
               {retired ? "A RETIRED FIVE" : king.team.toUpperCase()}
             </span>
-            <span className="text-gray-500">
+            {/* One unbreakable unit: the card is narrow enough that this line
+                wraps, and "· 2" on one line with DEFENSES alone on the next
+                reads as a count of nothing. */}
+            <span className="text-gray-500 whitespace-nowrap">
               {" "}· {king.defenses} {king.defenses === 1 ? "DEFENSE" : "DEFENSES"}
             </span>
           </span>
