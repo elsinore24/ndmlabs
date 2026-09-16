@@ -24,6 +24,18 @@ export const APP_STORE_URL = "/#games";
 export const RETIRED_HANDLE = "RETIRED COACH";
 export const RETIRED_TEAM = "RETIRED FIVE";
 
+// The house: `house_uid()` in the app's 0001 migration. It seeds a hill's
+// first lineage row (THE GATEKEEPERS, the '70 Knicks on LEGENDS) and never
+// enters the lineage as a dethroned King. It has no profile, so nothing is
+// looked up for it, and no COACH phrase is printed for it — a coach chose
+// nothing here. Change only together with that function.
+export const HOUSE_UID = "00000000-0000-0000-0000-000000000000";
+
+/** Which hill. 1 is ALL-STARS, the fives coaches build; 2 is LEGENDS, the
+ *  real champions (migration 0013, 2026-09-16). `throne.id` is the
+ *  discriminator; lineage and challenges carry it as `throne_id`. */
+export type ThroneId = 1 | 2;
+
 export type FiveEntry = { slot: string; pid: string; name?: string; lead?: boolean };
 export type Throne = {
   version: number;
@@ -34,9 +46,12 @@ export type Throne = {
   claimed_at: string;
   five: FiveEntry[];
   lead_player: string | null;
+  /** The champion's year on LEGENDS ('07 Spurs → 2007); null on ALL-STARS. */
+  season: number | null;
 };
 export type LineageEntry = {
   id: number;
+  throne_id: ThroneId;
   version: number;
   holder_uid: string;
   holder_handle: string;
@@ -46,9 +61,11 @@ export type LineageEntry = {
   ended_at: string;
   dethroned_by_handle: string;
   lead_player: string | null;
+  season: number | null;
 };
 export type Challenge = {
   id: number;
+  throne_id: ThroneId;
   challenger_handle: string;
   throne_version: number;
   result: "dethroned" | "defended";
@@ -87,9 +104,10 @@ export type SoloReign = {
   defenses: number;
   crowned_at: string;
   ended_at: string | null;
-  /** Which hill it was won on. `solo` is the user-built hill LEGENDS
-   *  replaced, and is the default for every row written before the split. */
-  mode: "solo" | "legends";
+  /** Always `solo` now: the user-built hill LEGENDS replaced. The LEGENDS
+   *  rows this table briefly held moved into `throne_lineage` (throne 2)
+   *  on 2026-09-16 — a champion's reign is lineage, not a solo record. */
+  mode: "solo";
 };
 /** One coach's best climb: what the ladder run was worth. */
 export type BestRun = {

@@ -8,9 +8,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Header from "@/components/Header";
 import {
-  APP_STORE_URL, RETIRED_HANDLE,
+  APP_STORE_URL, HOUSE_UID, RETIRED_HANDLE,
   type Challenge, type DailyRaw, type DailyRow, type LineageEntry, type Move,
-  type BestRun, type SoloReign, type Throne, type TopPlayer, type Venue, type WeekRow,
+  type BestRun, type SoloReign, type Throne, type ThroneId, type TopPlayer, type Venue, type WeekRow,
   type Profile,
   clockTime, defensesLabel, fiveLine, grouped, leadPlayer, longDate,
   handleNames, minutesAgo, mondayUTC, monthName, monthStartUTC, movement, ordinal, playerLabel,
@@ -31,10 +31,24 @@ const TABS = ["DAILY", "THE WEEK", "POST SEASON", "RECORDS"] as const;
 type Tab = (typeof TABS)[number];
 const POLL_MS = 60_000;
 
-type Board = {
+/** One hill: its King, the Kings before, and the series fought over it.
+ *  ALL-STARS and LEGENDS are the same shape (migration 0013 widened one
+ *  table rather than adding three), so everything below takes a Hill and
+ *  never asks which. */
+type Hill = {
+  id: ThroneId;
   throne: Throne | null;
   lineage: LineageEntry[];
   challenges: Challenge[];
+  /** The holder's coach, read live by uid — outlives every team rename. */
+  coach: string | null;
+};
+
+type Board = {
+  /** The fives coaches build. `throne` row 1. */
+  allStars: Hill;
+  /** The real champions — '07 Spurs, '86 Celtics. `throne` row 2. */
+  legends: Hill;
   daily: DailyRow[];
   week: WeekRow[];
   solo: SoloReign[];
@@ -51,10 +65,24 @@ type Board = {
       today's first post lands. */
   coach: { row: DailyRow; day: string; venue: Venue; topFinishes: number } | null;
   profiles: Record<string, Profile>;
-  /** The reigning King's coach, who outlives every team rename. */
-  throneCoach: string | null;
   fetchedAt: number;
 };
+
+// The three reads that make a hill, keyed on `throne.id`. Both hills share
+// `throne_lineage` and `challenges`, so **the filter is the hill**: without
+// `throne_id` the LEGENDS champions sit in the ALL-STARS lineage and the
+// ticker names the wrong King the moment a Legends series lands.
+const hillReads = (id: ThroneId) => [
+  rest<Throne[]>(
+    `throne?id=eq.${id}&select=version,holder_uid,holder_handle,team_name,defenses,claimed_at,five,lead_player,season`
+  ),
+  rest<LineageEntry[]>(
+    `throne_lineage?throne_id=eq.${id}&select=id,throne_id,version,holder_uid,holder_handle,team_name,defenses,claimed_at,ended_at,dethroned_by_handle,lead_player,season&order=version.desc&limit=50`
+  ),
+  rest<Challenge[]>(
+    `challenges?throne_id=eq.${id}&select=id,throne_id,challenger_handle,throne_version,result,applied,wins_you,wins_king,created_at&order=created_at.desc&limit=12`
+  ),
+] as const;
 
 export default function KothLive() {
   const [tab, setTab] = useState<Tab>("DAILY");
@@ -66,18 +94,11 @@ export default function KothLive() {
   const load = useCallback(async () => {
     try {
       const today = todayUTC();
-      const [throneRows, lineage, challenges, dailyRaw, weekRaw, solo, venues, winsRaw, monthRaw,
-             topPlayers, runs] =
+      const [throne1, lineage1, challenges1, throne2, lineage2, challenges2,
+             dailyRaw, weekRaw, solo, venues, winsRaw, monthRaw, topPlayers, runs] =
         await Promise.all([
-          rest<Throne[]>(
-            "throne?id=eq.1&select=version,holder_uid,holder_handle,team_name,defenses,claimed_at,five,lead_player"
-          ),
-          rest<LineageEntry[]>(
-            "throne_lineage?select=id,version,holder_uid,holder_handle,team_name,defenses,claimed_at,ended_at,dethroned_by_handle,lead_player&order=version.desc&limit=50"
-          ),
-          rest<Challenge[]>(
-            "challenges?select=id,challenger_handle,throne_version,result,applied,wins_you,wins_king,created_at&order=created_at.desc&limit=12"
-          ),
+          ...hillReads(1),
+          ...hillReads(2),
           // Winners first, then margin — the daily_board view computes both
           // so the ordering happens server-side (Dan, 2026-09-02).
           rest<DailyRaw[]>(
@@ -86,6 +107,8 @@ export default function KothLive() {
           rest<Omit<WeekRow, "rank" | "handle">[]>(
             `weekly_board?week=eq.${mondayUTC()}&select=uid,games,wins,margin&order=wins.desc,margin.desc,first_played.asc&limit=100`
           ),
+          // The retired user-built hill's reigns, for EARLIER HILL REIGNS only.
+          // Nothing LEGENDS lives here any more — its reigns are throne 2's lineage.
           rest<(SoloReign & { uid: string })[]>(
             "koth_solo?select=uid,team_name,defenses,crowned_at,ended_at,mode&order=defenses.desc,crowned_at.asc&limit=50"
           ),
@@ -119,7 +142,9 @@ export default function KothLive() {
         ...solo.map((r) => r.uid),
         ...winsRaw.map((r) => r.uid),
         ...runs.map((r) => r.uid),
-        ...(throneRows[0] ? [throneRows[0].holder_uid] : []),
+        // Both Kings' coaches. The house holds no profile, so a lookup for it
+        // is a wasted row.
+        ...[throne1[0], throne2[0]].flatMap((t) => (t && t.holder_uid !== HOUSE_UID ? [t.holder_uid] : [])),
       ]);
       const nameOf = (uid: string) => profiles[uid]?.handle ?? "COACH";
       const coachOf = (uid: string) => profiles[uid]?.coach ?? null;
@@ -145,11 +170,11 @@ export default function KothLive() {
 
       // Handles that arrive as snapshot strings with no uid beside them.
       const names = await handleNames([
-        ...challenges.map((c) => c.challenger_handle),
-        ...lineage.flatMap((l) => [l.holder_handle, l.dethroned_by_handle]),
+        ...[...challenges1, ...challenges2].map((c) => c.challenger_handle),
+        ...[...lineage1, ...lineage2].flatMap((l) => [l.holder_handle, l.dethroned_by_handle]),
         ...topPlayers.map((t) => t.coach_handle),
         ...runs.map((r) => r.coach_handle),
-        ...(throneRows[0] ? [throneRows[0].holder_handle] : []),
+        ...[throne1[0], throne2[0]].flatMap((t) => (t ? [t.holder_handle] : [])),
       ]);
 
       const todayVenue = venues.find((v) => v.day === today) ?? venueFallback(today);
@@ -183,10 +208,13 @@ export default function KothLive() {
         };
       }
 
+      const hill = (id: ThroneId, throne: Throne[], lineage: LineageEntry[], challenges: Challenge[]): Hill => ({
+        id, throne: throne[0] ?? null, lineage, challenges,
+        coach: throne[0] ? coachOf(throne[0].holder_uid) : null,
+      });
       setBoard({
-        throne: throneRows[0] ?? null,
-        lineage,
-        challenges,
+        allStars: hill(1, throne1, lineage1, challenges1),
+        legends: hill(2, throne2, lineage2, challenges2),
         daily,
         week,
         solo: solo.map((r) => ({ ...r, handle: nameOf(r.uid), coach: coachOf(r.uid) })),
@@ -199,7 +227,6 @@ export default function KothLive() {
         coach,
         profiles,
         names,
-        throneCoach: throneRows[0] ? coachOf(throneRows[0].holder_uid) : null,
         fetchedAt: Date.now(),
       });
       setFailed(false);
@@ -233,7 +260,20 @@ export default function KothLive() {
       <Ticker items={ticker} />
       <Header fixed={false} transparent />
       <div className="max-w-[1080px] mx-auto px-4 sm:px-6 pb-20">
-        {board?.throne && <KingStrip throne={board.throne} coach={board.throneCoach} />}
+        {/* Two thrones, equal billing (Dan, 2026-09-16). Neither is "the"
+            King strip: the same card twice, side by side. A hill with no
+            King — both are seeded, so this should not happen — leaves the
+            other full-width rather than a hole. */}
+        {board && (board.allStars.throne || board.legends.throne) && (
+          <div className="koth-thrones">
+            {board.allStars.throne && (
+              <KingStrip hill={board.allStars} kicker="KING OF THE HILL · ALL-STARS" cta="CHALLENGE THE KING →" />
+            )}
+            {board.legends.throne && (
+              <KingStrip hill={board.legends} kicker="KING OF THE HILL · LEGENDS" cta="CHALLENGE THE CHAMPION →" />
+            )}
+          </div>
+        )}
 
         <div className="koth-mast">
           <div>
@@ -290,20 +330,29 @@ export default function KothLive() {
             <div className="koth-card">
               <div className="h mono">LONGEST REIGNS</div>
               {board ? (
-                longestReigns(board).map((r, i) => (
-                  <div key={i} className="koth-line mono">
-                    <span>
-                      {r.team_name}
-                      {r.reigning && <span className="gold"> · REIGNING</span>}
-                    </span>
-                    <b className={i < 2 ? "amber" : ""}>{r.defenses}</b>
-                  </div>
-                ))
+                // Both hills, three each: the sidebar mirrors the pair above it.
+                ([["ALL-STARS", board.allStars], ["LEGENDS", board.legends]] as const).map(([label, hill]) => {
+                  const rows = longestReigns(hill, 3);
+                  return (
+                    <div key={label}>
+                      <div className="mono koth-subhead">{label}</div>
+                      {rows.length === 0 && (
+                        <div className="mono faint" style={{ fontSize: 12 }}>No reign on record yet.</div>
+                      )}
+                      {rows.map((r, i) => (
+                        <div key={i} className="koth-line mono">
+                          <span>
+                            {r.team_name}
+                            {r.reigning && <span className="gold"> · REIGNING</span>}
+                          </span>
+                          <b className={i < 1 ? "amber" : ""}>{r.defenses}</b>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })
               ) : (
                 <div className="mono faint" style={{ fontSize: 12 }}>…</div>
-              )}
-              {board && longestReigns(board).length === 0 && (
-                <div className="mono faint" style={{ fontSize: 12 }}>No reign on record yet.</div>
               )}
             </div>
           </aside>
@@ -344,19 +393,26 @@ function CoachName({ coach, handle }: { coach: string | null; handle: string }) 
   return <b>{coach ?? handle}</b>;
 }
 
-function KingStrip({ throne, coach }: { throne: Throne; coach: string | null }) {
+function KingStrip({ hill, kicker, cta }: { hill: Hill; kicker: string; cta: string }) {
+  const throne = hill.throne!;
+  const coach = hill.coach;
   const lead = leadPlayer(throne);
   // A king who deleted their account has no coach to name. The line below
   // falls back to the handle when no coach name is set, which reads as a
   // name for a live player — but for a retired one it would print the
   // placeholder twice ("COACH RETIRED COACH"), so the phrase is dropped
   // instead. The reign itself stays: the five is still there to beat.
-  const retired = throne.holder_handle === RETIRED_HANDLE;
+  // The house is the same case from the other side: nobody chose its five,
+  // so "COACH THE GATEKEEPERS" is a sentence with no subject.
+  const nobody = throne.holder_handle === RETIRED_HANDLE || throne.holder_uid === HOUSE_UID;
+  // On LEGENDS the coach chose the champion and coaches nobody — the '07
+  // Spurs are not coached by Captain Dan, they are held by him.
+  const verb = hill.id === 2 ? "HELD BY" : "COACH";
   return (
     <div className="koth-king">
       <div className="crown" aria-hidden>♛</div>
       <div className="text">
-        <div className="kicker mono">CURRENT KING OF THE HILL</div>
+        <div className="kicker mono">{kicker}</div>
         <div className="name display">{throne.team_name}</div>
         {/* One span per phrase, each unbreakable: the line may wrap between
             facts but never inside one, so "CROWNED SEP 1" cannot split.
@@ -364,8 +420,8 @@ function KingStrip({ throne, coach }: { throne: Throne; coach: string | null }) 
             tracked-out caps, and a mixed-case name sits in it like a typo. */}
         <div className="meta mono">
           {lead && <span>LED BY <b>{lead.name} · {lead.season}</b></span>}
-          {!retired &&
-            <span>COACH <b className="who">{(coach ?? throne.holder_handle).toUpperCase()}</b></span>}
+          {!nobody &&
+            <span>{verb} <b className="who">{(coach ?? throne.holder_handle).toUpperCase()}</b></span>}
           <span>CROWNED {shortDate(throne.claimed_at)}</span>
         </div>
       </div>
@@ -373,7 +429,7 @@ function KingStrip({ throne, coach }: { throne: Throne; coach: string | null }) 
         <div className="n mono">{throne.defenses}</div>
         <div className="l mono">DEFENSES</div>
       </div>
-      <a className="koth-cta mono" href={APP_STORE_URL}>CHALLENGE THE KING →</a>
+      <a className="koth-cta mono" href={APP_STORE_URL}>{cta}</a>
     </div>
   );
 }
@@ -486,11 +542,12 @@ function WeekTab({ board }: { board: Board | null }) {
 
 function RecordsTab({ board }: { board: Board | null }) {
   if (!board) return <p className="koth-empty mono">Loading…</p>;
-  const reigns = longestReigns(board, 10);
-  // Split on the hill it was won on. A row written before the modes split
-  // carries no mode at all and reads as the legacy hill, which is what it is.
-  const legendReigns = board.solo.filter((r) => r.mode === "legends");
-  const legacyReigns = board.solo.filter((r) => r.mode !== "legends");
+  const reigns = longestReigns(board.allStars, 10);
+  // The champions' reigns are throne 2's lineage plus whoever holds it now —
+  // the same derivation as ALL-STARS, on the other hill.
+  const championReigns = longestReigns(board.legends, 10);
+  // Only `solo` rows live here now: the user-built hill LEGENDS replaced.
+  const legacyReigns = board.solo;
   return (
     <section>
       <div className="koth-section-h mono">
@@ -531,24 +588,26 @@ function RecordsTab({ board }: { board: Board | null }) {
         </tbody></table>
       )}
 
-      {/* **Titled for what it measures.** The player picks each challenger
-          and coaches it, so a defence is recorded when the *player* loses:
-          this ranks which champion turned challengers back, not who coached
-          well. Saying so costs a line and stops the board claiming something
-          it cannot support. See `passdown/legends-passdown.md` §3 in the app
-          repo. */}
+      {/* **Titled for what it measures.** LEGENDS is a shared hill now
+          (2026-09-16): a defence is a challenger — any coach — turned back by
+          the champion holding it, and nobody coaches the champion. So this
+          ranks champions by resistance, and the coach's name on a reign says
+          who put that champion there, not who coached well. The note says so,
+          because the old one ("a defence means the player lost") was true of
+          the private hill and is false of this one. */}
       <div className="koth-section-h mono" style={{ marginTop: 28 }}>LONGEST CHAMPION REIGNS</div>
       <p className="koth-empty mono" style={{ marginTop: -4 }}>
-        Champions that proved hardest to dethrone.
+        Champions that proved hardest to dethrone. A defence is a challenger turned back by the
+        champion on the hill; the coach on a reign is who put that champion there.
       </p>
-      {legendReigns.length === 0 ? (
-        <p className="koth-empty mono">No champion has been dethroned yet.</p>
+      {championReigns.length === 0 ? (
+        <p className="koth-empty mono">No champion has held the hill yet.</p>
       ) : (
         <table><tbody>
-          {legendReigns.slice(0, 10).map((r, i) => (
+          {championReigns.map((r, i) => (
             <tr key={i}>
               <td className={`rk mono ${i < 3 ? "top" : ""}`}>{i + 1}</td>
-              <td className="display"><b>{r.team_name}</b></td>
+              <td className="display"><b>{r.team_name}</b>{r.reigning && <span className="mono gold" style={{ fontSize: 10, marginLeft: 8 }}>· REIGNING</span>}</td>
               <td className="mono num amber">{defensesLabel(r.defenses)}</td>
             </tr>
           ))}
@@ -589,21 +648,29 @@ function RecordsTab({ board }: { board: Board | null }) {
         </tbody></table>
       )}
 
-      <div className="koth-section-h mono" style={{ marginTop: 28 }}>THE LINEAGE</div>
-      {board.lineage.length === 0 ? (
-        <p className="koth-empty mono">No King has fallen yet. The Gatekeepers await.</p>
-      ) : (
-        <table><tbody>
-          {board.lineage.map((r) => (
-            <tr key={r.id}>
-              <td className="display"><b>{r.team_name}</b></td>
-              <td className="mono num amber">{defensesLabel(r.defenses)}</td>
-              <td className="mono num dust hide-sm" style={{ fontSize: 11 }}>{shortDate(r.claimed_at)} – {shortDate(r.ended_at)}</td>
-              <td className="mono num faint" style={{ fontSize: 11 }}>FELL TO {board.names[r.dethroned_by_handle] ?? r.dethroned_by_handle}</td>
-            </tr>
-          ))}
-        </tbody></table>
-      )}
+      {/* One lineage per hill, the same table. The house's seed row on LEGENDS
+          ('70 Knicks, THE GATEKEEPERS) prints like any other: a team, its
+          defences, and whom it fell to — nothing here names a holder. */}
+      {([["ALL-STARS", board.allStars, "No King has fallen yet. The Gatekeepers await."],
+         ["LEGENDS", board.legends, "No champion has fallen yet."]] as const).map(([label, hill, empty]) => (
+        <div key={label}>
+          <div className="koth-section-h mono" style={{ marginTop: 28 }}>THE LINEAGE · {label}</div>
+          {hill.lineage.length === 0 ? (
+            <p className="koth-empty mono">{empty}</p>
+          ) : (
+            <table><tbody>
+              {hill.lineage.map((r) => (
+                <tr key={r.id}>
+                  <td className="display"><b>{r.team_name}</b></td>
+                  <td className="mono num amber">{defensesLabel(r.defenses)}</td>
+                  <td className="mono num dust hide-sm" style={{ fontSize: 11 }}>{shortDate(r.claimed_at)} – {shortDate(r.ended_at)}</td>
+                  <td className="mono num faint" style={{ fontSize: 11 }}>FELL TO {board.names[r.dethroned_by_handle] ?? r.dethroned_by_handle}</td>
+                </tr>
+              ))}
+            </tbody></table>
+          )}
+        </div>
+      ))}
 
       <div className="koth-section-h mono" style={{ marginTop: 28 }}>MOST DAILY WINS</div>
       {board.mostWins.length === 0 ? (
@@ -669,14 +736,14 @@ function ClimbTab({ board }: { board: Board | null }) {
 
 // ---- Derivations
 
-function longestReigns(board: Board, limit = 5) {
-  const rows = board.lineage.map((r) => ({
+function longestReigns(hill: Hill, limit = 5) {
+  const rows = hill.lineage.map((r) => ({
     team_name: r.team_name, defenses: r.defenses, reigning: false,
   }));
-  if (board.throne) {
+  if (hill.throne) {
     rows.push({
-      team_name: board.throne.team_name,
-      defenses: board.throne.defenses, reigning: true,
+      team_name: hill.throne.team_name,
+      defenses: hill.throne.defenses, reigning: true,
     });
   }
   return rows.sort((a, b) => b.defenses - a.defenses).slice(0, limit);
@@ -685,20 +752,38 @@ function longestReigns(board: Board, limit = 5) {
 /** ~10 ticker items as [lead, body, tail] triples. */
 function tickerItems(board: Board): string[][] {
   const items: string[][] = [];
-  const kingAt = (version: number) =>
-    board.throne?.version === version
-      ? board.throne.team_name
-      : board.lineage.find((l) => l.version === version)?.team_name ?? "THE KING";
+  // A version number only means something on its own hill — both count from
+  // 1 — so the King a challenge was fought against is looked up on the hill
+  // the challenge row says it was on. That is what `throne_id` is for.
+  const kingAt = (hill: Hill, version: number) =>
+    hill.throne?.version === version
+      ? hill.throne.team_name
+      : hill.lineage.find((l) => l.version === version)?.team_name ?? "THE KING";
+  const hillOf = (id: ThroneId) => (id === 2 ? board.legends : board.allStars);
+  const who = (handle: string) => board.names[handle] ?? handle;
 
-  for (const c of board.challenges.filter((c) => c.applied).slice(0, 5)) {
+  // Both hills' latest series, most recent first across the two.
+  const recent = [...board.allStars.challenges, ...board.legends.challenges]
+    .filter((c) => c.applied)
+    .sort((a, b) => b.created_at.localeCompare(a.created_at))
+    .slice(0, 5);
+  for (const c of recent) {
+    const hill = hillOf(c.throne_id);
     if (c.result === "defended") {
-      items.push([kingAt(c.throne_version), `held off ${board.names[c.challenger_handle] ?? c.challenger_handle}`, `${c.wins_king}–${c.wins_you}`]);
+      items.push([kingAt(hill, c.throne_version), `held off ${who(c.challenger_handle)}`, `${c.wins_king}–${c.wins_you}`]);
+    } else if (c.throne_id === 2) {
+      // The coach took the champions' hill with a champion, not a five they
+      // built: the champion's name is the news, so it leads the line. The
+      // dethrone bumped the version, so the new King sits at version + 1.
+      items.push([kingAt(hill, c.throne_version + 1), `took the Legends hill · ${who(c.challenger_handle)}`, `${c.wins_you}–${c.wins_king}`]);
     } else {
-      items.push([board.names[c.challenger_handle] ?? c.challenger_handle, "took the throne", `${c.wins_you}–${c.wins_king}`]);
+      items.push([who(c.challenger_handle), "took the throne", `${c.wins_you}–${c.wins_king}`]);
     }
   }
-  if (board.throne && board.throne.defenses > 0) {
-    items.unshift([board.throne.team_name, "defended the throne", `${ordinal(board.throne.defenses)} STRAIGHT`]);
+  for (const hill of [board.legends, board.allStars]) {
+    if (hill.throne && hill.throne.defenses > 0) {
+      items.unshift([hill.throne.team_name, hill.id === 2 ? "defended the hill" : "defended the throne", `${ordinal(hill.throne.defenses)} STRAIGHT`]);
+    }
   }
   const leader = board.daily[0];
   if (leader) items.push([leader.coach ?? leader.handle, "tops today's board", scoreline(leader.score, leader.score_opp)]);
