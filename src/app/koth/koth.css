@@ -150,8 +150,8 @@
 }
 .koth-hall-kicker {
   text-align: center;
-  font-size: 10px;
-  letter-spacing: 0.3em;
+  font-size: 30px;
+  letter-spacing: 0.12em;
   color: var(--gold);
   font-weight: 700;
   position: relative;
@@ -169,6 +169,7 @@
   text-align: center;
   padding: 6px 22px 0;
   min-width: 0;
+  align-self: stretch;
 }
 /* The dividers: a hairline that fades at both ends, between columns only. */
 .koth-honoree + .koth-honoree {
@@ -176,7 +177,7 @@
   border-image: linear-gradient(180deg, transparent, rgba(255, 255, 255, 0.12) 30%, rgba(255, 255, 255, 0.12) 70%, transparent) 1;
 }
 .koth-honoree .glyph { font-size: 22px; line-height: 1; color: var(--accent); }
-.koth-honoree .label { font-size: 10px; letter-spacing: 0.28em; color: var(--accent); font-weight: 700; margin-top: 8px; }
+.koth-honoree .label { font-size: 20px; letter-spacing: 0.18em; color: var(--accent); font-weight: 700; margin-top: 8px; white-space: nowrap; }
 .koth-honoree .name {
   font-size: 30px;
   font-weight: 900;
@@ -191,7 +192,10 @@
 .koth-honoree .meta { font-size: 10px; letter-spacing: 0.16em; color: var(--faint); margin-top: 6px; font-weight: 700; }
 .koth-honoree .hero { font-size: 48px; font-weight: 900; color: var(--accent); line-height: 1; margin-top: 14px; }
 .koth-honoree .hero-l { font-size: 9px; letter-spacing: 0.28em; color: var(--faint); font-weight: 700; margin-top: 6px; }
-.koth-honoree .koth-cta { margin-top: 16px; width: 100%; }
+.koth-honoree .koth-cta { margin-top: auto; width: 100%; }
+/* Everything above the button keeps its rhythm; the gap to the button is
+   whatever the row leaves, at least this. */
+.koth-honoree .hero-l { margin-bottom: 16px; }
 
 /* One CTA, three colourways. Filled for the thrones; the coach's is an
    outline, because THE WEEK ↓ is a look, not a challenge. */
@@ -504,7 +508,9 @@
      colour on the border; the coach becomes a full-width strip beneath. */
   .koth-hall { padding: 18px 14px 16px; background: none; border: 0; backdrop-filter: none; -webkit-backdrop-filter: none; }
   .koth-hall::before { display: none; }
+  .koth-hall-kicker { letter-spacing: 0.04em; }
   .koth-hall-grid { grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px; }
+  .koth-honoree .label { letter-spacing: 0.1em; }
   .koth-honoree {
     padding: 18px 12px 16px;
     border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent);
@@ -516,7 +522,9 @@
   .koth-honoree .lead { font-size: 12px; }
   .koth-honoree .meta { display: none; }
   .koth-honoree .hero { font-size: 40px; margin-top: 10px; }
-  .koth-honoree .koth-cta { padding: 13px 14px; font-size: 11px; margin-top: 14px; }
+  /* margin-top stays `auto`: it is what pins the button to the card's foot
+     so the pair's buttons line up whatever the names above them do. */
+  .koth-honoree .koth-cta { padding: 13px 14px; font-size: 11px; }
   .koth-honoree.is-coach {
     grid-column: 1 / -1;
     flex-direction: row;
@@ -527,7 +535,7 @@
   }
   .koth-honoree.is-coach .glyph { display: none; }
   .koth-honoree.is-coach .coach-text { flex: 1; min-width: 0; }
-  .koth-honoree.is-coach .label { margin-top: 0; }
+  .koth-honoree.is-coach .label { margin-top: 0; font-size: 10px; letter-spacing: 0.28em; }
   .koth-honoree.is-coach .name { font-size: 22px; margin-top: 4px; }
   .koth-honoree.is-coach .lead { margin-top: 4px; }
   .koth-honoree.is-coach .meta { display: block; margin-top: 2px; }

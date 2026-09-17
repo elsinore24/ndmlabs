@@ -291,10 +291,10 @@ export default function KothLive() {
             colour is how a reader tells them apart without reading. */}
         {board && (
           <section className="koth-hall" aria-label="Who's on top right now">
-            <div className="koth-hall-kicker mono">★ WHO&apos;S ON TOP RIGHT NOW ★</div>
+            <div className="koth-hall-kicker mono">★ WHO&apos;S ON TOP ★</div>
             <div className="koth-hall-grid">
-              {board.legends.throne && <ThroneCard hill={board.legends} label="LEGENDS THRONE" kind="is-legends" />}
-              {board.allStars.throne && <ThroneCard hill={board.allStars} label="ALL-STARS THRONE" kind="is-allstars" />}
+              {board.legends.throne && <ThroneCard hill={board.legends} label="LEGENDS" kind="is-legends" />}
+              {board.allStars.throne && <ThroneCard hill={board.allStars} label="ALL-STARS" kind="is-allstars" />}
               <CoachOfWeekCard standing={board.weekTop3[0] ?? null} name={board.weekTop3[0] ? coachName(board.weekTop3[0].uid) : null} onWeek={goToWeek} />
             </div>
           </section>
