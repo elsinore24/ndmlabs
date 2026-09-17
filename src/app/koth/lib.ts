@@ -259,6 +259,69 @@ export function leadPlayer(t: Throne): { name: string; season: string } | null {
   return { name: entry.name, season: seasonOf(entry.pid) };
 }
 
+// ---- Coach of the Week
+
+/** One row of this week's daily board, as `daily_board` returns it. */
+export type WeekDayRow = {
+  uid: string; day: string; score: number; score_opp: number;
+  won: boolean; margin: number; created_at: string;
+};
+
+export type CoachOfWeek = {
+  uid: string;
+  /** Daily finishes at #3 or better this week — the ranking stat. */
+  top3: number;
+  firsts: number;
+  margin: number;
+  /** When the last of those top-3 finishes was posted. */
+  reachedAt: string;
+};
+
+/** Per-coach standing for this week, best first.
+ *
+ *  The rule (Dan, 2026-09-16): most top-3 daily finishes in the fixed
+ *  Mon–Sun week, midnight UTC — the same window as THE WEEK tab and the
+ *  venue flip, so the hall and the tab never disagree.
+ *
+ *  Ranks within a day are the board's own order — `won desc, margin desc,
+ *  created_at asc`, which is how the server sorts `daily_board` — so a #2
+ *  here is a #2 on the DAILY tab. The rows must arrive in that order within
+ *  each day; this function does not re-sort them, it counts them.
+ *
+ *  The tie-break chain ends in `uid`, so the order is total: the same rows
+ *  always name the same coach, however many times the page refreshes. */
+export function coachOfTheWeek(rows: WeekDayRow[]): CoachOfWeek[] {
+  const byDay = new Map<string, WeekDayRow[]>();
+  for (const r of rows) (byDay.get(r.day) ?? byDay.set(r.day, []).get(r.day)!).push(r);
+
+  const stats = new Map<string, CoachOfWeek>();
+  const at = (uid: string) =>
+    stats.get(uid) ?? stats.set(uid, { uid, top3: 0, firsts: 0, margin: 0, reachedAt: "" }).get(uid)!;
+
+  for (const dayRows of byDay.values()) {
+    dayRows.forEach((r, i) => {
+      const s = at(r.uid);
+      s.margin += r.margin;
+      if (i === 0) s.firsts += 1;
+      if (i < 3) {
+        s.top3 += 1;
+        if (!s.reachedAt || r.created_at > s.reachedAt) s.reachedAt = r.created_at;
+      }
+    });
+  }
+  return [...stats.values()].sort((a, b) =>
+    b.top3 - a.top3 || b.firsts - a.firsts || b.margin - a.margin ||
+    a.reachedAt.localeCompare(b.reachedAt) || a.uid.localeCompare(b.uid));
+}
+
+/** `SEP 14 – SEP 20`: the fixed Mon–Sun week that holds `dayKey`. */
+export function weekRange(dayKey: string): string {
+  const monday = new Date(`${mondayUTC()}T12:00:00Z`);
+  const sunday = new Date(monday); sunday.setUTCDate(monday.getUTCDate() + 6);
+  void dayKey;
+  return `${shortDate(monday.toISOString())} – ${shortDate(sunday.toISOString())}`;
+}
+
 // ---- Movement: diffed against the previous poll's ordering, kept per day
 // in localStorage. NEW when the handle was not in the previous set; no
 // arrows at all on the first look (there is nothing to have moved from).

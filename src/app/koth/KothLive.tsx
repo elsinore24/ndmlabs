@@ -9,13 +9,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Header from "@/components/Header";
 import {
   APP_STORE_URL, HOUSE_UID, RETIRED_HANDLE,
-  type Challenge, type DailyRaw, type DailyRow, type LineageEntry, type Move,
-  type BestRun, type SoloReign, type Throne, type ThroneId, type TopPlayer, type Venue, type WeekRow,
+  type Challenge, type CoachOfWeek, type DailyRaw, type DailyRow, type LineageEntry, type Move,
+  type BestRun, type SoloReign, type Throne, type ThroneId, type TopPlayer, type Venue, type WeekDayRow, type WeekRow,
   type Profile,
-  clockTime, defensesLabel, fiveLine, grouped, leadPlayer, longDate,
+  clockTime, coachOfTheWeek, defensesLabel, grouped, leadPlayer, longDate,
   handleNames, minutesAgo, mondayUTC, monthName, monthStartUTC, movement, ordinal, playerLabel,
   profileMap, rest, scoreline, statLine,
-  shortDate, signed, todayUTC, venueChip, venueFallback, venueKnown, venueName,
+  shortDate, signed, todayUTC, venueChip, venueFallback, venueKnown, weekRange,
 } from "./lib";
 import "./koth.css";
 
@@ -65,6 +65,8 @@ type Board = {
       today's first post lands. */
   coach: { row: DailyRow; day: string; venue: Venue; topFinishes: number } | null;
   profiles: Record<string, Profile>;
+  /** This week's standings by top-3 finishes, best first (lib.coachOfTheWeek). */
+  weekTop3: CoachOfWeek[];
   fetchedAt: number;
 };
 
@@ -95,7 +97,7 @@ export default function KothLive() {
     try {
       const today = todayUTC();
       const [throne1, lineage1, challenges1, throne2, lineage2, challenges2,
-             dailyRaw, weekRaw, solo, venues, winsRaw, monthRaw, topPlayers, runs] =
+             dailyRaw, weekRaw, solo, venues, winsRaw, monthRaw, topPlayers, runs, weekDays] =
         await Promise.all([
           ...hillReads(1),
           ...hillReads(2),
@@ -131,6 +133,12 @@ export default function KothLive() {
           rest<BestRun[]>(
             "best_runs?select=uid,run_id,coach_handle,score,rungs_cleared,summit_tier,top_rung,clean,ran_the_table,finished_at&order=score.desc&limit=100"
           ),
+          // The week's boards in board order, so each day's first three rows
+          // are that day's top-3 — COACH OF THE WEEK counts those. Its own
+          // read rather than the month's, because a week can straddle a month.
+          rest<WeekDayRow[]>(
+            `daily_board?day=gte.${mondayUTC()}&select=uid,day,score,score_opp,won,margin,created_at&order=day.desc,won.desc,margin.desc,created_at.asc&limit=1000`
+          ),
         ]);
 
       // One profile read covers every name on the page, the throne's holder
@@ -142,6 +150,7 @@ export default function KothLive() {
         ...solo.map((r) => r.uid),
         ...winsRaw.map((r) => r.uid),
         ...runs.map((r) => r.uid),
+        ...weekDays.map((r) => r.uid),
         // Both Kings' coaches. The house holds no profile, so a lookup for it
         // is a wasted row.
         ...[throne1[0], throne2[0]].flatMap((t) => (t && t.holder_uid !== HOUSE_UID ? [t.holder_uid] : [])),
@@ -227,6 +236,7 @@ export default function KothLive() {
         coach,
         profiles,
         names,
+        weekTop3: coachOfTheWeek(weekDays),
         fetchedAt: Date.now(),
       });
       setFailed(false);
@@ -254,25 +264,40 @@ export default function KothLive() {
   }, [load]);
 
   const ticker = useMemo(() => (board ? tickerItems(board) : []), [board]);
+  const tabsRef = useRef<HTMLDivElement | null>(null);
+  const goToWeek = () => { setTab("THE WEEK"); tabsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }); };
+  const [getBar, setGetBar] = useState(false);
+  // The bar is a session thing: dismissed stays dismissed until the tab
+  // closes, a new tab gets it back. Storage can throw (private mode), and a
+  // thrown read must not take the page with it.
+  useEffect(() => {
+    try { setGetBar(sessionStorage.getItem("koth.getbar") !== "dismissed"); } catch { setGetBar(true); }
+  }, []);
+  const dismissGetBar = () => {
+    setGetBar(false);
+    try { sessionStorage.setItem("koth.getbar", "dismissed"); } catch { /* fine */ }
+  };
+
+  const today = todayUTC();
+  const coachName = (uid: string) => board?.profiles[uid]?.coach ?? board?.profiles[uid]?.handle ?? "COACH";
 
   return (
-    <div className="koth">
+    <div className={`koth ${getBar ? "has-getbar" : ""}`}>
       <Ticker items={ticker} />
       <Header fixed={false} transparent />
-      <div className="max-w-[1080px] mx-auto px-4 sm:px-6 pb-20">
-        {/* Two thrones, equal billing (Dan, 2026-09-16). Neither is "the"
-            King strip: the same card twice, side by side. A hill with no
-            King — both are seeded, so this should not happen — leaves the
-            other full-width rather than a hole. */}
-        {board && (board.allStars.throne || board.legends.throne) && (
-          <div className="koth-thrones">
-            {board.allStars.throne && (
-              <KingStrip hill={board.allStars} kicker="KING OF THE HILL · ALL-STARS" cta="CHALLENGE THE KING →" />
-            )}
-            {board.legends.throne && (
-              <KingStrip hill={board.legends} kicker="KING OF THE HILL · LEGENDS" cta="CHALLENGE THE CHAMPION →" />
-            )}
-          </div>
+      <div className="max-w-[1180px] mx-auto px-4 sm:px-6 pb-20">
+        {/* The Hall of Champions: three honorees at equal weight (site redesign
+            passdown §3). LEGENDS gold, ALL-STARS violet, the coach teal — the
+            colour is how a reader tells them apart without reading. */}
+        {board && (
+          <section className="koth-hall" aria-label="Who's on top right now">
+            <div className="koth-hall-kicker mono">★ WHO&apos;S ON TOP RIGHT NOW ★</div>
+            <div className="koth-hall-grid">
+              {board.legends.throne && <ThroneCard hill={board.legends} label="LEGENDS THRONE" kind="is-legends" />}
+              {board.allStars.throne && <ThroneCard hill={board.allStars} label="ALL-STARS THRONE" kind="is-allstars" />}
+              <CoachOfWeekCard standing={board.weekTop3[0] ?? null} name={board.weekTop3[0] ? coachName(board.weekTop3[0].uid) : null} onWeek={goToWeek} />
+            </div>
+          </section>
         )}
 
         <div className="koth-mast">
@@ -287,8 +312,14 @@ export default function KothLive() {
             LIVE · {board ? minutesAgo(board.fetchedAt) : "CONNECTING"}
           </div>
         </div>
+        {/* On a phone LIVE and the venue share a row under the title (CSS
+            shows this row and hides the one above only there). */}
+        <div className="koth-mast-row mono">
+          <span className="koth-live"><span className="dot" />LIVE · {board ? minutesAgo(board.fetchedAt) : "CONNECTING"}</span>
+          {board && venueKnown(board.today) && <span className="koth-venue">{venueChip(board.today)}</span>}
+        </div>
 
-        <div className="koth-tabs mono" role="tablist">
+        <div className="koth-tabs mono" role="tablist" ref={tabsRef} id="board">
           {TABS.map((t) => (
             <button key={t} role="tab" aria-selected={tab === t}
               className={`koth-tab ${tab === t ? "on" : ""}`} onClick={() => setTab(t)}>
@@ -303,13 +334,13 @@ export default function KothLive() {
 
         <div className="koth-grid">
           <div>
-            {tab === "DAILY" && <DailyTab board={board} />}
+            {tab === "DAILY" && <Feed board={board} today={today} />}
             {tab === "THE WEEK" && <WeekTab board={board} />}
             {tab === "RECORDS" && <RecordsTab board={board} />}
             {tab === "POST SEASON" && <ClimbTab board={board} />}
           </div>
-          <aside className="side">
-            {board?.coach && <CoachOfTheDayCard {...board.coach} today={todayUTC()} />}
+          <aside className="side koth-rail" id="rail">
+            <div className="koth-more mono" aria-hidden>MORE</div>
             <div className="koth-card">
               <div className="h mono">TOMORROW</div>
               {board ? (
@@ -330,29 +361,45 @@ export default function KothLive() {
             <div className="koth-card">
               <div className="h mono">LONGEST REIGNS</div>
               {board ? (
-                // Both hills, three each: the sidebar mirrors the pair above it.
-                ([["ALL-STARS", board.allStars], ["LEGENDS", board.legends]] as const).map(([label, hill]) => {
+                // Both ladders, each in its hill's colour — the same rule as
+                // the hall, so a reader who learned it there reads it here.
+                ([["LEGENDS", board.legends, "is-legends"], ["ALL-STARS", board.allStars, "is-allstars"]] as const).map(([label, hill, kind]) => {
                   const rows = longestReigns(hill, 3);
-                  return (
-                    <div key={label}>
-                      <div className="mono koth-subhead">{label}</div>
-                      {rows.length === 0 && (
-                        <div className="mono faint" style={{ fontSize: 12 }}>No reign on record yet.</div>
-                      )}
-                      {rows.map((r, i) => (
-                        <div key={i} className="koth-line mono">
-                          <span>
-                            {r.team_name}
-                            {r.reigning && <span className="gold"> · REIGNING</span>}
-                          </span>
-                          <b className={i < 1 ? "amber" : ""}>{r.defenses}</b>
-                        </div>
-                      ))}
+                  return rows.length === 0 ? (
+                    <div key={label} className={`koth-line mono ${kind}`}><span><span className="dot" /><span className="hill">{label}</span>no reign yet</span></div>
+                  ) : rows.map((r, i) => (
+                    <div key={`${label}${i}`} className={`koth-line mono ${kind}`}>
+                      <span>
+                        <span className="dot" /><span className="hill">{label} ·</span> {r.team_name}
+                        {r.reigning && <span className="faint"> · REIGNING</span>}
+                      </span>
+                      <b>{r.defenses}</b>
                     </div>
-                  );
+                  ));
                 })
               ) : (
                 <div className="mono faint" style={{ fontSize: 12 }}>…</div>
+              )}
+            </div>
+
+            <div className="koth-card">
+              <div className="h mono">THIS WEEK&apos;S LEADERS</div>
+              {board ? (
+                board.weekTop3.length === 0 ? (
+                  <div className="mono faint" style={{ fontSize: 12 }}>No top-3 finish yet this week.</div>
+                ) : (
+                  board.weekTop3.slice(0, 3).map((s) => (
+                    <div key={s.uid} className="koth-line mono">
+                      <span>{coachName(s.uid)}</span>
+                      <b><span className="teal">{s.top3}</span> top-3</b>
+                    </div>
+                  ))
+                )
+              ) : (
+                <div className="mono faint" style={{ fontSize: 12 }}>…</div>
+              )}
+              {board && board.weekTop3.length > 0 && (
+                <button className="koth-linkish mono" onClick={goToWeek}>THE WEEK ↓</button>
               )}
             </div>
           </aside>
@@ -362,6 +409,20 @@ export default function KothLive() {
           Scores are player-reported for now · names and seasons shown as text only
         </div>
       </div>
+
+      {/* Mobile only, by CSS: a phone is one tap from installing, and that is
+          the page's highest-value action (passdown §7). */}
+      {getBar && (
+        <div className="koth-getbar" role="complementary" aria-label="Get the app">
+          <img className="icon" src="/coty-icon.png" alt="" width={44} height={44} />
+          <div className="t">
+            <b>All-Time Five</b>
+            <span>Build a five. Take the throne.</span>
+          </div>
+          <a className="get mono" href={APP_STORE_URL}>GET</a>
+          <button className="x" onClick={dismissGetBar} aria-label="Dismiss">×</button>
+        </div>
+      )}
     </div>
   );
 }
@@ -393,114 +454,122 @@ function CoachName({ coach, handle }: { coach: string | null; handle: string }) 
   return <b>{coach ?? handle}</b>;
 }
 
-function KingStrip({ hill, kicker, cta }: { hill: Hill; kicker: string; cta: string }) {
+/** One throne in the hall. Takes a Hill, so the two hills are one component. */
+function ThroneCard({ hill, label, kind }: { hill: Hill; label: string; kind: "is-legends" | "is-allstars" }) {
   const throne = hill.throne!;
-  const coach = hill.coach;
   const lead = leadPlayer(throne);
-  // A king who deleted their account has no coach to name. The line below
-  // falls back to the handle when no coach name is set, which reads as a
-  // name for a live player — but for a retired one it would print the
-  // placeholder twice ("COACH RETIRED COACH"), so the phrase is dropped
-  // instead. The reign itself stays: the five is still there to beat.
-  // The house is the same case from the other side: nobody chose its five,
-  // so "COACH THE GATEKEEPERS" is a sentence with no subject.
+  // A retired holder has no coach to name, and neither does the house that
+  // seeds a hill — "COACH THE GATEKEEPERS" is a sentence with no subject.
   const nobody = throne.holder_handle === RETIRED_HANDLE || throne.holder_uid === HOUSE_UID;
-  // COACH on both hills (Dan, 2026-09-16, over HELD BY for LEGENDS): one
-  // word for the person behind a King, whichever hill it stands on.
-  const verb = "COACH";
+  const coach = (hill.coach ?? throne.holder_handle).toUpperCase();
   return (
-    <div className="koth-king">
-      <div className="crown" aria-hidden>♛</div>
-      <div className="text">
-        <div className="kicker mono">{kicker}</div>
-        <div className="name display">{throne.team_name}</div>
-        {/* One span per phrase, each unbreakable: the line may wrap between
-            facts but never inside one, so "CROWNED SEP 1" cannot split.
-            The coach is uppercased here and only here — this line is
-            tracked-out caps, and a mixed-case name sits in it like a typo. */}
-        <div className="meta mono">
-          {lead && <span>LED BY <b>{lead.name} · {lead.season}</b></span>}
-          {!nobody &&
-            <span>{verb} <b className="who">{(coach ?? throne.holder_handle).toUpperCase()}</b></span>}
-          <span>CROWNED {shortDate(throne.claimed_at)}</span>
-        </div>
+    <div className={`koth-honoree ${kind}`}>
+      <div className="glyph" aria-hidden>♛</div>
+      <div className="label mono">{label}</div>
+      <div className="name display">{throne.team_name}</div>
+      {lead && <div className="lead">led by <b>{lead.name} {lead.season}</b></div>}
+      <div className="meta mono">
+        {!nobody && <>COACH {coach} · </>}{shortDate(throne.claimed_at).toUpperCase()}
       </div>
-      <div className="def">
-        <div className="n mono">{throne.defenses}</div>
-        <div className="l mono">DEFENSES</div>
-      </div>
-      <a className="koth-cta mono" href={APP_STORE_URL}>{cta}</a>
+      <div className="hero mono">{throne.defenses}</div>
+      <div className="hero-l mono">DEFENSES</div>
+      <a className="koth-cta mono" href={APP_STORE_URL}>CHALLENGE →</a>
     </div>
   );
 }
 
-// Today's #1: the daily's own headline, gold-trimmed like the King strip.
-function CoachOfTheDayCard({ row, day, venue, topFinishes, today }: {
-  row: DailyRow; day: string; venue: Venue; topFinishes: number; today: string;
-}) {
-  const isToday = day === today;
+/** The third honoree: most top-3 daily finishes this fixed Mon–Sun week.
+ *  The rule and the window are on the card, because players will otherwise
+ *  assume it means something else (passdown §3). */
+function CoachOfWeekCard({ standing, name, onWeek }: { standing: CoachOfWeek | null; name: string | null; onWeek: () => void }) {
+  const range = weekRange(todayUTC());
   return (
-    <div className="koth-card koth-cotd">
-      <div className="h mono">COACH OF THE DAY{!isToday && ` · ${shortDate(`${day}T12:00:00Z`)}`}</div>
-      <div className="display name">{row.coach ?? row.handle}</div>
-      <div className="mono dust" style={{ fontSize: 12, letterSpacing: ".1em", marginTop: 4 }}>
-        {scoreline(row.score, row.score_opp)} AT {venueName(venue)} · {signed(row.margin)}
+    <div className="koth-honoree is-coach">
+      <div className="glyph" aria-hidden>◎</div>
+      <div className="coach-text">
+        <div className="label mono">COACH OF THE WEEK</div>
+        <div className="name display">{name ?? "Nobody yet"}</div>
+        <div className="lead">{standing ? "most top-3 finishes" : "no top-3 finish yet"}</div>
+        <div className="meta mono">{range.toUpperCase()} · RESETS MON 00:00 UTC</div>
       </div>
-      {row.five && row.five.length > 0 && (
-        <div className="mono dust" style={{ fontSize: 12, letterSpacing: ".06em", marginTop: 12, lineHeight: 1.7 }}>
-          FIVE: <b style={{ color: "var(--chalk)" }}>{fiveLine(row.five)}</b>
-        </div>
-      )}
-      <div className="koth-badge mono">
-        ★ #1 {isToday ? "TODAY" : shortDate(`${day}T12:00:00Z`)}
-        {topFinishes > 1 && <> · {ordinal(topFinishes)} TOP FINISH THIS MONTH</>}
+      <div className="hero-wrap">
+        <div className="hero mono">{standing?.top3 ?? 0}</div>
+        <div className="hero-l mono">TOP-3 FINISHES</div>
       </div>
+      <button className="koth-cta outline mono" onClick={onWeek}>THE WEEK ↓</button>
     </div>
   );
 }
 
-function MoveCell({ move }: { move: Move }) {
+function MoveLabel({ move }: { move: Move }) {
   switch (move.kind) {
-    case "up": return <td className="mv up mono">▲{move.n}</td>;
-    case "down": return <td className="mv down mono">▼{move.n}</td>;
-    case "new": return <td className="mv new mono">NEW</td>;
-    default: return <td className="mv mono">—</td>;
+    case "up": return <em>▲{move.n}</em>;
+    case "down": return <em style={{ color: "var(--red)" }}>▼{move.n}</em>;
+    case "new": return <em>NEW</em>;
+    default: return null;
   }
 }
 
-function DailyTab({ board }: { board: Board | null }) {
-  const today = todayUTC();
+/** The daily as a feed of result cards, with a sparse state that reads as
+ *  "in progress" (passdown §4). Today's winner is named in the header so the
+ *  daily result stays visible without a card of its own. */
+function Feed({ board, today }: { board: Board | null; today: string }) {
+  const rows = board?.daily ?? [];
+  const leader = rows[0];
+  const maxMargin = Math.max(1, ...rows.map((r) => Math.abs(r.margin)));
+  const top3ThisWeek = new Map((board?.weekTop3 ?? []).map((s) => [s.uid, s.top3]));
   return (
     <section>
       <div className="koth-dateline mono">
         <span>{longDate(today)}</span>
-        {board && venueKnown(board.today) &&
-          <span className="koth-venue">{venueChip(board.today)}</span>}
+        {board && venueKnown(board.today) && <span className="koth-venue">{venueChip(board.today)}</span>}
         <span className="fill" />
-        <span>EVERYBODY PLAYS THE SAME GAME</span>
+        {leader
+          ? <span>TODAY · <b style={{ color: "var(--chalk)" }}>{leader.coach ?? leader.handle}</b> {scoreline(leader.score, leader.score_opp)}</span>
+          : <span>EVERYBODY PLAYS THE SAME GAME</span>}
       </div>
       {!board ? (
         <p className="koth-empty mono">Loading…</p>
-      ) : board.daily.length === 0 ? (
-        <p className="koth-empty mono">Nobody has posted today&apos;s game yet.</p>
       ) : (
-        <table>
-          <thead>
-            <tr className="mono"><th>#</th><th></th><th>COACH</th><th className="num">FINAL</th><th className="num">MARGIN</th><th className="num hide-sm">PLAYED</th></tr>
-          </thead>
-          <tbody>
-            {board.daily.map((r) => (
-              <tr key={r.uid}>
-                <td className={`rk mono ${r.rank <= 3 ? "top" : ""}`}>{r.rank}</td>
-                <MoveCell move={r.move} />
-                <td className="display"><CoachName coach={r.coach} handle={r.handle} /></td>
-                <td className={`fin mono num ${r.won ? "w" : "l"}`}>{scoreline(r.score, r.score_opp)}</td>
-                <td className="mono num">{signed(r.margin)}</td>
-                <td className="mono num faint hide-sm">{clockTime(r.created_at)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <>
+          {rows.length > 0 && (
+            <div className="koth-dateline mono" style={{ paddingTop: 0 }}>
+              <span className="fill" />
+              <span className="koth-count">{rows.length} {rows.length === 1 ? "RESULT" : "RESULTS"} IN</span>
+            </div>
+          )}
+          <div className="koth-feed">
+            {rows.map((r) => {
+              const t3 = top3ThisWeek.get(r.uid) ?? 0;
+              return (
+                <article key={r.uid} className={`koth-result ${r.won ? "win" : "loss"}`}>
+                  <div className="top">
+                    <div className={`rank mono ${r.rank === 1 ? "first" : ""}`}>{r.rank}</div>
+                    <div className="who">
+                      <CoachName coach={r.coach} handle={r.handle} />
+                      <div className="sub mono">{clockTime(r.created_at)}{r.move.kind !== "none" && r.move.kind !== "same" && <> · <MoveLabel move={r.move} /></>}</div>
+                    </div>
+                    <div className="score mono">
+                      <b>{scoreline(r.score, r.score_opp)}</b>
+                      <i>{signed(r.margin)}</i>
+                    </div>
+                  </div>
+                  <div className="bar"><i style={{ width: `${Math.round((Math.abs(r.margin) / maxMargin) * 100)}%` }} /></div>
+                  <div className="meta mono">
+                    {venueKnown(board.today) ? venueChip(board.today) : "VENUE NOT ANNOUNCED"} · <em>{r.won ? "WIN" : "LOSS"}</em>
+                    {t3 > 0 && <> · {t3} TOP-3 THIS WEEK</>}
+                  </div>
+                </article>
+              );
+            })}
+            {rows.length < 3 && (
+              <div className="koth-sparse">
+                The board is still filling up.
+                <div className="mono">EVERYBODY PLAYS THE SAME GAME · ONE SHOT A DAY</div>
+              </div>
+            )}
+          </div>
+        </>
       )}
     </section>
   );
@@ -781,8 +850,13 @@ function tickerItems(board: Board): string[][] {
     }
   }
   for (const hill of [board.legends, board.allStars]) {
-    if (hill.throne && hill.throne.defenses > 0) {
+    if (!hill.throne) continue;
+    const where = hill.id === 2 ? "Legends" : "All-Stars";
+    if (hill.throne.defenses > 0) {
       items.unshift([hill.throne.team_name, hill.id === 2 ? "defended the hill" : "defended the throne", `${ordinal(hill.throne.defenses)} STRAIGHT`]);
+    } else {
+      // A King with no defence yet was crowned recently: that is the news.
+      items.unshift([hill.throne.team_name, `crowned in ${where}`, shortDate(hill.throne.claimed_at).toUpperCase()]);
     }
   }
   const leader = board.daily[0];

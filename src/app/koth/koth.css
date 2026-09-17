@@ -18,6 +18,17 @@
   --gold: #d9b24a;
   --teal: #5ee0b8;
   --red: #f05a5a;
+  /* The two thrones and the coach, told apart without reading (site redesign
+     passdown §1). Every place an entity appears sets `--accent` from one of
+     these through an `is-*` class and styles against `--accent` only — that
+     is what makes the colour rule a property of the CSS, not a checklist. */
+  --legends: #d9b24a;
+  --legends-hi: #ffb020;
+  --legends-cta: linear-gradient(180deg, #ffc24a, #f5a310);
+  --allstars: #b99cf3;
+  --allstars-cta: linear-gradient(180deg, #cbb0fa, #9b78e8);
+  --coach: #5ee0b8;
+  --coach-cta: linear-gradient(180deg, #7ff0cc, #3fc9a0);
   background: var(--ink);
   color: var(--chalk);
   min-height: 100vh;
@@ -109,23 +120,82 @@
 }
 
 /* ── King strip ── */
-/* Two thrones, one row (Dan, 2026-09-16: the LEGENDS champion gets equal
-   billing with the ALL-STARS King). Equal columns, so neither card is "the"
-   King strip; one column on a phone. A card renders full-width when it is
-   alone, which only happens if a hill has no King to show. */
-.koth-thrones {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 18px;
+/* ── The Hall of Champions ──
+   Three honorees in one gold-edged room: the LEGENDS throne, the ALL-STARS
+   throne, the COACH OF THE WEEK. Equal columns divided by hairlines, so no
+   one of them is "the" card. */
+.is-legends  { --accent: var(--legends);  --accent-cta: var(--legends-cta); --accent-ink: #1a1205; }
+.is-allstars { --accent: var(--allstars); --accent-cta: var(--allstars-cta); --accent-ink: #160f2a; }
+.is-coach    { --accent: var(--coach);    --accent-cta: var(--coach-cta);    --accent-ink: #062a20; }
+
+.koth-hall {
   margin-top: 26px;
+  border: 1px solid rgba(217, 178, 74, 0.35);
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(22, 19, 12, 0.7), rgba(14, 16, 19, 0.6) 70%);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  padding: 22px 24px 26px;
+  position: relative;
+  overflow: hidden;
 }
-.koth-thrones .koth-king { margin-top: 0; min-width: 0; }
-/* Half the width means the name and the CTA cannot share a row: the CTA
-   drops under the text at full width, as it already does on a phone. */
-.koth-thrones .koth-king { flex-wrap: wrap; padding: 20px 22px; }
-.koth-thrones .koth-king .name { font-size: 28px; }
-.koth-thrones .koth-king .def { border: none; padding: 0 0 0 6px; }
-.koth-thrones .koth-cta { width: 100%; }
+.koth-hall::before {
+  content: "";
+  position: absolute;
+  left: 50%; top: -220px;
+  width: 720px; height: 520px;
+  transform: translateX(-50%);
+  background: radial-gradient(ellipse, rgba(255, 176, 32, 0.14), transparent 65%);
+  pointer-events: none;
+}
+.koth-hall-kicker {
+  text-align: center;
+  font-size: 10px;
+  letter-spacing: 0.3em;
+  color: var(--gold);
+  font-weight: 700;
+  position: relative;
+}
+.koth-hall-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  margin-top: 18px;
+  position: relative;
+}
+.koth-honoree {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 6px 22px 0;
+  min-width: 0;
+}
+/* The dividers: a hairline that fades at both ends, between columns only. */
+.koth-honoree + .koth-honoree {
+  border-left: 1px solid transparent;
+  border-image: linear-gradient(180deg, transparent, rgba(255, 255, 255, 0.12) 30%, rgba(255, 255, 255, 0.12) 70%, transparent) 1;
+}
+.koth-honoree .glyph { font-size: 22px; line-height: 1; color: var(--accent); }
+.koth-honoree .label { font-size: 10px; letter-spacing: 0.28em; color: var(--accent); font-weight: 700; margin-top: 8px; }
+.koth-honoree .name {
+  font-size: 30px;
+  font-weight: 900;
+  letter-spacing: -0.01em;
+  line-height: 1.1;
+  margin-top: 8px;
+  color: #ffffff;
+  overflow-wrap: anywhere;
+}
+.koth-honoree .lead { font-size: 13px; color: var(--dust); margin-top: 6px; }
+.koth-honoree .lead b { color: var(--chalk); font-weight: 700; }
+.koth-honoree .meta { font-size: 10px; letter-spacing: 0.16em; color: var(--faint); margin-top: 6px; font-weight: 700; }
+.koth-honoree .hero { font-size: 48px; font-weight: 900; color: var(--accent); line-height: 1; margin-top: 14px; }
+.koth-honoree .hero-l { font-size: 9px; letter-spacing: 0.28em; color: var(--faint); font-weight: 700; margin-top: 6px; }
+.koth-honoree .koth-cta { margin-top: 16px; width: 100%; }
+
+/* One CTA, three colourways. Filled for the thrones; the coach's is an
+   outline, because THE WEEK ↓ is a look, not a challenge. */
+.koth-cta.outline { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
 
 .koth-king {
   margin-top: 26px;
@@ -191,8 +261,11 @@
 .koth-king .def .l { font-size: 9px; letter-spacing: 0.28em; color: var(--gold); margin-top: 4px; font-weight: 700; }
 .koth-cta {
   display: inline-block;
-  background: linear-gradient(180deg, #ffc24a, #f5a310);
-  color: #1a1205;
+  /* The entity's colourway when one is set (the hall, the rail); gold on
+     its own. This base rule sits after the hall's, so it must defer, not
+     override — a hard-coded gold here turned the ALL-STARS CTA gold. */
+  background: var(--accent-cta, linear-gradient(180deg, #ffc24a, #f5a310));
+  color: var(--accent-ink, #1a1205);
   font-weight: 800;
   font-size: 12px;
   letter-spacing: 0.14em;
@@ -205,7 +278,6 @@
 }
 .koth-cta:hover { filter: brightness(1.06); }
 @media (max-width: 820px) {
-  .koth-thrones { grid-template-columns: 1fr; }
   .koth-king { flex-wrap: wrap; padding: 20px; }
   .koth-king .def { border: none; padding: 0; }
   .koth-king .name { font-size: 28px; }
@@ -213,6 +285,7 @@
 }
 
 /* ── Masthead + tabs ── */
+.koth-mast-row { display: none; }
 .koth-mast {
   display: flex;
   align-items: flex-end;
@@ -222,6 +295,71 @@
   border-bottom: 3px solid var(--amber);
 }
 .koth-mast h1 { font-size: 40px; font-weight: 900; letter-spacing: -0.01em; line-height: 1; margin-top: 4px; }
+/* ── The feed ──
+   Result cards, not table rows: a table built for a hundred rows renders
+   one and looks broken (passdown §4). A card holds one result whole. */
+.koth-count { font-size: 10px; letter-spacing: 0.2em; color: var(--faint); font-weight: 700; white-space: nowrap; }
+.koth-feed { display: flex; flex-direction: column; gap: 14px; }
+.koth-result {
+  position: relative;
+  border: 1px solid var(--edge);
+  border-left: 3px solid var(--accent, var(--edge));
+  border-radius: 14px;
+  background: rgba(13, 15, 20, 0.82);
+  backdrop-filter: blur(3px);
+  padding: 16px 18px 14px;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+.koth-result:hover { transform: translateY(-2px); border-color: rgba(255, 255, 255, 0.16); }
+.koth-result.win { --accent: var(--teal); }
+.koth-result.loss { --accent: var(--red); }
+.koth-result .top { display: flex; align-items: flex-start; gap: 14px; }
+.koth-result .rank {
+  flex: 0 0 auto;
+  width: 30px; height: 30px;
+  border-radius: 8px;
+  display: grid; place-items: center;
+  font-size: 12px; font-weight: 800;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--edge);
+  color: var(--dust);
+}
+.koth-result .rank.first { background: var(--legends-cta); color: #1a1205; border-color: transparent; }
+.koth-result .who { flex: 1; min-width: 0; }
+.koth-result .who b { display: block; font-size: 16px; color: #ffffff; font-weight: 800; letter-spacing: -0.01em; }
+.koth-result .sub { font-size: 10px; letter-spacing: 0.14em; color: var(--faint); margin-top: 3px; font-weight: 700; }
+.koth-result .score { text-align: right; flex: 0 0 auto; }
+.koth-result .score b { display: block; font-size: 22px; font-weight: 800; color: var(--accent); letter-spacing: -0.01em; }
+.koth-result .score i { font-style: normal; font-size: 11px; color: var(--dust); }
+.koth-result .bar { height: 3px; border-radius: 2px; background: rgba(255, 255, 255, 0.07); margin-top: 12px; overflow: hidden; }
+.koth-result .bar i { display: block; height: 100%; background: var(--accent); border-radius: 2px; }
+.koth-result .meta { font-size: 10px; letter-spacing: 0.14em; color: var(--faint); margin-top: 10px; font-weight: 700; }
+.koth-result .meta em { font-style: normal; color: var(--accent); }
+/* The sparse state is required, not optional: a quiet day reads as in
+   progress, never as broken. */
+.koth-sparse {
+  border: 1px dashed rgba(255, 255, 255, 0.16);
+  border-radius: 14px;
+  padding: 26px 18px;
+  text-align: center;
+  color: var(--dust);
+  font-size: 13px;
+}
+.koth-sparse .mono { font-size: 10px; letter-spacing: 0.16em; color: var(--faint); margin-top: 8px; font-weight: 700; }
+
+/* ── The rail ── */
+.koth-line .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); margin-right: 8px; vertical-align: middle; }
+.koth-line .hill { color: var(--accent); font-weight: 700; margin-right: 6px; }
+.koth-more { display: none; }
+/* A quiet in-card link that behaves like the tabs it points at. */
+.koth-linkish { display: block; margin-top: 10px; background: none; border: 0; padding: 4px 0; color: var(--coach); font-size: 10px; letter-spacing: 0.2em; font-weight: 700; cursor: pointer; min-height: 32px; }
+.koth-linkish:hover { color: var(--chalk); }
+
+/* ── Sticky GET bar: a phone is one tap from installing ──
+   Hidden above the breakpoint outright, not just visually: a desktop visitor
+   cannot install, and a floating bar there would be noise. */
+.koth-getbar { display: none; }
+
 /* Small, tracked-out, all-caps text goes bold everywhere: at 9-11px with
    0.2em+ tracking, regular weight is what makes a dark board read soft. */
 .koth-live { display: flex; align-items: center; gap: 8px; font-size: 11px; letter-spacing: 0.2em; color: var(--dust); white-space: nowrap; font-weight: 700; }
@@ -357,7 +495,108 @@
 /* Reduce Motion stills the LIVE blink but not the ticker: a frozen ticker
    reads as broken (Dan, 2026-09-02, with Reduce Motion on). It slows down
    instead, and hover still pauses it. */
+@media (max-width: 820px) {
+  /* The ticker sits under the Dynamic Island; keep its text clear of it. */
+  .koth-ticker { padding-top: env(safe-area-inset-top); }
+
+  /* The hall on a phone: the thrones stay a pair, 2-up — stacked, the
+     second reads as an afterthought (passdown §6). Each card wears its own
+     colour on the border; the coach becomes a full-width strip beneath. */
+  .koth-hall { padding: 18px 14px 16px; background: none; border: 0; backdrop-filter: none; -webkit-backdrop-filter: none; }
+  .koth-hall::before { display: none; }
+  .koth-hall-grid { grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px; }
+  .koth-honoree {
+    padding: 18px 12px 16px;
+    border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent);
+    border-radius: 16px;
+    background: color-mix(in srgb, var(--accent) 7%, rgba(13, 15, 20, 0.85));
+  }
+  .koth-honoree + .koth-honoree { border-image: none; border-left: 1px solid color-mix(in srgb, var(--accent) 55%, transparent); }
+  .koth-honoree .name { font-size: 22px; }
+  .koth-honoree .lead { font-size: 12px; }
+  .koth-honoree .meta { display: none; }
+  .koth-honoree .hero { font-size: 40px; margin-top: 10px; }
+  .koth-honoree .koth-cta { padding: 13px 14px; font-size: 11px; margin-top: 14px; }
+  .koth-honoree.is-coach {
+    grid-column: 1 / -1;
+    flex-direction: row;
+    align-items: center;
+    text-align: left;
+    gap: 12px;
+    padding: 16px 18px;
+  }
+  .koth-honoree.is-coach .glyph { display: none; }
+  .koth-honoree.is-coach .coach-text { flex: 1; min-width: 0; }
+  .koth-honoree.is-coach .label { margin-top: 0; }
+  .koth-honoree.is-coach .name { font-size: 22px; margin-top: 4px; }
+  .koth-honoree.is-coach .lead { margin-top: 4px; }
+  .koth-honoree.is-coach .meta { display: block; margin-top: 2px; }
+  .koth-honoree.is-coach .hero-wrap { text-align: right; }
+  .koth-honoree.is-coach .hero { margin-top: 0; font-size: 34px; }
+  .koth-honoree.is-coach .koth-cta { display: none; }
+
+  /* LIVE and the venue chip share a row under the title. */
+  .koth-mast { padding-bottom: 12px; }
+  .koth-mast .koth-live { display: none; }
+  .koth-mast-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 0 2px; }
+  /* The chip is one name; it must not break inside itself. */
+  .koth-mast-row .koth-venue { white-space: nowrap; }
+  .koth-mast-row .koth-live { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* Tabs scroll sideways, thumb-sized, no scrollbar. */
+  .koth-tabs { -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .koth-tabs::-webkit-scrollbar { display: none; }
+  .koth-tab { padding: 14px 16px; min-height: 44px; white-space: nowrap; }
+
+  /* One column: the rail follows the feed under — MORE —. */
+  .koth-more { display: flex; align-items: center; gap: 12px; margin: 26px 0 6px; font-size: 10px; letter-spacing: 0.3em; color: var(--faint); font-weight: 700; }
+  .koth-more::before, .koth-more::after { content: ""; flex: 1; height: 1px; background: var(--edge); }
+
+  .koth-getbar {
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    z-index: 40;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px calc(10px + env(safe-area-inset-bottom));
+    background: rgba(10, 11, 13, 0.94);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-top: 1px solid var(--edge);
+  }
+  .koth-getbar .icon { width: 44px; height: 44px; border-radius: 11px; flex: 0 0 auto; }
+  .koth-getbar .t { flex: 1; min-width: 0; }
+  .koth-getbar .t b { display: block; font-size: 15px; color: #ffffff; font-weight: 800; }
+  .koth-getbar .t span { font-size: 11px; color: var(--dust); }
+  .koth-getbar .get {
+    background: var(--legends-cta);
+    color: #1a1205;
+    font-weight: 800;
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    padding: 0 20px;
+    min-height: 44px;
+    display: inline-flex; align-items: center;
+    border-radius: 999px;
+    text-decoration: none;
+  }
+  .koth-getbar .x {
+    width: 44px; height: 44px;
+    display: grid; place-items: center;
+    color: var(--faint);
+    background: transparent; border: 0;
+    font-size: 18px;
+    cursor: pointer;
+  }
+  .koth.has-getbar { padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
+  .koth-cta { min-height: 44px; }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .koth-ticker .tk { animation-duration: 30s; }
+  /* Static, not slower: the passdown's rule is that motion is limited to what
+     a reader can opt out of entirely. */
+  .koth-ticker .tk { animation: none; }
   .koth-live .dot { animation: none; }
+  .koth-result:hover { transform: none; }
 }
