@@ -7,6 +7,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Header from "@/components/Header";
+import AllTimeFiveMark from "@/components/AllTimeFiveMark";
 import {
   APP_STORE_URL, HOUSE_UID, RETIRED_HANDLE,
   type Challenge, type CoachOfWeek, type DailyRaw, type DailyRow, type LineageEntry, type Move,
@@ -284,7 +285,7 @@ export default function KothLive() {
   return (
     <div className={`koth ${getBar ? "has-getbar" : ""}`}>
       <Ticker items={ticker} />
-      <Header fixed={false} transparent />
+      <Header fixed={false} transparent mark={<AllTimeFiveMark />} />
       <div className="max-w-[1180px] mx-auto px-4 sm:px-6 pb-20">
         {/* The Hall of Champions: three honorees at equal weight (site redesign
             passdown §3). LEGENDS gold, ALL-STARS violet, the coach teal — the

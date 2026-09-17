@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import Link from "next/link";
 
 // `fixed` is the homepage's floating bar; /koth stacks the nav under its
@@ -21,6 +21,9 @@ import Link from "next/link";
 // own backdrop shows through from the ticker down rather than being cut by a
 // black band. The nav sits on whatever is behind it, which on /koth is the
 // darkest part of the arena scrim.
+// `mark` replaces the wordmark with a whole logotype — the All-Time Five
+// lockup on /koth (Dan, 2026-09-17: the board is the app's page, and the
+// app is All-Time Five). It links to `markHref`, the board itself.
 // `brand` replaces the NDMLABS wordmark. The GOAT board uses it to point back
 // at Coach of the Year, which is the page a reader arrived from and the one
 // they want to return to — NDMLABS is not that destination. Both boards are
@@ -30,10 +33,14 @@ export default function Header({
   fixed = true,
   transparent = false,
   brand,
+  mark,
+  markHref = "/koth",
 }: {
   fixed?: boolean;
   transparent?: boolean;
   brand?: { label: string; href: string };
+  mark?: ReactNode;
+  markHref?: string;
 }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -48,7 +55,11 @@ export default function Header({
       <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo, or whatever the page nominates in its place */}
-          {brand ? (
+          {mark ? (
+            <Link href={markHref} className="flex items-center min-w-0">
+              {mark}
+            </Link>
+          ) : brand ? (
             <Link
               href={brand.href}
               className="flex items-center gap-2 text-gray-300 hover:text-white transition-colors min-w-0"
