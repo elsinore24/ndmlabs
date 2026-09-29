@@ -608,3 +608,17 @@
   .koth-live .dot { animation: none; }
   .koth-result:hover { transform: none; }
 }
+
+/* ---- The 2026-27 season (2026-09-29): the league table, two conferences
+   side by side, one under the other on a phone. Rows are a five-column
+   grid so the numbers line up whatever the nickname's length. */
+.koth-season { margin: 22px 0 6px; }
+.koth-season-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 720px) { .koth-season-grid { grid-template-columns: 1fr; } }
+.koth-season-div { margin-top: 10px; }
+.koth-season-divh { font-size: 10px; letter-spacing: .18em; opacity: .7; margin-bottom: 4px; }
+.koth-season-cols, .koth-season-row { display: grid; grid-template-columns: 1fr 34px 34px 46px 44px; gap: 6px; font-size: 12px; padding: 3px 0; }
+.koth-season-cols { font-size: 9.5px; letter-spacing: .12em; }
+.koth-season-cols span:not(:first-child), .koth-season-row span:not(:first-child) { text-align: right; font-variant-numeric: tabular-nums; }
+.koth-season-row { border-top: 1px solid var(--line, rgba(255,255,255,.08)); }
+.koth-season-row .team { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

@@ -269,19 +269,43 @@ export type WeekDayRow = {
 
 export type CoachOfWeek = {
   uid: string;
-  /** Daily finishes at #3 or better this week — the ranking stat. */
+  /** Daily finishes at #3 or better this week. */
   top3: number;
+  /** 2026-27 season games won this week (Dan, 2026-09-29: they count). */
+  seasonWins: number;
+  /** The ranking stat: a top-3 daily finish and a season win are a point each. */
+  points: number;
   firsts: number;
   margin: number;
-  /** When the last of those top-3 finishes was posted. */
+  /** When the last point was earned. */
   reachedAt: string;
 };
+
+/** One 2026-27 season game, as `season_games` returns it. */
+export type SeasonGameRow = {
+  uid: string; coach_handle?: string; played_on: string;
+  home_abbr: string; away_abbr: string; home_score: number; away_score: number;
+  coached_abbr: string; created_at?: string;
+};
+
+/** One row of `season_standings`. */
+export type Standing = {
+  abbr: string; name: string; conference: "EAST" | "WEST"; division: string;
+  games: number; wins: number; losses: number; margin: number; pct: number;
+};
+
+/** Whether the coach's side won a season game. */
+export function seasonGameWon(g: SeasonGameRow): boolean {
+  return g.coached_abbr === g.home_abbr ? g.home_score > g.away_score : g.away_score > g.home_score;
+}
 
 /** Per-coach standing for this week, best first.
  *
  *  The rule (Dan, 2026-09-16): most top-3 daily finishes in the fixed
  *  Mon–Sun week, midnight UTC — the same window as THE WEEK tab and the
- *  venue flip, so the hall and the tab never disagree.
+ *  venue flip, so the hall and the tab never disagree. Since 2026-09-29 a
+ *  2026-27 season game won this week counts the same as a top-3 finish:
+ *  one point each, and the points rank. The daily's own board is untouched.
  *
  *  Ranks within a day are the board's own order — `won desc, margin desc,
  *  created_at asc`, which is how the server sorts `daily_board` — so a #2
@@ -290,27 +314,35 @@ export type CoachOfWeek = {
  *
  *  The tie-break chain ends in `uid`, so the order is total: the same rows
  *  always name the same coach, however many times the page refreshes. */
-export function coachOfTheWeek(rows: WeekDayRow[]): CoachOfWeek[] {
+export function coachOfTheWeek(rows: WeekDayRow[], seasonGames: SeasonGameRow[] = []): CoachOfWeek[] {
   const byDay = new Map<string, WeekDayRow[]>();
   for (const r of rows) (byDay.get(r.day) ?? byDay.set(r.day, []).get(r.day)!).push(r);
 
   const stats = new Map<string, CoachOfWeek>();
   const at = (uid: string) =>
-    stats.get(uid) ?? stats.set(uid, { uid, top3: 0, firsts: 0, margin: 0, reachedAt: "" }).get(uid)!;
+    stats.get(uid) ?? stats.set(uid, { uid, top3: 0, seasonWins: 0, points: 0, firsts: 0, margin: 0, reachedAt: "" }).get(uid)!;
+  const earned = (s: CoachOfWeek, when: string) => {
+    s.points += 1;
+    if (!s.reachedAt || when > s.reachedAt) s.reachedAt = when;
+  };
 
   for (const dayRows of byDay.values()) {
     dayRows.forEach((r, i) => {
       const s = at(r.uid);
       s.margin += r.margin;
       if (i === 0) s.firsts += 1;
-      if (i < 3) {
-        s.top3 += 1;
-        if (!s.reachedAt || r.created_at > s.reachedAt) s.reachedAt = r.created_at;
-      }
+      if (i < 3) { s.top3 += 1; earned(s, r.created_at); }
     });
   }
-  return [...stats.values()].sort((a, b) =>
-    b.top3 - a.top3 || b.firsts - a.firsts || b.margin - a.margin ||
+  for (const g of seasonGames) {
+    const s = at(g.uid);
+    const mine = g.coached_abbr === g.home_abbr;
+    s.margin += mine ? g.home_score - g.away_score : g.away_score - g.home_score;
+    if (seasonGameWon(g)) { s.seasonWins += 1; earned(s, g.created_at ?? `${g.played_on}T23:59:59Z`); }
+  }
+  // A coach with a game but no point is not on the board.
+  return [...stats.values()].filter((s) => s.points > 0).sort((a, b) =>
+    b.points - a.points || b.firsts - a.firsts || b.margin - a.margin ||
     a.reachedAt.localeCompare(b.reachedAt) || a.uid.localeCompare(b.uid));
 }
 

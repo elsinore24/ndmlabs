@@ -16,8 +16,7 @@ import {
   clockTime, coachOfTheWeek, defensesLabel, grouped, leadPlayer, longDate,
   handleNames, minutesAgo, mondayUTC, monthName, monthStartUTC, movement, ordinal, playerLabel,
   profileMap, rest, scoreline, statLine,
-  shortDate, signed, todayUTC, venueChip, venueFallback, venueKnown, weekRange,
-} from "./lib";
+  shortDate, signed, todayUTC, venueChip, venueFallback, venueKnown, weekRange, Standing, SeasonGameRow, seasonGameWon } from "./lib";
 import "./koth.css";
 
 // No THE THRONE tab: the King strip at the top of the page IS the throne
@@ -66,8 +65,12 @@ type Board = {
       today's first post lands. */
   coach: { row: DailyRow; day: string; venue: Venue; topFinishes: number } | null;
   profiles: Record<string, Profile>;
-  /** This week's standings by top-3 finishes, best first (lib.coachOfTheWeek). */
+  /** This week's standings by points — top-3 finishes and season wins — best first (lib.coachOfTheWeek). */
   weekTop3: CoachOfWeek[];
+  /** The 2026-27 league table, `season_standings`, in table order. */
+  standings: Standing[];
+  /** The last twelve season games anyone played, newest first. */
+  seasonRecent: SeasonGameRow[];
   fetchedAt: number;
 };
 
@@ -75,6 +78,9 @@ type Board = {
 // `throne_lineage` and `challenges`, so **the filter is the hill**: without
 // `throne_id` the LEGENDS champions sit in the ALL-STARS lineage and the
 // ticker names the wrong King the moment a Legends series lands.
+/** The season the table is for: 2026-27, the archive's end-year numbering. */
+const SEASON = 2027;
+
 const hillReads = (id: ThroneId) => [
   rest<Throne[]>(
     `throne?id=eq.${id}&select=version,holder_uid,holder_handle,team_name,defenses,claimed_at,five,lead_player,season`
@@ -98,7 +104,8 @@ export default function KothLive() {
     try {
       const today = todayUTC();
       const [throne1, lineage1, challenges1, throne2, lineage2, challenges2,
-             dailyRaw, weekRaw, solo, venues, winsRaw, monthRaw, topPlayers, runs, weekDays] =
+             dailyRaw, weekRaw, solo, venues, winsRaw, monthRaw, topPlayers, runs, weekDays,
+             standings, seasonRecent, seasonWeek] =
         await Promise.all([
           ...hillReads(1),
           ...hillReads(2),
@@ -139,6 +146,19 @@ export default function KothLive() {
           // read rather than the month's, because a week can straddle a month.
           rest<WeekDayRow[]>(
             `daily_board?day=gte.${mondayUTC()}&select=uid,day,score,score_opp,won,margin,created_at&order=day.desc,won.desc,margin.desc,created_at.asc&limit=1000`
+          ),
+          // The 2026-27 season (app migration 0014): the view is already in
+          // table order — conference, division, pct, margin — so it renders
+          // as it arrives.
+          rest<Standing[]>(
+            `season_standings?season=eq.${SEASON}&select=abbr,name,conference,division,games,wins,losses,margin,pct`
+          ),
+          rest<SeasonGameRow[]>(
+            `season_games?season=eq.${SEASON}&select=uid,coach_handle,played_on,home_abbr,away_abbr,home_score,away_score,coached_abbr,created_at&order=created_at.desc&limit=12`
+          ),
+          // This week's season games, for COACH OF THE WEEK: a win is a point.
+          rest<SeasonGameRow[]>(
+            `season_games?season=eq.${SEASON}&played_on=gte.${mondayUTC()}&select=uid,played_on,home_abbr,away_abbr,home_score,away_score,coached_abbr,created_at&limit=2000`
           ),
         ]);
 
@@ -237,7 +257,9 @@ export default function KothLive() {
         coach,
         profiles,
         names,
-        weekTop3: coachOfTheWeek(weekDays),
+        weekTop3: coachOfTheWeek(weekDays, seasonWeek),
+        standings,
+        seasonRecent,
         fetchedAt: Date.now(),
       });
       setFailed(false);
@@ -300,6 +322,8 @@ export default function KothLive() {
             </div>
           </section>
         )}
+
+        {board && board.standings.length > 0 && <SeasonSection board={board} coachName={coachName} />}
 
         <div className="koth-mast">
           <div>
@@ -387,12 +411,12 @@ export default function KothLive() {
               <div className="h mono">THIS WEEK&apos;S LEADERS</div>
               {board ? (
                 board.weekTop3.length === 0 ? (
-                  <div className="mono faint" style={{ fontSize: 12 }}>No top-3 finish yet this week.</div>
+                  <div className="mono faint" style={{ fontSize: 12 }}>No top-3 finish or season win yet this week.</div>
                 ) : (
                   board.weekTop3.slice(0, 3).map((s) => (
                     <div key={s.uid} className="koth-line mono">
                       <span>{coachName(s.uid)}</span>
-                      <b><span className="teal">{s.top3}</span> top-3</b>
+                      <b><span className="teal">{s.points}</span> {s.points === 1 ? "pt" : "pts"}</b>
                     </div>
                   ))
                 )
@@ -490,15 +514,68 @@ function CoachOfWeekCard({ standing, name, onWeek }: { standing: CoachOfWeek | n
       <div className="coach-text">
         <div className="label mono">COACH OF THE WEEK</div>
         <div className="name display">{name ?? "Nobody yet"}</div>
-        <div className="lead">{standing ? "most top-3 finishes" : "no top-3 finish yet"}</div>
+        <div className="lead">{standing ? `${standing.top3} top-3 ${standing.top3 === 1 ? "finish" : "finishes"} · ${standing.seasonWins} season ${standing.seasonWins === 1 ? "win" : "wins"}` : "no top-3 finish or season win yet"}</div>
         <div className="meta mono">{range.toUpperCase()} · RESETS MON 00:00 UTC</div>
       </div>
       <div className="hero-wrap">
-        <div className="hero mono">{standing?.top3 ?? 0}</div>
-        <div className="hero-l mono">TOP-3 FINISHES</div>
+        <div className="hero mono">{standing?.points ?? 0}</div>
+        <div className="hero-l mono">TOP-3 FINISHES + SEASON WINS</div>
       </div>
       <button className="koth-cta outline mono" onClick={onWeek}>THE WEEK ↓</button>
     </div>
+  );
+}
+
+/** The 2026-27 season: the league table the whole crowd moves, two
+ *  conferences of three divisions, and the last dozen games anyone played.
+ *  Rows come from `season_standings` in table order. A team with no games
+ *  yet is still a row — the table is the league, not its activity. */
+function SeasonSection({ board, coachName }: { board: Board; coachName: (uid: string) => string }) {
+  const played = board.standings.reduce((n, t) => n + t.games, 0) / 2;
+  const divisions = (conf: "EAST" | "WEST") =>
+    [...new Set(board.standings.filter((t) => t.conference === conf).map((t) => t.division))];
+  return (
+    <section className="koth-season" aria-label="The 2026-27 season">
+      <div className="koth-section-h mono">2026-27 SEASON · {played} {played === 1 ? "GAME" : "GAMES"} PLAYED · EVERY GAME ANYONE PLAYS COUNTS</div>
+      <div className="koth-season-grid">
+        {(["EAST", "WEST"] as const).map((conf) => (
+          <div key={conf} className="koth-card">
+            <div className="h mono">{conf}</div>
+            {divisions(conf).map((div) => (
+              <div key={div} className="koth-season-div">
+                <div className="koth-season-divh mono">{div.toUpperCase()}</div>
+                <div className="koth-season-cols mono faint"><span>TEAM</span><span>W</span><span>L</span><span>PCT</span><span>+/−</span></div>
+                {board.standings.filter((t) => t.division === div).map((t) => (
+                  <div key={t.abbr} className="koth-season-row mono">
+                    <span className="team"><b>{t.abbr}</b> {t.name.split(" ").slice(-1)[0]}</span>
+                    <span>{t.wins}</span><span>{t.losses}</span>
+                    <span>{t.games ? Number(t.pct).toFixed(3).replace(/^0/, "") : "—"}</span>
+                    <span>{t.margin > 0 ? `+${t.margin}` : t.margin}</span>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+      {board.seasonRecent.length > 0 && (
+        <div className="koth-card" style={{ marginTop: 12 }}>
+          <div className="h mono">LATEST GAMES</div>
+          {board.seasonRecent.map((g, i) => {
+            const won = seasonGameWon(g);
+            return (
+              <div key={`${g.uid}-${g.created_at ?? i}`} className="koth-line mono">
+                <span>
+                  <b>{g.home_abbr}</b> {g.home_score}–{g.away_score} <b>{g.away_abbr}</b>
+                  <span className="faint"> · {coachName(g.uid)} coached {g.coached_abbr}</span>
+                </span>
+                <b className={won ? "teal" : "faint"}>{won ? "W" : "L"}</b>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </section>
   );
 }
 

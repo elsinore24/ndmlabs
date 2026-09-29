@@ -42,3 +42,31 @@ test("the same rows always name the same coach, whatever order the days arrive i
 test("an empty week is an empty ranking, not an error", () => {
   assert.deepEqual(coachOfTheWeek([]), []);
 });
+
+// A 2026-27 season win is a point, the same as a top-3 finish (2026-09-29).
+const game = (uid, home, away, hs, as, coached, created_at) =>
+  ({ uid, played_on: created_at.slice(0, 10), home_abbr: home, away_abbr: away, home_score: hs, away_score: as, coached_abbr: coached, created_at });
+
+test("a season win counts as a point; a season loss counts for nothing but margin", () => {
+  const games = [
+    game("d", "LAL", "MIA", 104, 98, "LAL", "2026-09-17T01:00Z"),   // d wins, coaching home
+    game("d", "BOS", "LAL", 110, 99, "LAL", "2026-09-17T02:00Z"),   // d loses, coaching away
+    game("e", "PHI", "NYK", 90, 95, "NYK", "2026-09-17T03:00Z"),    // e wins, coaching away
+  ];
+  const ranked = coachOfTheWeek(week, games);
+  const d = ranked.find((s) => s.uid === "d"), e = ranked.find((s) => s.uid === "e");
+  assert.equal(d.seasonWins, 1); assert.equal(d.points, d.top3 + 1);
+  assert.equal(d.margin, -4 + 2 + 6 - 11);
+  assert.equal(e.seasonWins, 1); assert.equal(e.points, 1); assert.equal(e.top3, 0);
+  // a still leads: 3 top-3 finishes beat d's 2 top-3 + 1 win only on... no — points tie at 3, and a has a #1.
+  assert.equal(ranked[0].uid, "a");
+  assert.equal(ranked[0].points, 3);
+  // A coach with games and no point is not on the board.
+  const loser = coachOfTheWeek([], [game("z", "LAL", "MIA", 90, 98, "LAL", "2026-09-17T01:00Z")]);
+  assert.deepEqual(loser, []);
+});
+
+test("season games alone make a board", () => {
+  const only = coachOfTheWeek([], [game("s", "LAL", "MIA", 104, 98, "LAL", "2026-09-17T01:00Z")]);
+  assert.equal(only[0].uid, "s"); assert.equal(only[0].points, 1);
+});
