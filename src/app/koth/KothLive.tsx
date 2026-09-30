@@ -535,7 +535,7 @@ function SeasonSection({ board, coachName }: { board: Board; coachName: (uid: st
   const divisions = (conf: "EAST" | "WEST") =>
     [...new Set(board.standings.filter((t) => t.conference === conf).map((t) => t.division))];
   return (
-    <section className="koth-season" aria-label="The 2026-27 season">
+    <section className="koth-season" id="season" aria-label="The 2026-27 season">
       <div className="koth-section-h mono">2026-27 SEASON · {played} {played === 1 ? "GAME" : "GAMES"} PLAYED · EVERY GAME ANYONE PLAYS COUNTS</div>
       <div className="koth-season-grid">
         {(["EAST", "WEST"] as const).map((conf) => (
