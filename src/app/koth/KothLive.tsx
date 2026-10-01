@@ -10,7 +10,7 @@ import Header from "@/components/Header";
 import AllTimeFiveMark from "@/components/AllTimeFiveMark";
 import {
   APP_STORE_URL, HOUSE_UID, RETIRED_HANDLE,
-  type Challenge, type CoachOfWeek, type DailyRaw, type DailyRow, type LineageEntry, type Move,
+  type Challenge, type CoachRating, type DailyRaw, type DailyRow, type LineageEntry, type Move,
   type BestRun, type SoloReign, type Throne, type ThroneId, type TopPlayer, type Venue, type WeekDayRow, type WeekRow,
   type Profile,
   clockTime, coachOfTheWeek, defensesLabel, grouped, leadPlayer, longDate,
@@ -66,7 +66,7 @@ type Board = {
   coach: { row: DailyRow; day: string; venue: Venue; topFinishes: number } | null;
   profiles: Record<string, Profile>;
   /** This week's standings by points — top-3 finishes and season wins — best first (lib.coachOfTheWeek). */
-  weekTop3: CoachOfWeek[];
+  weekTop3: CoachRating[];
   /** The 2026-27 league table, `season_standings`, in table order. */
   standings: Standing[];
   /** The last five season games anyone played, newest first (Dan, 2026-09-30: cap it at five). */
@@ -416,7 +416,7 @@ export default function KothLive() {
                   board.weekTop3.slice(0, 3).map((s) => (
                     <div key={s.uid} className="koth-line mono">
                       <span>{coachName(s.uid)}</span>
-                      <b><span className="teal">{s.points}</span> {s.points === 1 ? "pt" : "pts"}</b>
+                      <b><span className="teal">{s.percent}%</span></b>
                     </div>
                   ))
                 )
@@ -506,7 +506,7 @@ function ThroneCard({ hill, label, kind }: { hill: Hill; label: string; kind: "i
 /** The third honoree: most top-3 daily finishes this fixed Mon–Sun week.
  *  The rule and the window are on the card, because players will otherwise
  *  assume it means something else (passdown §3). */
-function CoachOfWeekCard({ standing, name, onWeek }: { standing: CoachOfWeek | null; name: string | null; onWeek: () => void }) {
+function CoachOfWeekCard({ standing, name, onWeek }: { standing: CoachRating | null; name: string | null; onWeek: () => void }) {
   const range = weekRange(todayUTC());
   return (
     <div className="koth-honoree is-coach">
@@ -514,12 +514,12 @@ function CoachOfWeekCard({ standing, name, onWeek }: { standing: CoachOfWeek | n
       <div className="coach-text">
         <div className="label mono">COACH OF THE WEEK</div>
         <div className="name display">{name ?? "Nobody yet"}</div>
-        <div className="lead">{standing ? `${standing.top3} top-3 ${standing.top3 === 1 ? "finish" : "finishes"} · ${standing.seasonWins} season ${standing.seasonWins === 1 ? "win" : "wins"}` : "no top-3 finish or season win yet"}</div>
+        <div className="lead">{standing ? `${standing.wins}-${standing.losses} in ${standing.games} games` : "three games this week to qualify"}</div>
         <div className="meta mono">{range.toUpperCase()} · RESETS MON 00:00 UTC</div>
       </div>
       <div className="hero-wrap">
-        <div className="hero mono">{standing?.points ?? 0}</div>
-        <div className="hero-l mono">TOP-3 FINISHES + SEASON WINS</div>
+        <div className="hero mono">{standing ? `${standing.percent}%` : "—"}</div>
+        <div className="hero-l mono">COACH RATING</div>
       </div>
       <button className="koth-cta outline mono" onClick={onWeek}>THE WEEK ↓</button>
     </div>
@@ -595,7 +595,6 @@ function Feed({ board, today }: { board: Board | null; today: string }) {
   const rows = board?.daily ?? [];
   const leader = rows[0];
   const maxMargin = Math.max(1, ...rows.map((r) => Math.abs(r.margin)));
-  const top3ThisWeek = new Map((board?.weekTop3 ?? []).map((s) => [s.uid, s.top3]));
   return (
     <section>
       <div className="koth-dateline mono">
@@ -618,7 +617,6 @@ function Feed({ board, today }: { board: Board | null; today: string }) {
           )}
           <div className="koth-feed">
             {rows.map((r) => {
-              const t3 = top3ThisWeek.get(r.uid) ?? 0;
               return (
                 <article key={r.uid} className={`koth-result ${r.won ? "win" : "loss"}`}>
                   <div className="top">
@@ -635,7 +633,6 @@ function Feed({ board, today }: { board: Board | null; today: string }) {
                   <div className="bar"><i style={{ width: `${Math.round((Math.abs(r.margin) / maxMargin) * 100)}%` }} /></div>
                   <div className="meta mono">
                     {venueKnown(board.today) ? venueChip(board.today) : "VENUE NOT ANNOUNCED"} · <em>{r.won ? "WIN" : "LOSS"}</em>
-                    {t3 > 0 && <> · {t3} TOP-3 THIS WEEK</>}
                   </div>
                 </article>
               );

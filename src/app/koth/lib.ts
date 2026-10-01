@@ -267,20 +267,6 @@ export type WeekDayRow = {
   won: boolean; margin: number; created_at: string;
 };
 
-export type CoachOfWeek = {
-  uid: string;
-  /** Daily finishes at #3 or better this week. */
-  top3: number;
-  /** 2026-27 season games won this week (Dan, 2026-09-29: they count). */
-  seasonWins: number;
-  /** The ranking stat: a top-3 daily finish and a season win are a point each. */
-  points: number;
-  firsts: number;
-  margin: number;
-  /** When the last point was earned. */
-  reachedAt: string;
-};
-
 /** One 2026-27 season game, as `season_games` returns it. */
 export type SeasonGameRow = {
   uid: string; coach_handle?: string; played_on: string;
@@ -299,51 +285,92 @@ export function seasonGameWon(g: SeasonGameRow): boolean {
   return g.coached_abbr === g.home_abbr ? g.home_score > g.away_score : g.away_score > g.home_score;
 }
 
-/** Per-coach standing for this week, best first.
- *
- *  The rule (Dan, 2026-09-16): most top-3 daily finishes in the fixed
- *  Mon–Sun week, midnight UTC — the same window as THE WEEK tab and the
- *  venue flip, so the hall and the tab never disagree. Since 2026-09-29 a
- *  2026-27 season game won this week counts the same as a top-3 finish:
- *  one point each, and the points rank. The daily's own board is untouched.
- *
- *  Ranks within a day are the board's own order — `won desc, margin desc,
- *  created_at asc`, which is how the server sorts `daily_board` — so a #2
- *  here is a #2 on the DAILY tab. The rows must arrive in that order within
- *  each day; this function does not re-sort them, it counts them.
- *
- *  The tie-break chain ends in `uid`, so the order is total: the same rows
- *  always name the same coach, however many times the page refreshes. */
-export function coachOfTheWeek(rows: WeekDayRow[], seasonGames: SeasonGameRow[] = []): CoachOfWeek[] {
-  const byDay = new Map<string, WeekDayRow[]>();
-  for (const r of rows) (byDay.get(r.day) ?? byDay.set(r.day, []).get(r.day)!).push(r);
+// ---- The coach rating (Dan, 2026-10-01). It replaces the top-3 tally:
+// it sets Coach of the Week and orders the coaches under each team.
+//
+// Every game is worth points: a loss 0, a win 1 plus up to 1 more for the
+// margin, the whole extra point at 20 or more. The rating is the average,
+// shrunk toward an even 1.0 as if every coach had already played three
+// such games, so one blowout does not top a coach with a full week. It is
+// printed as a percentage of the best possible, 2 points a game.
 
-  const stats = new Map<string, CoachOfWeek>();
-  const at = (uid: string) =>
-    stats.get(uid) ?? stats.set(uid, { uid, top3: 0, seasonWins: 0, points: 0, firsts: 0, margin: 0, reachedAt: "" }).get(uid)!;
-  const earned = (s: CoachOfWeek, when: string) => {
-    s.points += 1;
-    if (!s.reachedAt || when > s.reachedAt) s.reachedAt = when;
+export const RATING_PRIOR = 1.0;
+export const RATING_WEIGHT = 3;
+export const MARGIN_CAP = 20;
+/** Games in the week before a coach can be Coach of the Week. */
+export const WEEK_MIN_GAMES = 3;
+
+/** One finished game from a coach's side. */
+export type RatedGame = { uid: string; won: boolean; margin: number; at: string };
+
+export type CoachRating = {
+  uid: string;
+  games: number;
+  wins: number;
+  losses: number;
+  /** Net margin over the games, for the tie-break. */
+  margin: number;
+  /** Points per game after shrinkage, 0–2. */
+  rating: number;
+  /** `rating` as a whole percentage of 2. */
+  percent: number;
+  /** When the coach's first game in the set finished. */
+  firstAt: string;
+};
+
+export function gamePoints(won: boolean, margin: number): number {
+  return won ? 1 + Math.min(Math.max(margin, 0), MARGIN_CAP) / MARGIN_CAP : 0;
+}
+
+/** A season game, from the coach's side. */
+export function seasonGameRated(g: SeasonGameRow): RatedGame {
+  const home = g.coached_abbr === g.home_abbr;
+  return {
+    uid: g.uid, won: seasonGameWon(g),
+    margin: home ? g.home_score - g.away_score : g.away_score - g.home_score,
+    at: g.created_at ?? `${g.played_on}T23:59:59Z`,
   };
+}
 
-  for (const dayRows of byDay.values()) {
-    dayRows.forEach((r, i) => {
-      const s = at(r.uid);
-      s.margin += r.margin;
-      if (i === 0) s.firsts += 1;
-      if (i < 3) { s.top3 += 1; earned(s, r.created_at); }
-    });
+/** A daily, from the coach's side. */
+export function dailyRated(r: WeekDayRow): RatedGame {
+  return { uid: r.uid, won: r.won, margin: r.margin, at: r.created_at };
+}
+
+/** Every coach in `games`, best first. The tie-break chain ends in `uid`,
+ *  so the order is total: the same games always rank the same way. */
+export function rateCoaches(games: RatedGame[]): CoachRating[] {
+  const by = new Map<string, CoachRating & { points: number }>();
+  for (const g of games) {
+    const c = by.get(g.uid) ?? by.set(g.uid, {
+      uid: g.uid, games: 0, wins: 0, losses: 0, margin: 0, rating: 0, percent: 0, firstAt: g.at, points: 0,
+    }).get(g.uid)!;
+    c.games += 1;
+    if (g.won) c.wins += 1; else c.losses += 1;
+    c.margin += g.margin;
+    c.points += gamePoints(g.won, g.margin);
+    if (g.at < c.firstAt) c.firstAt = g.at;
   }
-  for (const g of seasonGames) {
-    const s = at(g.uid);
-    const mine = g.coached_abbr === g.home_abbr;
-    s.margin += mine ? g.home_score - g.away_score : g.away_score - g.home_score;
-    if (seasonGameWon(g)) { s.seasonWins += 1; earned(s, g.created_at ?? `${g.played_on}T23:59:59Z`); }
-  }
-  // A coach with a game but no point is not on the board.
-  return [...stats.values()].filter((s) => s.points > 0).sort((a, b) =>
-    b.points - a.points || b.firsts - a.firsts || b.margin - a.margin ||
-    a.reachedAt.localeCompare(b.reachedAt) || a.uid.localeCompare(b.uid));
+  return [...by.values()].map(({ points, ...c }) => {
+    const rating = (points + RATING_WEIGHT * RATING_PRIOR) / (c.games + RATING_WEIGHT);
+    return { ...c, rating, percent: Math.round((rating / 2) * 100) };
+  }).sort((a, b) =>
+    b.rating - a.rating || b.wins - a.wins || b.margin - a.margin ||
+    a.firstAt.localeCompare(b.firstAt) || a.uid.localeCompare(b.uid));
+}
+
+/** This week's ranking: dailies and season games together, Mon–Sun UTC,
+ *  only coaches with {@link WEEK_MIN_GAMES} or more. The first is Coach of
+ *  the Week. Callers pass this week's rows only. */
+export function coachOfTheWeek(rows: WeekDayRow[], seasonGames: SeasonGameRow[] = []): CoachRating[] {
+  return rateCoaches([...rows.map(dailyRated), ...seasonGames.map(seasonGameRated)])
+    .filter((c) => c.games >= WEEK_MIN_GAMES);
+}
+
+/** The coaches of one team this season, best first: the games they
+ *  coached that team in, nothing else. */
+export function teamCoaches(seasonGames: SeasonGameRow[], abbr: string): CoachRating[] {
+  return rateCoaches(seasonGames.filter((g) => g.coached_abbr === abbr).map(seasonGameRated));
 }
 
 /** `SEP 14 – SEP 20`: the fixed Mon–Sun week that holds `dayKey`. */
