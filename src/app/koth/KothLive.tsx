@@ -15,7 +15,7 @@ import {
   type CoachTotals, type Profile, type Standing, type SeasonGameRow, type Throne, type ThroneId, type Venue, type WeekDayRow,
   CAREER_MIN_GAMES, WEEK_MIN_GAMES,
   allTimeCoaches, coachOfTheWeek, leadPlayer, ratingLabel, minutesAgo, mondayUTC, profileMap, resetsIn, rest, scoreline,
-  shortDate, signed, teamCoaches, todayUTC, venueCity, venueDecade, venueFallback, venueKnown,
+  shortDate, signed, todayUTC, venueCity, venueDecade, venueFallback, venueKnown,
   weekRange } from "./lib";
 import "./koth.css";
 
@@ -372,8 +372,8 @@ const nickname = (name: string) =>
   name.endsWith("Trail Blazers") ? "Trail Blazers" : name.split(" ").slice(-1)[0];
 
 /** The 2026-27 season: the ten busiest teams up front, the full league
- *  table — two conferences of three divisions, every team a row, each
- *  team's coaches under it — one tap away. */
+ *  table — two conferences of three divisions, every team a row — one tap
+ *  away. Teams only (Dan, 2026-10-01: no coach names under the teams). */
 function SeasonSection({ board, coachName }: { board: Board; coachName: (uid: string) => string }) {
   const [full, setFull] = useState(false);
   const played = board.standings.reduce((n, t) => n + t.games, 0) / 2;
@@ -433,27 +433,12 @@ function SeasonSection({ board, coachName }: { board: Board; coachName: (uid: st
                         <span>{pct(t)}</span>
                         <span>{signed(t.margin)}</span>
                       </div>
-                      {/* The coaches who have run this team, best rating
-                          first: their own record with it this season. */}
-                      {teamCoaches(board.seasonGames, t.abbr).map((c) => (
-                        <div key={c.uid} className="koth-season-coach mono">
-                          <span className="who">{coachName(c.uid)}</span>
-                          <span>{c.wins}</span><span>{c.losses}</span>
-                          <span className="teal">{ratingLabel(c.rating)}</span>
-                          <span>{signed(c.margin)}</span>
-                        </div>
-                      ))}
                     </div>
                   ))}
                 </div>
               ))}
             </div>
           ))}
-          <div className="koth-rule mono span">
-            Under each team: the coaches who have run it, best first, in points per game. A win
-            scores 1 plus up to 1 more for the margin, a loss 0, out of 2 a game, steadied for
-            coaches with few games.
-          </div>
         </div>
       )}
     </section>

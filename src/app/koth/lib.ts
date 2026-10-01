@@ -286,8 +286,7 @@ export function seasonGameWon(g: SeasonGameRow): boolean {
 }
 
 // ---- The coach rating (Dan, 2026-10-01). It replaces the top-3 tally:
-// it sets Coach of the Week, orders the coaches under each team, and ranks
-// the ALL-TIME COACHES board.
+// it sets Coach of the Week and ranks the ALL-TIME COACHES board.
 //
 // Every game is worth points: a loss 0, a win 1 plus up to 1 more for the
 // margin, the whole extra point at 20 or more. The rating is the average,
@@ -389,12 +388,6 @@ export function allTimeCoaches(totals: CoachTotals[]): CoachRating[] {
 export function coachOfTheWeek(rows: WeekDayRow[], seasonGames: SeasonGameRow[] = []): CoachRating[] {
   return rateCoaches([...rows.map(dailyRated), ...seasonGames.map(seasonGameRated)])
     .filter((c) => c.games >= WEEK_MIN_GAMES);
-}
-
-/** The coaches of one team this season, best first: the games they
- *  coached that team in, nothing else. */
-export function teamCoaches(seasonGames: SeasonGameRow[], abbr: string): CoachRating[] {
-  return rateCoaches(seasonGames.filter((g) => g.coached_abbr === abbr).map(seasonGameRated));
 }
 
 /** `SEP 14 – SEP 20`: the fixed Mon–Sun week that holds `dayKey`. */

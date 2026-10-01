@@ -2,7 +2,7 @@
 // (node --test with type-stripping, so lib.ts is imported as it is).
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { allTimeCoaches, coachOfTheWeek, gamePoints, rateCoaches, ratingLabel, teamCoaches } from "../lib.ts";
+import { allTimeCoaches, coachOfTheWeek, gamePoints, rateCoaches, ratingLabel } from "../lib.ts";
 
 const daily = (uid, margin, created_at) =>
   ({ uid, day: created_at.slice(0, 10), score: 100 + margin, score_opp: 100, won: margin > 0, margin, created_at });
@@ -70,19 +70,6 @@ test("the order does not depend on the order the games arrive in", () => {
   ];
   const key = (list) => rateCoaches(list.map((x) => ({ uid: x.uid, won: true, margin: 1, at: x.created_at }))).map((c) => c.uid);
   assert.deepEqual(key([...games].reverse()), key(games));
-  assert.deepEqual(teamCoaches([...games].reverse(), "LAL").map((c) => c.uid), teamCoaches(games, "LAL").map((c) => c.uid));
-});
-
-test("a team's coaches are only the games they coached that team in", () => {
-  const games = [
-    game("a", "LAL", "MIA", 110, 100, "LAL", "2026-09-28T01:00Z"),   // a coached LAL, won
-    game("b", "LAL", "MIA", 100, 104, "MIA", "2026-09-28T02:00Z"),   // b coached MIA, won
-    game("a", "BOS", "LAL", 120, 100, "BOS", "2026-09-28T03:00Z"),   // a coached BOS
-  ];
-  const lal = teamCoaches(games, "LAL");
-  assert.deepEqual(lal.map((c) => [c.uid, c.wins, c.losses]), [["a", 1, 0]]);
-  assert.deepEqual(teamCoaches(games, "MIA").map((c) => c.uid), ["b"]);
-  assert.deepEqual(teamCoaches(games, "PHI"), []);
 });
 
 test("an empty week is an empty ranking, not an error", () => {

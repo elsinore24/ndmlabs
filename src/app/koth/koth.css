@@ -376,21 +376,6 @@
 .koth-season-grid { margin-top: 12px; }
 @media (max-width: 720px) { .koth-active { grid-template-columns: 1fr; } .koth-active > div + div .koth-active-cols { display: none; } }
 
-/* A coach under a team in the full table: the team's own columns, the
-   rating in PCT's place, quieter and indented so the team row leads. */
-.koth-season-coach {
-  display: grid;
-  grid-template-columns: 1fr 40px 40px 56px 52px;
-  gap: 8px;
-  padding: 3px 0 3px 18px;
-  font-size: 12px;
-  color: #c3cad6;
-}
-.koth-season-coach:last-child { padding-bottom: 8px; }
-.koth-season-coach span:not(:first-child) { text-align: right; }
-.koth-season-coach .who { color: #e8e6e1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.koth-season-coach .who::before { content: "↳ "; color: var(--faint); }
-
 /* ---- Records: four tiles, each in its entity's colour. */
 .koth-records-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
 .koth-record {
