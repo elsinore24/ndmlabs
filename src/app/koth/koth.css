@@ -433,3 +433,13 @@
   .koth-app { flex-wrap: wrap; padding: 20px; }
   .koth-app .koth-cta { width: 100%; }
 }
+
+/* ---- All-time coaches: one table, rank, coach, W, L, games, points a game. */
+.koth-career-cols, .koth-career-row { display: grid; grid-template-columns: 30px 1fr 40px 40px 44px 60px; gap: 8px; padding: 9px 0; }
+.koth-career-cols { font-size: 10px; letter-spacing: 0.14em; color: #8f98ab; font-weight: 700; border-bottom: 1px solid rgba(255, 255, 255, 0.12); margin-top: 12px; }
+.koth-career-row { font-size: 14px; color: #ffffff; border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
+.koth-career-row .rk { color: var(--faint); font-weight: 700; }
+.koth-career-row .rk.top { color: var(--amber); }
+.koth-career-row .who { font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.koth-career-cols span:nth-child(n+3), .koth-career-row span:nth-child(n+3) { text-align: right; }
+.koth-career-row .teal { font-weight: 800; }

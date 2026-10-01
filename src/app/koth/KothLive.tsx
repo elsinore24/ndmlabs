@@ -12,9 +12,9 @@ import AllTimeFiveMark from "@/components/AllTimeFiveMark";
 import {
   APP_STORE_URL, DAILY_OPPONENTS, HOUSE_UID, RETIRED_HANDLE,
   type Challenge, type CoachRating, type DailyRaw, type LineageEntry,
-  type Profile, type Standing, type SeasonGameRow, type Throne, type ThroneId, type Venue, type WeekDayRow,
-  WEEK_MIN_GAMES,
-  coachOfTheWeek, leadPlayer, minutesAgo, mondayUTC, profileMap, resetsIn, rest, scoreline,
+  type CoachTotals, type Profile, type Standing, type SeasonGameRow, type Throne, type ThroneId, type Venue, type WeekDayRow,
+  CAREER_MIN_GAMES, WEEK_MIN_GAMES,
+  allTimeCoaches, coachOfTheWeek, leadPlayer, ratingLabel, minutesAgo, mondayUTC, profileMap, resetsIn, rest, scoreline,
   shortDate, signed, teamCoaches, todayUTC, venueCity, venueDecade, venueFallback, venueKnown,
   weekRange } from "./lib";
 import "./koth.css";
@@ -48,6 +48,8 @@ type Board = {
   today: Venue;
   /** This week's coaches by rating, qualified only (lib.coachOfTheWeek). */
   week: CoachRating[];
+  /** Every coach with ten career games or more, best first (lib.allTimeCoaches). */
+  career: CoachRating[];
   /** The 2026-27 league table, `season_standings`, in table order. */
   standings: Standing[];
   /** Every 2026-27 game anyone has played: the coach lines under each team. */
@@ -83,7 +85,7 @@ export default function KothLive() {
       const today = todayUTC();
       const monday = mondayUTC();
       const [throne1, lineage1, challenges1, throne2, lineage2, challenges2,
-             dailyRaw, venues, winsRaw, weekDays, standings, seasonGames] =
+             dailyRaw, venues, winsRaw, weekDays, standings, seasonGames, careerRaw] =
         await Promise.all([
           ...hillReads(1),
           ...hillReads(2),
@@ -109,6 +111,9 @@ export default function KothLive() {
           rest<SeasonGameRow[]>(
             `season_games?season=eq.${SEASON}&select=uid,coach_handle,played_on,home_abbr,away_abbr,home_score,away_score,coached_abbr,created_at&order=created_at.asc&limit=5000`
           ),
+          // Careers, totalled on the server (app migration 0016): a board
+          // of every game ever cannot be read raw past PostgREST's cap.
+          rest<CoachTotals[]>("coach_career?select=uid,games,wins,points,margin,first_at"),
         ]);
 
       const winCounts = new Map<string, number>();
@@ -116,12 +121,14 @@ export default function KothLive() {
       const most = [...winCounts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0];
       const best = winsRaw[0];
       const week = coachOfTheWeek(weekDays, seasonGames.filter((g) => g.played_on >= monday));
+      const career = allTimeCoaches(careerRaw);
 
       // One profile read covers every name on the page. The house holds no
       // profile, so a lookup for it is a wasted row.
       const profiles = await profileMap([
         ...dailyRaw.map((r) => r.uid),
         ...week.slice(0, 5).map((c) => c.uid),
+        ...career.map((c) => c.uid),
         ...seasonGames.map((g) => g.uid),
         ...(best ? [best.uid] : []),
         ...(most ? [most[0]] : []),
@@ -138,6 +145,7 @@ export default function KothLive() {
         daily: dailyRaw,
         today: venues[0] ?? venueFallback(today),
         week,
+        career,
         standings,
         seasonGames,
         bestMargin: best ? { uid: best.uid, scoreline: scoreline(best.score, best.score_opp), margin: best.margin, day: best.day } : null,
@@ -199,6 +207,8 @@ export default function KothLive() {
         )}
 
         {board && board.standings.length > 0 && <SeasonSection board={board} coachName={coachName} />}
+
+        {board && <AllTimeCoaches career={board.career} coachName={coachName} />}
 
         {board && <RecordsStrip board={board} coachName={coachName} />}
 
@@ -331,8 +341,8 @@ function CoachOfWeekCard({ week, coachName }: { week: CoachRating[]; coachName: 
         <div className="meta mono">{weekRange(todayUTC()).toUpperCase()} · RESETS MON 00:00 UTC</div>
       </div>
       <div className="hero-wrap">
-        <div className="hero mono">{top ? `${top.percent}%` : "—"}</div>
-        <div className="hero-l mono">COACH RATING</div>
+        <div className="hero mono">{top ? ratingLabel(top.rating) : "—"}</div>
+        <div className="hero-l mono">PTS / GAME</div>
       </div>
       {open && (
         <div className="koth-week-list">
@@ -341,12 +351,12 @@ function CoachOfWeekCard({ week, coachName }: { week: CoachRating[]; coachName: 
           ) : week.slice(0, 5).map((c, i) => (
             <div key={c.uid} className="koth-line mono">
               <span>{i + 1}. <b className="who">{coachName(c.uid)}</b> <span className="faint">{c.wins}-{c.losses}</span></span>
-              <b className="teal">{c.percent}%</b>
+              <b className="teal">{ratingLabel(c.rating)}</b>
             </div>
           ))}
           <div className="koth-rule mono">
-            A win scores 1, plus up to 1 more for the margin (20+ is the max). A loss scores 0.
-            Daily and season games count.
+            Points per game. A win scores 1, plus up to 1 more for the margin (20+ is the max).
+            A loss scores 0. Daily and season games count.
           </div>
         </div>
       )}
@@ -429,7 +439,7 @@ function SeasonSection({ board, coachName }: { board: Board; coachName: (uid: st
                         <div key={c.uid} className="koth-season-coach mono">
                           <span className="who">{coachName(c.uid)}</span>
                           <span>{c.wins}</span><span>{c.losses}</span>
-                          <span className="teal">{c.percent}%</span>
+                          <span className="teal">{ratingLabel(c.rating)}</span>
                           <span>{signed(c.margin)}</span>
                         </div>
                       ))}
@@ -440,12 +450,51 @@ function SeasonSection({ board, coachName }: { board: Board; coachName: (uid: st
             </div>
           ))}
           <div className="koth-rule mono span">
-            Under each team: the coaches who have run it, best rating first. A win scores 1 plus up
-            to 1 more for the margin, a loss 0; the % is the average out of 2, steadied for coaches
-            with few games.
+            Under each team: the coaches who have run it, best first, in points per game. A win
+            scores 1 plus up to 1 more for the margin, a loss 0, out of 2 a game, steadied for
+            coaches with few games.
           </div>
         </div>
       )}
+    </section>
+  );
+}
+
+/** ALL-TIME COACHES (Dan, 2026-10-01): every daily and season game a coach
+ *  has played, rated as Coach of the Week is, ten games to appear. Top ten,
+ *  the rest one tap away. */
+function AllTimeCoaches({ career, coachName }: { career: CoachRating[]; coachName: (uid: string) => string }) {
+  const [all, setAll] = useState(false);
+  const shown = all ? career : career.slice(0, 10);
+  return (
+    <section className="koth-career" aria-label="All-time coaches">
+      <div className="koth-kicker mono">ALL-TIME COACHES</div>
+      <div className="koth-card">
+        <div className="koth-season-top mono">
+          <span>EVERY DAILY AND SEASON GAME</span>
+          <span className="faint">{CAREER_MIN_GAMES}+ GAMES TO QUALIFY</span>
+        </div>
+        {career.length === 0 ? (
+          <p className="koth-empty mono">Nobody has {CAREER_MIN_GAMES} games yet.</p>
+        ) : (
+          <>
+            <div className="koth-career-cols mono faint"><span>#</span><span>COACH</span><span>W</span><span>L</span><span>GP</span><span>PTS/G</span></div>
+            {shown.map((c, i) => (
+              <div key={c.uid} className="koth-career-row mono">
+                <span className={`rk ${i < 3 ? "top" : ""}`}>{i + 1}</span>
+                <span className="who">{coachName(c.uid)}</span>
+                <span>{c.wins}</span><span>{c.losses}</span><span>{c.games}</span>
+                <span className="teal">{ratingLabel(c.rating)}</span>
+              </div>
+            ))}
+            {career.length > 10 && (
+              <button className="koth-linkish mono center" onClick={() => setAll(!all)} aria-expanded={all}>
+                {all ? "TOP TEN ↑" : `ALL ${career.length} COACHES ↓`}
+              </button>
+            )}
+          </>
+        )}
+      </div>
     </section>
   );
 }

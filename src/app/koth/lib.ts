@@ -286,22 +286,32 @@ export function seasonGameWon(g: SeasonGameRow): boolean {
 }
 
 // ---- The coach rating (Dan, 2026-10-01). It replaces the top-3 tally:
-// it sets Coach of the Week and orders the coaches under each team.
+// it sets Coach of the Week, orders the coaches under each team, and ranks
+// the ALL-TIME COACHES board.
 //
 // Every game is worth points: a loss 0, a win 1 plus up to 1 more for the
 // margin, the whole extra point at 20 or more. The rating is the average,
 // shrunk toward an even 1.0 as if every coach had already played three
 // such games, so one blowout does not top a coach with a full week. It is
-// printed as a percentage of the best possible, 2 points a game.
+// printed as points per game, 0.00 to 2.00 (Dan, 2026-10-01: points, not a
+// percentage). The app's `coach_career` view (migration 0016) carries the
+// same per-game rule in SQL; change the two together.
 
 export const RATING_PRIOR = 1.0;
 export const RATING_WEIGHT = 3;
 export const MARGIN_CAP = 20;
 /** Games in the week before a coach can be Coach of the Week. */
 export const WEEK_MIN_GAMES = 3;
+/** Career games before a coach is on the ALL-TIME COACHES board. */
+export const CAREER_MIN_GAMES = 10;
 
 /** One finished game from a coach's side. */
 export type RatedGame = { uid: string; won: boolean; margin: number; at: string };
+
+/** One coach's games, totalled — what `coach_career` returns. */
+export type CoachTotals = {
+  uid: string; games: number; wins: number; points: number; margin: number; first_at: string;
+};
 
 export type CoachRating = {
   uid: string;
@@ -310,16 +320,19 @@ export type CoachRating = {
   losses: number;
   /** Net margin over the games, for the tie-break. */
   margin: number;
-  /** Points per game after shrinkage, 0–2. */
+  /** Points per game after shrinkage, 0–2: the number the boards print. */
   rating: number;
-  /** `rating` as a whole percentage of 2. */
-  percent: number;
   /** When the coach's first game in the set finished. */
   firstAt: string;
 };
 
 export function gamePoints(won: boolean, margin: number): number {
   return won ? 1 + Math.min(Math.max(margin, 0), MARGIN_CAP) / MARGIN_CAP : 0;
+}
+
+/** `1.09`: a rating as the boards print it. */
+export function ratingLabel(rating: number): string {
+  return rating.toFixed(2);
 }
 
 /** A season game, from the coach's side. */
@@ -337,26 +350,37 @@ export function dailyRated(r: WeekDayRow): RatedGame {
   return { uid: r.uid, won: r.won, margin: r.margin, at: r.created_at };
 }
 
-/** Every coach in `games`, best first. The tie-break chain ends in `uid`,
- *  so the order is total: the same games always rank the same way. */
-export function rateCoaches(games: RatedGame[]): CoachRating[] {
-  const by = new Map<string, CoachRating & { points: number }>();
-  for (const g of games) {
-    const c = by.get(g.uid) ?? by.set(g.uid, {
-      uid: g.uid, games: 0, wins: 0, losses: 0, margin: 0, rating: 0, percent: 0, firstAt: g.at, points: 0,
-    }).get(g.uid)!;
-    c.games += 1;
-    if (g.won) c.wins += 1; else c.losses += 1;
-    c.margin += g.margin;
-    c.points += gamePoints(g.won, g.margin);
-    if (g.at < c.firstAt) c.firstAt = g.at;
-  }
-  return [...by.values()].map(({ points, ...c }) => {
-    const rating = (points + RATING_WEIGHT * RATING_PRIOR) / (c.games + RATING_WEIGHT);
-    return { ...c, rating, percent: Math.round((rating / 2) * 100) };
-  }).sort((a, b) =>
+/** Coaches from their totals, best first. The tie-break chain ends in
+ *  `uid`, so the order is total: the same games always rank the same way. */
+export function rateTotals(totals: CoachTotals[]): CoachRating[] {
+  return totals.map((t) => ({
+    uid: t.uid, games: t.games, wins: t.wins, losses: t.games - t.wins, margin: t.margin,
+    rating: (t.points + RATING_WEIGHT * RATING_PRIOR) / (t.games + RATING_WEIGHT),
+    firstAt: t.first_at,
+  })).sort((a, b) =>
     b.rating - a.rating || b.wins - a.wins || b.margin - a.margin ||
     a.firstAt.localeCompare(b.firstAt) || a.uid.localeCompare(b.uid));
+}
+
+/** Every coach in `games`, best first. */
+export function rateCoaches(games: RatedGame[]): CoachRating[] {
+  const by = new Map<string, CoachTotals>();
+  for (const g of games) {
+    const t = by.get(g.uid) ?? by.set(g.uid, {
+      uid: g.uid, games: 0, wins: 0, points: 0, margin: 0, first_at: g.at,
+    }).get(g.uid)!;
+    t.games += 1;
+    if (g.won) t.wins += 1;
+    t.margin += g.margin;
+    t.points += gamePoints(g.won, g.margin);
+    if (g.at < t.first_at) t.first_at = g.at;
+  }
+  return rateTotals([...by.values()]);
+}
+
+/** The ALL-TIME COACHES board: careers of {@link CAREER_MIN_GAMES} or more. */
+export function allTimeCoaches(totals: CoachTotals[]): CoachRating[] {
+  return rateTotals(totals.filter((t) => t.games >= CAREER_MIN_GAMES));
 }
 
 /** This week's ranking: dailies and season games together, Mon–Sun UTC,
