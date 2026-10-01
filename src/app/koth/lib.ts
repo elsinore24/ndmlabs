@@ -382,6 +382,19 @@ export function allTimeCoaches(totals: CoachTotals[]): CoachRating[] {
   return rateTotals(totals.filter((t) => t.games >= CAREER_MIN_GAMES));
 }
 
+/** One series that took a throne, as `challenges` returns it. */
+export type ThroneWin = { challenger_uid: string; throne_id: ThroneId };
+
+/** uid → thrones taken, both hills together (Dan, 2026-10-01: a count
+ *  beside the coach's name, kept out of the rating — a throne series is so
+ *  much harder than a regular game that its W-L would only punish trying).
+ *  Defences are not counted: the holder does not play them. */
+export function thronesTaken(wins: ThroneWin[]): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const w of wins) if (w.challenger_uid) out[w.challenger_uid] = (out[w.challenger_uid] ?? 0) + 1;
+  return out;
+}
+
 /** This week's ranking: dailies and season games together, Mon–Sun UTC,
  *  only coaches with {@link WEEK_MIN_GAMES} or more. The first is Coach of
  *  the Week. Callers pass this week's rows only. */

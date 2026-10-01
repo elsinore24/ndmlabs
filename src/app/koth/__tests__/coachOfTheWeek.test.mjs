@@ -2,7 +2,7 @@
 // (node --test with type-stripping, so lib.ts is imported as it is).
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { allTimeCoaches, coachOfTheWeek, gamePoints, rateCoaches, ratingLabel } from "../lib.ts";
+import { allTimeCoaches, coachOfTheWeek, gamePoints, rateCoaches, ratingLabel, thronesTaken } from "../lib.ts";
 
 const daily = (uid, margin, created_at) =>
   ({ uid, day: created_at.slice(0, 10), score: 100 + margin, score_opp: 100, won: margin > 0, margin, created_at });
@@ -91,4 +91,13 @@ test("the all-time board rates career totals the same way, ten games to appear",
   const g = (won, margin, at) => ({ uid: "x", won, margin, at });
   const games = [g(true, 20, "a"), g(false, -4, "b"), g(true, 10, "c")];
   assert.equal(rateCoaches(games)[0].rating, (2 + 0 + 1.5 + 3) / 6);
+});
+
+test("thrones taken count every series that took a throne, both hills, per coach", () => {
+  const taken = thronesTaken([
+    { challenger_uid: "a", throne_id: 1 }, { challenger_uid: "a", throne_id: 2 },
+    { challenger_uid: "b", throne_id: 1 }, { challenger_uid: "", throne_id: 1 },
+  ]);
+  assert.deepEqual(taken, { a: 2, b: 1 });
+  assert.deepEqual(thronesTaken([]), {});
 });

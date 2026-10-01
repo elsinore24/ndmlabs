@@ -6,15 +6,15 @@
 // component owns the reads and the 60-second visible-tab poll; the pieces
 // below it are pure renderers. Display only — no sign-in (Dan, 2026-09-02).
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import Header from "@/components/Header";
 import AllTimeFiveMark from "@/components/AllTimeFiveMark";
 import {
   APP_STORE_URL, DAILY_OPPONENTS, HOUSE_UID, RETIRED_HANDLE,
   type Challenge, type CoachRating, type DailyRaw, type LineageEntry,
-  type CoachTotals, type Profile, type Standing, type SeasonGameRow, type Throne, type ThroneId, type Venue, type WeekDayRow,
+  type CoachTotals, type Profile, type ThroneWin, type Standing, type SeasonGameRow, type Throne, type ThroneId, type Venue, type WeekDayRow,
   CAREER_MIN_GAMES, WEEK_MIN_GAMES,
-  allTimeCoaches, coachOfTheWeek, leadPlayer, ratingLabel, minutesAgo, mondayUTC, profileMap, resetsIn, rest, scoreline,
+  allTimeCoaches, coachOfTheWeek, leadPlayer, ratingLabel, thronesTaken, minutesAgo, mondayUTC, profileMap, resetsIn, rest, scoreline,
   shortDate, signed, todayUTC, venueCity, venueDecade, venueFallback, venueKnown,
   weekRange } from "./lib";
 import "./koth.css";
@@ -57,6 +57,8 @@ type Board = {
   bestMargin: { uid: string; scoreline: string; margin: number; day: string } | null;
   mostWins: { uid: string; wins: number } | null;
   profiles: Record<string, Profile>;
+  /** uid → thrones taken (lib.thronesTaken): the crown beside a coach. */
+  thrones: Record<string, number>;
   fetchedAt: number;
 };
 
@@ -85,7 +87,7 @@ export default function KothLive() {
       const today = todayUTC();
       const monday = mondayUTC();
       const [throne1, lineage1, challenges1, throne2, lineage2, challenges2,
-             dailyRaw, venues, winsRaw, weekDays, standings, seasonGames, careerRaw] =
+             dailyRaw, venues, winsRaw, weekDays, standings, seasonGames, careerRaw, throneWins] =
         await Promise.all([
           ...hillReads(1),
           ...hillReads(2),
@@ -114,6 +116,9 @@ export default function KothLive() {
           // Careers, totalled on the server (app migration 0016): a board
           // of every game ever cannot be read raw past PostgREST's cap.
           rest<CoachTotals[]>("coach_career?select=uid,games,wins,points,margin,first_at"),
+          // Every series that took a throne. A few a week at most, so a raw
+          // read stays far under PostgREST's 1,000-row cap for years.
+          rest<ThroneWin[]>("challenges?result=eq.dethroned&applied=is.true&select=challenger_uid,throne_id&limit=1000"),
         ]);
 
       const winCounts = new Map<string, number>();
@@ -151,6 +156,7 @@ export default function KothLive() {
         bestMargin: best ? { uid: best.uid, scoreline: scoreline(best.score, best.score_opp), margin: best.margin, day: best.day } : null,
         mostWins: most ? { uid: most[0], wins: most[1] } : null,
         profiles,
+        thrones: thronesTaken(throneWins),
         fetchedAt: Date.now(),
       });
       setFailed(false);
@@ -179,12 +185,14 @@ export default function KothLive() {
   }, [load]);
 
   const coachName = (uid: string) => board?.profiles[uid]?.coach ?? board?.profiles[uid]?.handle ?? "COACH";
+  /** The coach's name with their crown count beside it, where they have one. */
+  const coachTag = (uid: string) => <CoachTag name={coachName(uid)} thrones={board?.thrones[uid] ?? 0} />;
 
   return (
     <div className="koth">
       <Header fixed={false} transparent mark={<AllTimeFiveMark />} />
       <div className="max-w-[1180px] mx-auto px-4 sm:px-6 pb-20">
-        <TodayCard board={board} coachName={coachName} />
+        <TodayCard board={board} coachTag={coachTag} />
 
         {failed && !board && (
           <p className="koth-empty mono">The board didn&apos;t answer. Refresh to try again.</p>
@@ -200,7 +208,7 @@ export default function KothLive() {
               <div className="koth-hall-grid">
                 {board.legends.throne && <ThroneCard hill={board.legends} label="LEGENDS" kind="is-legends" />}
                 {board.allStars.throne && <ThroneCard hill={board.allStars} label="ALL-STARS" kind="is-allstars" />}
-                <CoachOfWeekCard week={board.week} coachName={coachName} />
+                <CoachOfWeekCard week={board.week} coachTag={coachTag} />
               </div>
             </section>
           </>
@@ -208,7 +216,7 @@ export default function KothLive() {
 
         {board && board.standings.length > 0 && <SeasonSection board={board} coachName={coachName} />}
 
-        {board && <AllTimeCoaches career={board.career} coachName={coachName} />}
+        {board && <AllTimeCoaches career={board.career} coachTag={coachTag} />}
 
         {board && <RecordsStrip board={board} coachName={coachName} />}
 
@@ -236,7 +244,7 @@ export default function KothLive() {
  *  on a phone). The venue row names the city, the year and the rules; the
  *  opponent and the decade follow from it. A day the calendar has not
  *  reached says nothing it would have to guess. */
-function TodayCard({ board, coachName }: { board: Board | null; coachName: (uid: string) => string }) {
+function TodayCard({ board, coachTag }: { board: Board | null; coachTag: (uid: string) => ReactNode }) {
   const [open, setOpen] = useState(false);
   const v = board?.today;
   const known = venueKnown(v);
@@ -283,7 +291,7 @@ function TodayCard({ board, coachName }: { board: Board | null; coachName: (uid:
             {shown.map((r, i) => (
               <div key={r.uid} className="koth-today-row">
                 <span className={`rk mono ${i < 3 ? "top" : ""}`}>{i + 1}</span>
-                <b>{coachName(r.uid)}</b>
+                <b>{coachTag(r.uid)}</b>
                 <span className={`mono sc ${r.won ? "teal" : "red"}`}>{scoreline(r.score, r.score_opp)}</span>
               </div>
             ))}
@@ -296,6 +304,22 @@ function TodayCard({ board, coachName }: { board: Board | null; coachName: (uid:
         )}
       </div>
     </section>
+  );
+}
+
+/** A coach's name, and a gold crown with their thrones taken when they have
+ *  any (Dan, 2026-10-01). Kept out of the rating on purpose. */
+function CoachTag({ name, thrones }: { name: string; thrones: number }) {
+  return (
+    <>
+      {name}
+      {thrones > 0 && (
+        <span className="koth-crowns mono" title={`${thrones} ${thrones === 1 ? "throne" : "thrones"} taken`}
+              aria-label={`${thrones} ${thrones === 1 ? "throne" : "thrones"} taken`}>
+          ♛{thrones}
+        </span>
+      )}
+    </>
   );
 }
 
@@ -326,7 +350,7 @@ function ThroneCard({ hill, label, kind }: { hill: Hill; label: string; kind: "i
 /** The third honoree: the best coach rating this fixed Mon–Sun week, three
  *  games or more (lib.coachOfTheWeek). The rule is on the card, because
  *  players will otherwise assume it means something else. */
-function CoachOfWeekCard({ week, coachName }: { week: CoachRating[]; coachName: (uid: string) => string }) {
+function CoachOfWeekCard({ week, coachTag }: { week: CoachRating[]; coachTag: (uid: string) => ReactNode }) {
   const [open, setOpen] = useState(false);
   const top = week[0] ?? null;
   return (
@@ -334,7 +358,7 @@ function CoachOfWeekCard({ week, coachName }: { week: CoachRating[]; coachName: 
       <div className="glyph" aria-hidden>◎</div>
       <div className="coach-text">
         <div className="label mono">COACH OF THE WEEK</div>
-        <div className="name display">{top ? coachName(top.uid) : "Nobody yet"}</div>
+        <div className="name display">{top ? coachTag(top.uid) : "Nobody yet"}</div>
         <div className="lead">
           {top ? `${top.wins}-${top.losses} in ${top.games} games` : `${WEEK_MIN_GAMES} games this week to qualify`}
         </div>
@@ -350,7 +374,7 @@ function CoachOfWeekCard({ week, coachName }: { week: CoachRating[]; coachName: 
             <div className="mono faint" style={{ fontSize: 11 }}>Nobody has {WEEK_MIN_GAMES} games yet.</div>
           ) : week.slice(0, 5).map((c, i) => (
             <div key={c.uid} className="koth-line mono">
-              <span>{i + 1}. <b className="who">{coachName(c.uid)}</b> <span className="faint">{c.wins}-{c.losses}</span></span>
+              <span>{i + 1}. <b className="who">{coachTag(c.uid)}</b> <span className="faint">{c.wins}-{c.losses}</span></span>
               <b className="teal">{ratingLabel(c.rating)}</b>
             </div>
           ))}
@@ -448,7 +472,7 @@ function SeasonSection({ board, coachName }: { board: Board; coachName: (uid: st
 /** ALL-TIME COACHES (Dan, 2026-10-01): every daily and season game a coach
  *  has played, rated as Coach of the Week is, ten games to appear. Top ten,
  *  the rest one tap away. */
-function AllTimeCoaches({ career, coachName }: { career: CoachRating[]; coachName: (uid: string) => string }) {
+function AllTimeCoaches({ career, coachTag }: { career: CoachRating[]; coachTag: (uid: string) => ReactNode }) {
   const [all, setAll] = useState(false);
   const shown = all ? career : career.slice(0, 10);
   return (
@@ -467,7 +491,7 @@ function AllTimeCoaches({ career, coachName }: { career: CoachRating[]; coachNam
             {shown.map((c, i) => (
               <div key={c.uid} className="koth-career-row mono">
                 <span className={`rk ${i < 3 ? "top" : ""}`}>{i + 1}</span>
-                <span className="who">{coachName(c.uid)}</span>
+                <span className="who">{coachTag(c.uid)}</span>
                 <span>{c.wins}</span><span>{c.losses}</span><span>{c.games}</span>
                 <span className="teal">{ratingLabel(c.rating)}</span>
               </div>

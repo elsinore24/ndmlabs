@@ -428,3 +428,16 @@
 .koth-career-row .who { font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .koth-career-cols span:nth-child(n+3), .koth-career-row span:nth-child(n+3) { text-align: right; }
 .koth-career-row .teal { font-weight: 800; }
+
+/* ---- Thrones taken, beside a coach's name: a small gold crown and the
+   count, set off the name so it reads as a badge, not part of it. */
+.koth-crowns {
+  display: inline-block;
+  margin-left: 0.4em;
+  font-size: 0.85em;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: var(--gold);
+  vertical-align: 0.12em;
+  white-space: nowrap;
+}
