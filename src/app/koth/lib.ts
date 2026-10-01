@@ -446,6 +446,74 @@ export function venueChip(v: Venue): string {
   const name = venueName(v);
   return v.year ? `${name} · ${v.year}` : name;
 }
+// ---- Today's opponent. The daily's building follows its opponent one to
+// one (the app's venues.json: one building per opponent), so the venue id
+// names the team to beat. Generated from Engine/Sources/BTLEngine/Data/
+// venues.json on 2026-10-01; a venue missing here only drops the "Beat the"
+// clause, it never guesses.
+export const DAILY_OPPONENTS: Record<string, string> = {
+  nyk1970: "'70 Knicks",
+  mil1971: "'71 Bucks",
+  phi1973: "'73 76ers",
+  por1977: "'77 Blazers",
+  wsb1978: "'78 Bullets",
+  sea1979: "'79 SuperSonics",
+  phi1983: "'83 76ers",
+  lal1985: "'85 Lakers",
+  bos1986: "'86 Celtics",
+  atl1987: "'87 Hawks",
+  lal1987: "'87 Lakers",
+  det1989: "'89 Pistons",
+  ind1990: "'90 Pacers",
+  dal1993: "'93 Mavericks",
+  pho1993: "'93 Suns",
+  orl1995: "'95 Magic",
+  chi1996: "'96 Bulls",
+  uta1997: "'97 Jazz",
+  chh1998: "'98 Hornets",
+  den1998: "'98 Nuggets",
+  sas1999: "'99 Spurs",
+  lal2001: "'01 Lakers",
+  sac2002: "'02 Kings",
+  njn2003: "'03 Nets",
+  det2004: "'04 Pistons",
+  min2004: "'04 Timberwolves",
+  hou2005: "'05 Rockets",
+  mia2006: "'06 Heat",
+  noh2008: "'08 Hornets",
+  cha2012: "'12 Bobcats",
+  mem2013: "'13 Grizzlies",
+  lac2014: "'14 Clippers",
+  cle2016: "'16 Cavaliers",
+  okc2016: "'16 Thunder",
+  phi2016: "'16 76ers",
+  gsw2017: "'17 Warriors",
+  tor2019: "'19 Raptors",
+  lal2020: "'20 Lakers",
+  mil2021: "'21 Bucks",
+  gsw2022: "'22 Warriors",
+  den2023: "'23 Nuggets",
+  bos2024: "'24 Celtics",
+  okc2025: "'25 Thunder",
+  nyk2026: "'26 Knicks",
+};
+
+/** `Philadelphia` from `PHILADELPHIA 1973`: the city, in title case. */
+export function venueCity(v: Venue): string {
+  return v.display_name.replace(/\s*\d{4}$/, "").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+}
+/** `1970s` for a 1973 venue: the decade the daily drafts from. */
+export function venueDecade(v: Venue): string {
+  return v.year ? `${Math.floor(v.year / 10) * 10}s` : "";
+}
+/** `7H 12M` until the next midnight UTC, when the daily resets. */
+export function resetsIn(now = Date.now()): string {
+  const d = new Date(now);
+  const next = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + 1);
+  const mins = Math.max(0, Math.ceil((next - now) / 60000));
+  return `${Math.floor(mins / 60)}H ${mins % 60}M`;
+}
+
 /** First day of the current UTC month, `YYYY-MM-01`. */
 export function monthStartUTC(): string {
   return `${todayUTC().slice(0, 7)}-01`;

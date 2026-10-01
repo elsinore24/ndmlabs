@@ -1,7 +1,8 @@
-/* The Board — ndmlabs.net/koth. Same product as the app: ink, chalk, dust,
-   amber for the CTA and top ranks, gold for the King's trim. Mono for every
-   numeral and label. Motion is the ticker, the LIVE dot and row hover; all
-   of it honors reduced motion. */
+/* ndmlabs.net/koth. Same product as the app: ink, chalk, dust, amber for
+   the CTA and top ranks, gold for the King's trim. Mono for every numeral
+   and label. Since 2026-10-01 (Dan's mockup) the page is today's
+   challenge, who's on top, the season, a records strip and the app; the
+   Board's ticker, tabs and feed are gone, and so is their motion. */
 
 .koth {
   --ink: #08090c;
@@ -67,7 +68,6 @@
    14px chalk survives a lit court, but 10px tracked-out mono at --faint does
    not. A translucent panel behind the board keeps the photograph visible
    around it and legibility absolute on it. */
-.koth-grid > div:first-child,
 .koth-card {
   /* The same warm felt as the gold-trimmed boxes (Dan, 2026-09-05:
      "change them all to warm gradient"). */
@@ -75,16 +75,6 @@
   backdrop-filter: blur(3px);
   -webkit-backdrop-filter: blur(3px);
 }
-.koth-grid > div:first-child {
-  /* The same gold the Coach of the Day card and the King strip wear (Dan,
-     2026-09-05): the board is the page's subject, and a grey edge made it read
-     as the background to its own sidebar. */
-  border: 1px solid rgba(217, 178, 74, 0.45);
-  border-radius: 16px;
-  padding: 16px 18px;
-}
-.koth-cotd { background: linear-gradient(180deg, rgba(22, 19, 12, 0.67), rgba(13, 15, 20, 0.57) 70%); }
-.koth-grid > * { min-width: 0; }
 .koth .mono {
   font-family: "SF Mono", "JetBrains Mono", ui-monospace, Menlo, monospace;
   font-variant-numeric: tabular-nums;
@@ -97,29 +87,6 @@
   font-family: -apple-system, BlinkMacSystemFont, system-ui, var(--font-inter), Inter, sans-serif;
 }
 
-/* ── Ticker ── */
-.koth-ticker {
-  background: #111318;
-  border-bottom: 1px solid var(--edge);
-  overflow: hidden;
-  white-space: nowrap;
-  font-size: 12px;
-}
-.koth-ticker .tk {
-  display: inline-block;
-  padding: 10px 0;
-  animation: koth-scroll 18s linear infinite;
-}
-.koth-ticker:hover .tk { animation-play-state: paused; }
-.koth-ticker .tk span { margin-right: 44px; color: var(--dust); }
-.koth-ticker .tk b { color: var(--chalk); font-weight: 700; }
-.koth-ticker .tk i { font-style: normal; color: var(--amber); }
-@keyframes koth-scroll {
-  from { transform: translateX(0); }
-  to { transform: translateX(-50%); }
-}
-
-/* ── King strip ── */
 /* ── The Hall of Champions ──
    Three honorees in one gold-edged room: the LEGENDS throne, the ALL-STARS
    throne, the COACH OF THE WEEK. Equal columns divided by hairlines, so no
@@ -129,7 +96,7 @@
 .is-coach    { --accent: var(--coach);    --accent-cta: var(--coach-cta);    --accent-ink: #062a20; }
 
 .koth-hall {
-  margin-top: 26px;
+  margin-top: 0;
   border: 1px solid rgba(217, 178, 74, 0.35);
   border-radius: 18px;
   background: linear-gradient(180deg, rgba(22, 19, 12, 0.7), rgba(14, 16, 19, 0.6) 70%);
@@ -148,18 +115,10 @@
   background: radial-gradient(ellipse, rgba(255, 176, 32, 0.14), transparent 65%);
   pointer-events: none;
 }
-.koth-hall-kicker {
-  text-align: center;
-  font-size: 30px;
-  letter-spacing: 0.12em;
-  color: var(--gold);
-  font-weight: 700;
-  position: relative;
-}
 .koth-hall-grid {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
-  margin-top: 18px;
+  margin-top: 4px;
   position: relative;
 }
 .koth-honoree {
@@ -197,77 +156,11 @@
    whatever the row leaves, at least this. */
 .koth-honoree .hero-l { margin-bottom: 16px; }
 
-/* One CTA, three colourways. Filled for the thrones; the coach's is an
-   outline, because THE WEEK ↓ is a look, not a challenge. */
-.koth-cta.outline { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
-
-.koth-king {
-  margin-top: 26px;
-  border: 1px solid rgba(217, 178, 74, 0.35);
-  border-radius: 18px;
-  /* Translucent, like the panels below it, so the arena bleeds through
-     (Dan, 2026-09-05: "I want the background image to bleed through a
-     little"). The warm left end keeps its tint; the right end is the
-     panel glass. */
-  background: linear-gradient(90deg, rgba(22, 19, 12, 0.67), rgba(14, 16, 19, 0.57) 70%);
-  backdrop-filter: blur(2px);
-  -webkit-backdrop-filter: blur(2px);
-  padding: 22px 28px;
-  display: flex;
-  align-items: center;
-  gap: 26px;
-  position: relative;
-  overflow: hidden;
-}
-.koth-king::before {
-  content: "";
-  position: absolute;
-  left: -120px;
-  top: -140px;
-  width: 420px;
-  height: 420px;
-  background: radial-gradient(circle, rgba(255, 176, 32, 0.16), transparent 65%);
-  pointer-events: none;
-}
-.koth-king .crown { font-size: 28px; line-height: 1; color: var(--gold); }
-.koth-king .text { flex: 1; min-width: 0; position: relative; }
-.koth-king .kicker { font-size: 10px; letter-spacing: 0.3em; color: var(--gold); font-weight: 700; }
-.koth-king .name {
-  font-size: 34px;
-  font-weight: 900;
-  letter-spacing: -0.01em;
-  margin-top: 4px;
-  line-height: 1.1;
-  overflow-wrap: anywhere;
-}
-.koth-king .meta { font-size: 11px; color: var(--dust); letter-spacing: 0.12em; margin-top: 6px; }
-.koth-king .meta b { color: var(--chalk); letter-spacing: 0.02em; font-size: 12px; }
-/* The coach on the king card, bright like every other coach name on the
-   page (Dan, 2026-09-05: "still dull or chalky"). Keeps the meta's tracking
-   and size — it is the same line, one word lit. */
-.koth-king .meta b.who { color: #ffffff; letter-spacing: 0.12em; font-size: 11px; }
-/* Each fact is one unbreakable span, separated by a drawn middot, so the line
-   wraps between facts and never inside one.
-   A flex row, not inline spans: adjacent JSX elements have no whitespace
-   between them, so inline nowrap spans give the line no break opportunity at
-   all and it runs straight through the defenses cell. Flex wrapping breaks
-   between items without needing one. */
-.koth-king .meta { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 10px; }
-.koth-king .meta span { white-space: nowrap; }
-.koth-king .meta span + span::before { content: "·"; margin-right: 10px; color: var(--faint); }
-.koth-king .def {
-  text-align: center;
-  padding: 0 18px;
-  border-left: 1px solid var(--edge);
-  border-right: 1px solid var(--edge);
-}
-.koth-king .def .n { font-size: 48px; font-weight: 900; color: var(--amber); line-height: 1; }
-.koth-king .def .l { font-size: 9px; letter-spacing: 0.28em; color: var(--gold); margin-top: 4px; font-weight: 700; }
 .koth-cta {
   display: inline-block;
-  /* The entity's colourway when one is set (the hall, the rail); gold on
-     its own. This base rule sits after the hall's, so it must defer, not
-     override — a hard-coded gold here turned the ALL-STARS CTA gold. */
+  /* The entity's colourway when one is set (the hall); gold on its own.
+     It must defer, not override — a hard-coded gold here turned the
+     ALL-STARS CTA gold. */
   background: var(--accent-cta, linear-gradient(180deg, #ffc24a, #f5a310));
   color: var(--accent-ink, #1a1205);
   font-weight: 800;
@@ -281,159 +174,15 @@
   text-align: center;
 }
 .koth-cta:hover { filter: brightness(1.06); }
-@media (max-width: 820px) {
-  .koth-king { flex-wrap: wrap; padding: 20px; }
-  .koth-king .def { border: none; padding: 0; }
-  .koth-king .name { font-size: 28px; }
-  .koth-cta { width: 100%; }
-}
 
-/* ── Masthead + tabs ── */
-.koth-mast-row { display: none; }
-.koth-mast {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 34px 0 18px;
-  border-bottom: 3px solid var(--amber);
-}
-.koth-mast h1 { font-size: 40px; font-weight: 900; letter-spacing: -0.01em; line-height: 1; margin-top: 4px; }
-/* ── The feed ──
-   Result cards, not table rows: a table built for a hundred rows renders
-   one and looks broken (passdown §4). A card holds one result whole. */
-.koth-count { font-size: 10px; letter-spacing: 0.2em; color: var(--faint); font-weight: 700; white-space: nowrap; }
-.koth-feed { display: flex; flex-direction: column; gap: 14px; }
-.koth-result {
-  position: relative;
-  border: 1px solid var(--edge);
-  border-left: 3px solid var(--accent, var(--edge));
-  border-radius: 14px;
-  background: rgba(13, 15, 20, 0.82);
-  backdrop-filter: blur(3px);
-  padding: 16px 18px 14px;
-  transition: transform 0.15s ease, border-color 0.15s ease;
-}
-.koth-result:hover { transform: translateY(-2px); border-color: rgba(255, 255, 255, 0.16); }
-.koth-result.win { --accent: var(--teal); }
-.koth-result.loss { --accent: var(--red); }
-.koth-result .top { display: flex; align-items: flex-start; gap: 14px; }
-.koth-result .rank {
-  flex: 0 0 auto;
-  width: 30px; height: 30px;
-  border-radius: 8px;
-  display: grid; place-items: center;
-  font-size: 12px; font-weight: 800;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid var(--edge);
-  color: var(--dust);
-}
-.koth-result .rank.first { background: var(--legends-cta); color: #1a1205; border-color: transparent; }
-.koth-result .who { flex: 1; min-width: 0; }
-.koth-result .who b { display: block; font-size: 16px; color: #ffffff; font-weight: 800; letter-spacing: -0.01em; }
-.koth-result .sub { font-size: 10px; letter-spacing: 0.14em; color: var(--faint); margin-top: 3px; font-weight: 700; }
-.koth-result .score { text-align: right; flex: 0 0 auto; }
-.koth-result .score b { display: block; font-size: 22px; font-weight: 800; color: var(--accent); letter-spacing: -0.01em; }
-.koth-result .score i { font-style: normal; font-size: 11px; color: var(--dust); }
-.koth-result .bar { height: 3px; border-radius: 2px; background: rgba(255, 255, 255, 0.07); margin-top: 12px; overflow: hidden; }
-.koth-result .bar i { display: block; height: 100%; background: var(--accent); border-radius: 2px; }
-.koth-result .meta { font-size: 10px; letter-spacing: 0.14em; color: var(--faint); margin-top: 10px; font-weight: 700; }
-.koth-result .meta em { font-style: normal; color: var(--accent); }
-/* The sparse state is required, not optional: a quiet day reads as in
-   progress, never as broken. */
-.koth-sparse {
-  border: 1px dashed rgba(255, 255, 255, 0.16);
-  border-radius: 14px;
-  padding: 26px 18px;
-  text-align: center;
-  color: var(--dust);
-  font-size: 13px;
-}
-.koth-sparse .mono { font-size: 10px; letter-spacing: 0.16em; color: var(--faint); margin-top: 8px; font-weight: 700; }
+/* One CTA, three colourways. Filled for the thrones; the coach's is an
+   outline, because THE WEEK ↓ is a look, not a challenge. */
+.koth-cta.outline { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
 
-/* ── The rail ── */
-.koth-line .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); margin-right: 8px; vertical-align: middle; }
-.koth-line .hill { color: var(--accent); font-weight: 700; margin-right: 6px; }
-.koth-more { display: none; }
 /* A quiet in-card link that behaves like the tabs it points at. */
 .koth-linkish { display: block; margin-top: 10px; background: none; border: 0; padding: 4px 0; color: var(--coach); font-size: 10px; letter-spacing: 0.2em; font-weight: 700; cursor: pointer; min-height: 32px; }
 .koth-linkish:hover { color: var(--chalk); }
 
-/* ── Sticky GET bar: a phone is one tap from installing ──
-   Hidden above the breakpoint outright, not just visually: a desktop visitor
-   cannot install, and a floating bar there would be noise. */
-.koth-getbar { display: none; }
-
-/* Small, tracked-out, all-caps text goes bold everywhere: at 9-11px with
-   0.2em+ tracking, regular weight is what makes a dark board read soft. */
-.koth-live { display: flex; align-items: center; gap: 8px; font-size: 11px; letter-spacing: 0.2em; color: var(--dust); white-space: nowrap; font-weight: 700; }
-.koth-live .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--red); animation: koth-blink 1.2s infinite; }
-@keyframes koth-blink { 50% { opacity: 0.25; } }
-.koth-tabs { display: flex; border-bottom: 1px solid var(--edge); overflow-x: auto; }
-.koth-tab {
-  padding: 14px 22px;
-  font-size: 11px;
-  letter-spacing: 0.2em;
-  color: var(--dust);
-  border: 0;
-  border-bottom: 3px solid transparent;
-  background: none;
-  cursor: pointer;
-  white-space: nowrap;
-  font-weight: 700;
-}
-.koth-tab.on { color: #fff; border-color: var(--amber); }
-.koth-tab:hover { color: var(--chalk); }
-
-/* ── Grid, table, cards ── */
-/* start, not stretch: with the board panel now drawn, a thin day would
-   otherwise leave a tall empty box down the side of the page. */
-.koth-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 26px; margin-top: 26px; align-items: start; }
-.koth-dateline {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px;
-  font-size: 11px;
-  letter-spacing: 0.2em;
-  color: var(--dust);
-  margin: 6px 0 10px;
-  font-weight: 700;
-}
-.koth-dateline .fill { flex: 1; }
-.koth-venue {
-  display: inline-block;
-  font-size: 9px;
-  letter-spacing: 0.16em;
-  color: var(--gold);
-  border: 1px solid rgba(217, 178, 74, 0.35);
-  border-radius: 6px;
-  padding: 3px 8px;
-  font-weight: 700;
-}
-.koth table { width: 100%; border-collapse: collapse; }
-.koth th {
-  text-align: left;
-  font-size: 10px;
-  letter-spacing: 0.2em;
-  color: var(--faint);
-  padding: 10px 12px;
-  border-bottom: 1px solid var(--edge);
-  font-weight: 700;
-}
-.koth td { padding: 13px 12px; border-bottom: 1px solid var(--hair); font-size: 14px; }
-.koth tbody tr:hover td { background: rgba(255, 255, 255, 0.025); }
-.koth .rk { color: var(--faint); width: 40px; }
-.koth .rk.top { color: var(--amber); font-weight: 800; }
-.koth .mv { font-size: 11px; color: var(--faint); }
-.koth .mv.up { color: var(--teal); }
-.koth .mv.down { color: var(--red); }
-.koth .mv.new { color: var(--amber); }
-.koth .fin { font-weight: 700; }
-.koth .fin.w { color: var(--teal); }
-.koth .fin.l { color: var(--red); }
-/* A quiet second line under a name — the stat line that earned a placing. */
-.koth-subline { font-size: 11px; letter-spacing: 0.14em; color: var(--faint); margin-top: 2px; }
 .koth .num { text-align: right; }
 .koth .faint { color: var(--faint); }
 .koth .dust { color: var(--dust); }
@@ -441,74 +190,23 @@
 .koth .gold { color: var(--gold); }
 .koth .teal { color: var(--teal); }
 .koth .red { color: var(--red); }
-.koth .side { display: flex; flex-direction: column; gap: 14px; }
 /* No background here: the translucent one above is the panel's ground
    (Dan, 2026-09-05: "the panels under the board are solid"). This rule
    used to paint --panel over it, and it won by coming last. */
 .koth-card { border: 1px solid var(--edge); border-radius: 14px; padding: 16px 18px; }
 .koth-card .h { font-size: 10px; letter-spacing: 0.24em; color: var(--dust); margin-bottom: 10px; font-weight: 700; }
 .koth-line { display: flex; justify-content: space-between; gap: 12px; font-size: 12px; padding: 7px 0; border-top: 1px solid var(--hair); color: var(--dust); }
-/* The sidebar's LONGEST REIGNS carries both hills: a hill's name over its
-   three rows, quieter than the card's header, so the card reads as one list
-   in two parts rather than two cards in one. */
-.koth-subhead { font-size: 9px; letter-spacing: 0.24em; color: var(--gold); font-weight: 700; margin: 10px 0 2px; }
-.koth-subhead + .koth-line { border-top: 0; }
 .koth-line b { color: var(--chalk); text-align: right; }
-.koth-cotd {
-  border-color: rgba(217, 178, 74, 0.45);
-  background: linear-gradient(180deg, rgba(22, 19, 12, 0.67), rgba(13, 15, 20, 0.57) 70%);
-}
-.koth-cotd .name { font-size: 26px; font-weight: 900; letter-spacing: -0.01em; line-height: 1.1; overflow-wrap: anywhere; }
-/* The coach's name is the one thing on the board that is a person: bright
-   white, not chalk, wherever it is the row's subject (Dan, 2026-09-05). */
-.koth table td.display,
-.koth-cotd .name { color: #ffffff; }
-.koth-badge {
-  display: inline-block;
-  margin-top: 14px;
-  font-size: 10px;
-  letter-spacing: 0.16em;
-  color: var(--amber);
-  border: 1px solid rgba(255, 176, 32, 0.45);
-  border-radius: 8px;
-  padding: 6px 10px;
-  font-weight: 700;
-}
 .koth-section-h { font-size: 11px; letter-spacing: 0.2em; color: var(--dust); margin: 6px 0 10px; font-weight: 700; }
-.koth-throne-card {
-  margin-top: 14px;
-  border: 1px solid rgba(217, 178, 74, 0.35);
-  border-radius: 18px;
-  background: linear-gradient(180deg, rgba(22, 19, 12, 0.67), rgba(14, 16, 19, 0.57) 60%);
-  backdrop-filter: blur(2px);
-  -webkit-backdrop-filter: blur(2px);
-  padding: 22px 26px;
-}
 .koth-empty { padding: 24px 0; font-size: 13px; color: var(--dust); }
 .koth-foot { margin-top: 40px; text-align: center; font-size: 11px; color: var(--faint); font-weight: 700; }
 
 @media (max-width: 820px) {
-  .koth-grid { grid-template-columns: 1fr; }
-  .koth-mast { flex-wrap: wrap; align-items: flex-start; padding-top: 26px; }
-  .koth-mast h1 { font-size: 32px; }
-  .koth-live { width: 100%; }
-  .koth td, .koth th { padding-left: 8px; padding-right: 8px; }
-  .koth .hide-sm { display: none; }
-}
-
-/* Reduce Motion stills the LIVE blink but not the ticker: a frozen ticker
-   reads as broken (Dan, 2026-09-02, with Reduce Motion on). It slows down
-   instead, and hover still pauses it. */
-@media (max-width: 820px) {
-  /* The ticker sits under the Dynamic Island; keep its text clear of it. */
-  .koth-ticker { padding-top: env(safe-area-inset-top); }
-
   /* The hall on a phone: the thrones stay a pair, 2-up — stacked, the
      second reads as an afterthought (passdown §6). Each card wears its own
      colour on the border; the coach becomes a full-width strip beneath. */
   .koth-hall { padding: 18px 14px 16px; background: none; border: 0; backdrop-filter: none; -webkit-backdrop-filter: none; }
   .koth-hall::before { display: none; }
-  .koth-hall-kicker { letter-spacing: 0.04em; }
   .koth-hall-grid { grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px; }
   .koth-honoree .label { letter-spacing: 0.1em; }
   .koth-honoree {
@@ -541,72 +239,12 @@
   .koth-honoree.is-coach .meta { display: block; margin-top: 2px; }
   .koth-honoree.is-coach .hero-wrap { text-align: right; }
   .koth-honoree.is-coach .hero { margin-top: 0; font-size: 34px; }
-  .koth-honoree.is-coach .koth-cta { display: none; }
+  /* The coach's strip wraps: THE WEEK opens its list under the strip. */
+  .koth-honoree.is-coach { flex-wrap: wrap; }
+  .koth-honoree.is-coach .koth-week-list,
+  .koth-honoree.is-coach .koth-cta { flex: 0 0 100%; }
 
-  /* LIVE and the venue chip share a row under the title. */
-  .koth-mast { padding-bottom: 12px; }
-  .koth-mast .koth-live { display: none; }
-  .koth-mast-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 0 2px; }
-  /* The chip is one name; it must not break inside itself. */
-  .koth-mast-row .koth-venue { white-space: nowrap; }
-  .koth-mast-row .koth-live { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-  /* Tabs scroll sideways, thumb-sized, no scrollbar. */
-  .koth-tabs { -webkit-overflow-scrolling: touch; scrollbar-width: none; }
-  .koth-tabs::-webkit-scrollbar { display: none; }
-  .koth-tab { padding: 14px 16px; min-height: 44px; white-space: nowrap; }
-
-  /* One column: the rail follows the feed under — MORE —. */
-  .koth-more { display: flex; align-items: center; gap: 12px; margin: 26px 0 6px; font-size: 10px; letter-spacing: 0.3em; color: var(--faint); font-weight: 700; }
-  .koth-more::before, .koth-more::after { content: ""; flex: 1; height: 1px; background: var(--edge); }
-
-  .koth-getbar {
-    position: fixed;
-    left: 0; right: 0; bottom: 0;
-    z-index: 40;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 10px 14px calc(10px + env(safe-area-inset-bottom));
-    background: rgba(10, 11, 13, 0.94);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border-top: 1px solid var(--edge);
-  }
-  .koth-getbar .icon { width: 44px; height: 44px; border-radius: 11px; flex: 0 0 auto; }
-  .koth-getbar .t { flex: 1; min-width: 0; }
-  .koth-getbar .t b { display: block; font-size: 15px; color: #ffffff; font-weight: 800; }
-  .koth-getbar .t span { font-size: 11px; color: var(--dust); }
-  .koth-getbar .get {
-    background: var(--legends-cta);
-    color: #1a1205;
-    font-weight: 800;
-    font-size: 12px;
-    letter-spacing: 0.12em;
-    padding: 0 20px;
-    min-height: 44px;
-    display: inline-flex; align-items: center;
-    border-radius: 999px;
-    text-decoration: none;
-  }
-  .koth-getbar .x {
-    width: 44px; height: 44px;
-    display: grid; place-items: center;
-    color: var(--faint);
-    background: transparent; border: 0;
-    font-size: 18px;
-    cursor: pointer;
-  }
-  .koth.has-getbar { padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
   .koth-cta { min-height: 44px; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  /* Static, not slower: the passdown's rule is that motion is limited to what
-     a reader can opt out of entirely. */
-  .koth-ticker .tk { animation: none; }
-  .koth-live .dot { animation: none; }
-  .koth-result:hover { transform: none; }
 }
 
 /* ---- The 2026-27 season (2026-09-29): the league table, two conferences
@@ -630,3 +268,168 @@
 .koth-season-row .team b { color: var(--amber); margin-right: 4px; }
 .koth-season .koth-line { font-size: 13px; color: var(--chalk); }
 .koth-season .koth-line .faint { color: #9aa3b5; }
+
+/* ---- Section kickers: one small centred line over each section, the
+   mockup's ★ WHO'S ON TOP ★ and 2026-27 SEASON · N GAMES PLAYED. */
+.koth-kicker {
+  text-align: center;
+  font-size: 12px;
+  letter-spacing: 0.3em;
+  color: #9aa3b5;
+  font-weight: 700;
+  margin: 34px 0 12px;
+}
+
+/* ---- Today's challenge: the page's headline. Warm felt and a gold edge,
+   the challenge on the left, today's board on the right past a hairline;
+   one over the other on a phone. */
+.koth-today {
+  margin-top: 26px;
+  display: grid;
+  grid-template-columns: 1.35fr 1fr;
+  border: 1px solid rgba(217, 178, 74, 0.45);
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(40, 30, 10, 0.78), rgba(14, 16, 19, 0.66) 60%);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  position: relative;
+  overflow: hidden;
+}
+.koth-today::before {
+  content: "";
+  position: absolute;
+  right: -120px; top: -160px;
+  width: 520px; height: 420px;
+  background: radial-gradient(ellipse, rgba(255, 176, 32, 0.12), transparent 65%);
+  pointer-events: none;
+}
+.koth-today-main { padding: 26px 28px 28px; position: relative; min-width: 0; }
+.koth-today-board {
+  padding: 22px 26px 18px;
+  position: relative;
+  min-width: 0;
+  border-left: 1px solid transparent;
+  border-image: linear-gradient(180deg, transparent, rgba(255, 255, 255, 0.14) 15%, rgba(255, 255, 255, 0.14) 85%, transparent) 1;
+}
+.koth-today-k { font-size: 10px; letter-spacing: 0.24em; color: var(--amber); font-weight: 700; }
+.koth-today-k.dim { color: #9aa3b5; margin-bottom: 6px; }
+.koth-today h1 {
+  font-size: 52px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  line-height: 1.02;
+  color: #f1ece2;
+  margin-top: 14px;
+  overflow-wrap: anywhere;
+}
+.koth-today .brief { font-size: 16px; color: #c3cad6; margin-top: 14px; }
+.koth-today .brief b { color: #ffffff; font-weight: 700; }
+.koth-today .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+.koth-today .chips span {
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  color: var(--gold);
+  border: 1px solid rgba(217, 178, 74, 0.5);
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.koth-today .go { display: flex; align-items: center; flex-wrap: wrap; gap: 14px 20px; margin-top: 24px; }
+.koth-today .go .koth-cta { box-shadow: 0 8px 28px rgba(255, 176, 32, 0.28); }
+.koth-today .resets { font-size: 11px; letter-spacing: 0.2em; color: #9aa3b5; font-weight: 700; }
+.koth-today-row {
+  display: grid;
+  grid-template-columns: 26px 1fr auto;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 15px;
+}
+.koth-today-row b { color: #ffffff; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.koth-today-row .rk { font-size: 13px; color: var(--faint); font-weight: 700; }
+.koth-today-row .rk.top { color: var(--amber); }
+.koth-today-row .sc { font-size: 14px; font-weight: 700; }
+.koth-today .row-empty { font-size: 14px; color: #c3cad6; padding: 12px 0; }
+.koth-today .koth-linkish { color: #9aa3b5; }
+.koth-today .koth-linkish:hover { color: var(--chalk); }
+
+/* ---- The coach's week, opened from THE WEEK ↓. */
+.koth-week-list { width: 100%; margin: 4px 0 14px; text-align: left; }
+.koth-week-list .koth-line { font-size: 13px; color: #c3cad6; }
+.koth-week-list .who { color: #ffffff; font-weight: 700; text-align: left; }
+.koth-rule { font-size: 11px; line-height: 1.6; color: #9aa3b5; margin-top: 10px; letter-spacing: 0.02em; }
+.koth-rule.span { grid-column: 1 / -1; text-align: center; }
+
+/* ---- Most active teams: two columns of five, the mockup's table. */
+.koth-season-top { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-size: 11px; letter-spacing: 0.22em; color: #c3cad6; font-weight: 700; }
+.koth-active { display: grid; grid-template-columns: 1fr 1fr; gap: 0 36px; margin-top: 12px; }
+.koth-active-cols, .koth-active-row { display: grid; grid-template-columns: 48px 1fr 40px 40px 52px; gap: 8px; padding: 9px 0; }
+.koth-active-cols { font-size: 10px; letter-spacing: 0.14em; color: #8f98ab; font-weight: 700; border-bottom: 1px solid rgba(255, 255, 255, 0.12); }
+.koth-active-row { font-size: 14px; color: var(--chalk); border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
+.koth-active-row .abbr { color: var(--amber); font-weight: 700; }
+.koth-active-row .team { color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.koth-active-cols span:nth-child(n+3), .koth-active-row span:nth-child(n+3) { text-align: right; }
+.koth-active-row span:nth-child(n+3) { color: #ffffff; font-weight: 600; }
+.koth-linkish.center { margin: 14px auto 0; color: var(--gold); }
+.koth-season-grid { margin-top: 12px; }
+@media (max-width: 720px) { .koth-active { grid-template-columns: 1fr; } .koth-active > div + div .koth-active-cols { display: none; } }
+
+/* A coach under a team in the full table: the team's own columns, the
+   rating in PCT's place, quieter and indented so the team row leads. */
+.koth-season-coach {
+  display: grid;
+  grid-template-columns: 1fr 40px 40px 56px 52px;
+  gap: 8px;
+  padding: 3px 0 3px 18px;
+  font-size: 12px;
+  color: #c3cad6;
+}
+.koth-season-coach:last-child { padding-bottom: 8px; }
+.koth-season-coach span:not(:first-child) { text-align: right; }
+.koth-season-coach .who { color: #e8e6e1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.koth-season-coach .who::before { content: "↳ "; color: var(--faint); }
+
+/* ---- Records: four tiles, each in its entity's colour. */
+.koth-records-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.koth-record {
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  border-radius: 14px;
+  padding: 16px 18px;
+  background: rgba(8, 9, 12, 0.78);
+  min-width: 0;
+}
+.koth-record .k { font-size: 10px; letter-spacing: 0.2em; color: var(--accent); font-weight: 700; }
+.koth-record .v { font-size: 34px; font-weight: 900; color: #ffffff; line-height: 1; margin-top: 10px; }
+.koth-record .s { font-size: 13px; color: #c3cad6; margin-top: 8px; overflow-wrap: anywhere; }
+@media (max-width: 820px) { .koth-records-grid { grid-template-columns: 1fr 1fr; } }
+
+/* ---- Get the app: the banner the old sticky bar became. */
+.koth-app {
+  margin-top: 40px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 22px 26px;
+  border: 1px solid rgba(217, 178, 74, 0.45);
+  border-radius: 18px;
+  background: linear-gradient(90deg, rgba(40, 30, 10, 0.78), rgba(14, 16, 19, 0.66) 70%);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+}
+.koth-app .icon { width: 56px; height: 56px; border-radius: 13px; flex: 0 0 auto; }
+.koth-app .t { flex: 1; min-width: 0; }
+.koth-app .t b { display: block; font-size: 20px; color: #ffffff; font-weight: 800; }
+.koth-app .t span { font-size: 14px; color: #c3cad6; }
+.koth-app .koth-cta { border-radius: 999px; }
+
+@media (max-width: 820px) {
+  .koth-today { grid-template-columns: 1fr; }
+  .koth-today-main { padding: 22px 20px 22px; }
+  .koth-today-board { padding: 18px 20px 14px; border-left: 0; border-image: none; border-top: 1px solid rgba(255, 255, 255, 0.12); }
+  .koth-today h1 { font-size: 40px; }
+  .koth-today .go .koth-cta { width: 100%; }
+  .koth-app { flex-wrap: wrap; padding: 20px; }
+  .koth-app .koth-cta { width: 100%; }
+}

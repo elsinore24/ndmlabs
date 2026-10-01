@@ -1,35 +1,27 @@
 "use client";
 
-// The Board, board-first (koth-web-board-passdown.md): ticker, site nav, a
-// compact King strip as the headline, then the tabs and the sidebar. One
+// ndmlabs.net/koth, refocused on what the app leads with (Dan's mockup,
+// 2026-10-01): today's challenge, who's on top, the 2026-27 season, a strip
+// of records, and the app. The Board's tabs, feed and ticker are gone. One
 // component owns the reads and the 60-second visible-tab poll; the pieces
 // below it are pure renderers. Display only — no sign-in (Dan, 2026-09-02).
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Header from "@/components/Header";
 import AllTimeFiveMark from "@/components/AllTimeFiveMark";
 import {
-  APP_STORE_URL, HOUSE_UID, RETIRED_HANDLE,
-  type Challenge, type CoachRating, type DailyRaw, type DailyRow, type LineageEntry, type Move,
-  type BestRun, type SoloReign, type Throne, type ThroneId, type TopPlayer, type Venue, type WeekDayRow, type WeekRow,
-  type Profile,
-  clockTime, coachOfTheWeek, defensesLabel, grouped, leadPlayer, longDate,
-  handleNames, minutesAgo, mondayUTC, monthName, monthStartUTC, movement, ordinal, playerLabel,
-  profileMap, rest, scoreline, statLine,
-  shortDate, signed, todayUTC, venueChip, venueFallback, venueKnown, weekRange, Standing, SeasonGameRow, seasonGameWon } from "./lib";
+  APP_STORE_URL, DAILY_OPPONENTS, HOUSE_UID, RETIRED_HANDLE,
+  type Challenge, type CoachRating, type DailyRaw, type LineageEntry,
+  type Profile, type Standing, type SeasonGameRow, type Throne, type ThroneId, type Venue, type WeekDayRow,
+  WEEK_MIN_GAMES,
+  coachOfTheWeek, leadPlayer, minutesAgo, mondayUTC, profileMap, resetsIn, rest, scoreline,
+  shortDate, signed, teamCoaches, todayUTC, venueCity, venueDecade, venueFallback, venueKnown,
+  weekRange } from "./lib";
 import "./koth.css";
 
-// No THE THRONE tab: the King strip at the top of the page IS the throne
-// (Dan, 2026-09-03), and a tab repeating it was the same fact twice. Its
-// lineage moved into RECORDS, where the rest of the history lives.
-//
-// POST SEASON was TOURNAMENT CHALLENGE (2026-09-05) and THE CLIMB before that:
-// the tab follows the app's hub door, so the mode has one name everywhere,
-// and the app settled on "Post season" on 2026-09-06. The component is still
-// ClimbTab — the ladder is what the mode is made of, whatever it is called.
-const TABS = ["DAILY", "THE WEEK", "POST SEASON", "RECORDS"] as const;
-type Tab = (typeof TABS)[number];
 const POLL_MS = 60_000;
+/** The season the table is for: 2026-27, the archive's end-year numbering. */
+const SEASON = 2027;
 
 /** One hill: its King, the Kings before, and the series fought over it.
  *  ALL-STARS and LEGENDS are the same shape (migration 0013 widened one
@@ -44,43 +36,30 @@ type Hill = {
   coach: string | null;
 };
 
+type Reign = { team_name: string; defenses: number; reigning: boolean };
+
 type Board = {
   /** The fives coaches build. `throne` row 1. */
   allStars: Hill;
   /** The real champions — '07 Spurs, '86 Celtics. `throne` row 2. */
   legends: Hill;
-  daily: DailyRow[];
-  week: WeekRow[];
-  solo: SoloReign[];
-  bestMargins: { name: string; scoreline: string; margin: number; day: string }[];
-  mostWins: { name: string; wins: number }[];
-  /** handle → the name to print. The handle is identity, never display
-      (Dan, 2026-09-03): the franchise name belongs in the app, not here. */
-  names: Record<string, string>;
-  topPlayers: TopPlayer[];
-  runs: BestRun[];
+  /** Today's daily board in board order: won desc, margin desc, first in. */
+  daily: DailyRaw[];
   today: Venue;
-  tomorrow: Venue;
-  /** COACH OF THE DAY: today's #1, or the latest day with results until
-      today's first post lands. */
-  coach: { row: DailyRow; day: string; venue: Venue; topFinishes: number } | null;
-  profiles: Record<string, Profile>;
-  /** This week's standings by points — top-3 finishes and season wins — best first (lib.coachOfTheWeek). */
-  weekTop3: CoachRating[];
+  /** This week's coaches by rating, qualified only (lib.coachOfTheWeek). */
+  week: CoachRating[];
   /** The 2026-27 league table, `season_standings`, in table order. */
   standings: Standing[];
-  /** The last five season games anyone played, newest first (Dan, 2026-09-30: cap it at five). */
-  seasonRecent: SeasonGameRow[];
+  /** Every 2026-27 game anyone has played: the coach lines under each team. */
+  seasonGames: SeasonGameRow[];
+  bestMargin: { uid: string; scoreline: string; margin: number; day: string } | null;
+  mostWins: { uid: string; wins: number } | null;
+  profiles: Record<string, Profile>;
   fetchedAt: number;
 };
 
 // The three reads that make a hill, keyed on `throne.id`. Both hills share
-// `throne_lineage` and `challenges`, so **the filter is the hill**: without
-// `throne_id` the LEGENDS champions sit in the ALL-STARS lineage and the
-// ticker names the wrong King the moment a Legends series lands.
-/** The season the table is for: 2026-27, the archive's end-year numbering. */
-const SEASON = 2027;
-
+// `throne_lineage` and `challenges`, so **the filter is the hill**.
 const hillReads = (id: ThroneId) => [
   rest<Throne[]>(
     `throne?id=eq.${id}&select=version,holder_uid,holder_handle,team_name,defenses,claimed_at,five,lead_player,season`
@@ -94,7 +73,6 @@ const hillReads = (id: ThroneId) => [
 ] as const;
 
 export default function KothLive() {
-  const [tab, setTab] = useState<Tab>("DAILY");
   const [board, setBoard] = useState<Board | null>(null);
   const [failed, setFailed] = useState(false);
   const [, tick] = useState(0);
@@ -103,163 +81,68 @@ export default function KothLive() {
   const load = useCallback(async () => {
     try {
       const today = todayUTC();
+      const monday = mondayUTC();
       const [throne1, lineage1, challenges1, throne2, lineage2, challenges2,
-             dailyRaw, weekRaw, solo, venues, winsRaw, monthRaw, topPlayers, runs, weekDays,
-             standings, seasonRecent, seasonWeek] =
+             dailyRaw, venues, winsRaw, weekDays, standings, seasonGames] =
         await Promise.all([
           ...hillReads(1),
           ...hillReads(2),
           // Winners first, then margin — the daily_board view computes both
           // so the ordering happens server-side (Dan, 2026-09-02).
           rest<DailyRaw[]>(
-            `daily_board?day=eq.${today}&select=uid,score,score_opp,venue,created_at,won,margin,five&order=won.desc,margin.desc,created_at.asc&limit=100`
+            `daily_board?day=eq.${today}&select=uid,score,score_opp,venue,created_at,won,margin,five&order=won.desc,margin.desc,created_at.asc&limit=200`
           ),
-          rest<Omit<WeekRow, "rank" | "handle">[]>(
-            `weekly_board?week=eq.${mondayUTC()}&select=uid,games,wins,margin&order=wins.desc,margin.desc,first_played.asc&limit=100`
-          ),
-          // The retired user-built hill's reigns, for EARLIER HILL REIGNS only.
-          // Nothing LEGENDS lives here any more — its reigns are throne 2's lineage.
-          rest<(SoloReign & { uid: string })[]>(
-            "koth_solo?select=uid,team_name,defenses,crowned_at,ended_at,mode&order=defenses.desc,crowned_at.asc&limit=50"
-          ),
-          rest<Venue[]>(`daily_venues?day=in.(${today},${todayUTC(1)})&select=*`),
+          rest<Venue[]>(`daily_venues?day=eq.${today}&select=*`),
+          // Every daily win, biggest first: BIGGEST DAILY WIN and MOST DAILY WINS.
           rest<{ uid: string; day: string; score: number; score_opp: number; margin: number }[]>(
             "daily_board?won=is.true&select=uid,day,score,score_opp,margin&order=margin.desc&limit=1000"
           ),
-          // This month's boards in board order, so the first row per day is
-          // that day's #1 — the COACH OF THE DAY badge counts those.
-          rest<{ uid: string; day: string }[]>(
-            `daily_board?day=gte.${monthStartUTC()}&select=uid,day&order=day.desc,won.desc,margin.desc,created_at.asc&limit=3000`
-          ),
-          // The view has already kept each player-season's best game this
-          // month, so ten rows here are ten different men.
-          rest<TopPlayer[]>(
-            "top_players_month?select=player_id,player_name,player_season,coach_handle,uid,played_on,pts,reb,ast,stl,blk,composite&order=composite.desc&limit=10"
-          ),
-          // Best climb per coach — the view has already deduped, so this is a
-          // board of people, not of one person's afternoon.
-          rest<BestRun[]>(
-            "best_runs?select=uid,run_id,coach_handle,score,rungs_cleared,summit_tier,top_rung,clean,ran_the_table,finished_at&order=score.desc&limit=100"
-          ),
-          // The week's boards in board order, so each day's first three rows
-          // are that day's top-3 — COACH OF THE WEEK counts those. Its own
-          // read rather than the month's, because a week can straddle a month.
+          // This week's dailies, every one: each is a game for the rating.
           rest<WeekDayRow[]>(
-            `daily_board?day=gte.${mondayUTC()}&select=uid,day,score,score_opp,won,margin,created_at&order=day.desc,won.desc,margin.desc,created_at.asc&limit=1000`
+            `daily_board?day=gte.${monday}&select=uid,day,score,score_opp,won,margin,created_at&limit=2000`
           ),
           // The 2026-27 season (app migration 0014): the view is already in
-          // table order — conference, division, pct, margin — so it renders
-          // as it arrives.
+          // table order — conference, division, pct, margin.
           rest<Standing[]>(
             `season_standings?season=eq.${SEASON}&select=abbr,name,conference,division,games,wins,losses,margin,pct`
           ),
           rest<SeasonGameRow[]>(
-            `season_games?season=eq.${SEASON}&select=uid,coach_handle,played_on,home_abbr,away_abbr,home_score,away_score,coached_abbr,created_at&order=created_at.desc&limit=5`
-          ),
-          // This week's season games, for COACH OF THE WEEK: a win is a point.
-          rest<SeasonGameRow[]>(
-            `season_games?season=eq.${SEASON}&played_on=gte.${mondayUTC()}&select=uid,played_on,home_abbr,away_abbr,home_score,away_score,coached_abbr,created_at&limit=2000`
+            `season_games?season=eq.${SEASON}&select=uid,coach_handle,played_on,home_abbr,away_abbr,home_score,away_score,coached_abbr,created_at&order=created_at.asc&limit=5000`
           ),
         ]);
 
-      // One profile read covers every name on the page, the throne's holder
-      // included — the coach is looked up by uid, not carried on the row,
-      // because it is read live rather than snapshotted.
-      const profiles = await profileMap([
-        ...dailyRaw.map((r) => r.uid),
-        ...weekRaw.map((r) => r.uid),
-        ...solo.map((r) => r.uid),
-        ...winsRaw.map((r) => r.uid),
-        ...runs.map((r) => r.uid),
-        ...weekDays.map((r) => r.uid),
-        // Both Kings' coaches. The house holds no profile, so a lookup for it
-        // is a wasted row.
-        ...[throne1[0], throne2[0]].flatMap((t) => (t && t.holder_uid !== HOUSE_UID ? [t.holder_uid] : [])),
-      ]);
-      const nameOf = (uid: string) => profiles[uid]?.handle ?? "COACH";
-      const coachOf = (uid: string) => profiles[uid]?.coach ?? null;
-
-      const moves = movement(today, dailyRaw.map((r) => nameOf(r.uid)));
-      const daily: DailyRow[] = dailyRaw.map((r, i) => ({
-        ...r, rank: i + 1, handle: nameOf(r.uid), coach: coachOf(r.uid), move: moves[i],
-      }));
-      const week: WeekRow[] = weekRaw.map((r, i) => ({
-        ...r, rank: i + 1, handle: nameOf(r.uid), coach: coachOf(r.uid),
-      }));
-
       const winCounts = new Map<string, number>();
       for (const w of winsRaw) winCounts.set(w.uid, (winCounts.get(w.uid) ?? 0) + 1);
-      const mostWins = [...winCounts.entries()]
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 5)
-        .map(([uid, wins]) => ({ name: coachOf(uid) ?? nameOf(uid), wins }));
-      const bestMargins = winsRaw.slice(0, 5).map((w) => ({
-        name: coachOf(w.uid) ?? nameOf(w.uid), scoreline: scoreline(w.score, w.score_opp),
-        margin: w.margin, day: w.day,
-      }));
+      const most = [...winCounts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0];
+      const best = winsRaw[0];
+      const week = coachOfTheWeek(weekDays, seasonGames.filter((g) => g.played_on >= monday));
 
-      // Handles that arrive as snapshot strings with no uid beside them.
-      const names = await handleNames([
-        ...[...challenges1, ...challenges2].map((c) => c.challenger_handle),
-        ...[...lineage1, ...lineage2].flatMap((l) => [l.holder_handle, l.dethroned_by_handle]),
-        ...topPlayers.map((t) => t.coach_handle),
-        ...runs.map((r) => r.coach_handle),
-        ...[throne1[0], throne2[0]].flatMap((t) => (t ? [t.holder_handle] : [])),
+      // One profile read covers every name on the page. The house holds no
+      // profile, so a lookup for it is a wasted row.
+      const profiles = await profileMap([
+        ...dailyRaw.map((r) => r.uid),
+        ...week.slice(0, 5).map((c) => c.uid),
+        ...seasonGames.map((g) => g.uid),
+        ...(best ? [best.uid] : []),
+        ...(most ? [most[0]] : []),
+        ...[throne1[0], throne2[0]].flatMap((t) => (t && t.holder_uid !== HOUSE_UID ? [t.holder_uid] : [])),
       ]);
-
-      const todayVenue = venues.find((v) => v.day === today) ?? venueFallback(today);
-
-      // COACH OF THE DAY. Before today's first post, the latest finished
-      // board holds the card so the sidebar never opens empty.
-      let coach: Board["coach"] = null;
-      let coachDay = today;
-      let coachRaw: DailyRaw | undefined = dailyRaw[0];
-      if (!coachRaw) {
-        const latest = await rest<(DailyRaw & { day: string })[]>(
-          "daily_board?select=uid,day,score,score_opp,venue,created_at,won,margin,five&order=day.desc,won.desc,margin.desc,created_at.asc&limit=1"
-        );
-        if (latest[0]) { coachRaw = latest[0]; coachDay = latest[0].day; }
-      }
-      if (coachRaw) {
-        const winnerByDay = new Map<string, string>();
-        for (const r of monthRaw) if (!winnerByDay.has(r.day)) winnerByDay.set(r.day, r.uid);
-        const topFinishes = [...winnerByDay.values()].filter((u) => u === coachRaw!.uid).length;
-        const own = profiles[coachRaw.uid] ?? (await profileMap([coachRaw.uid]))[coachRaw.uid];
-        const venue = coachDay === today
-          ? todayVenue
-          : (await rest<Venue[]>(`daily_venues?day=eq.${coachDay}&select=*`))[0] ?? venueFallback(coachDay);
-        coach = {
-          row: {
-            ...coachRaw, rank: 1,
-            handle: own?.handle ?? "COACH", coach: own?.coach ?? null,
-            move: { kind: "none", n: 0 },
-          },
-          day: coachDay, venue, topFinishes: Math.max(topFinishes, 1),
-        };
-      }
 
       const hill = (id: ThroneId, throne: Throne[], lineage: LineageEntry[], challenges: Challenge[]): Hill => ({
         id, throne: throne[0] ?? null, lineage, challenges,
-        coach: throne[0] ? coachOf(throne[0].holder_uid) : null,
+        coach: throne[0] ? profiles[throne[0].holder_uid]?.coach ?? null : null,
       });
       setBoard({
         allStars: hill(1, throne1, lineage1, challenges1),
         legends: hill(2, throne2, lineage2, challenges2),
-        daily,
+        daily: dailyRaw,
+        today: venues[0] ?? venueFallback(today),
         week,
-        solo: solo.map((r) => ({ ...r, handle: nameOf(r.uid), coach: coachOf(r.uid) })),
-        bestMargins,
-        mostWins,
-        topPlayers,
-        runs,
-        today: todayVenue,
-        tomorrow: venues.find((v) => v.day === todayUTC(1)) ?? venueFallback(todayUTC(1)),
-        coach,
-        profiles,
-        names,
-        weekTop3: coachOfTheWeek(weekDays, seasonWeek),
         standings,
-        seasonRecent,
+        seasonGames,
+        bestMargin: best ? { uid: best.uid, scoreline: scoreline(best.score, best.score_opp), margin: best.margin, day: best.day } : null,
+        mostWins: most ? { uid: most[0], wins: most[1] } : null,
+        profiles,
         fetchedAt: Date.now(),
       });
       setFailed(false);
@@ -268,7 +151,8 @@ export default function KothLive() {
     }
   }, []);
 
-  // First load, then every 60s while the tab is visible.
+  // First load, then every 60s while the tab is visible. The 30-second tick
+  // keeps the reset countdown and "updated" line honest between polls.
   useEffect(() => {
     load();
     const start = () => {
@@ -286,197 +170,123 @@ export default function KothLive() {
     return () => { stop(); document.removeEventListener("visibilitychange", onVisibility); window.clearInterval(clock); };
   }, [load]);
 
-  const ticker = useMemo(() => (board ? tickerItems(board) : []), [board]);
-  const tabsRef = useRef<HTMLDivElement | null>(null);
-  const goToWeek = () => { setTab("THE WEEK"); tabsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }); };
-  const [getBar, setGetBar] = useState(false);
-  // The bar is a session thing: dismissed stays dismissed until the tab
-  // closes, a new tab gets it back. Storage can throw (private mode), and a
-  // thrown read must not take the page with it.
-  useEffect(() => {
-    try { setGetBar(sessionStorage.getItem("koth.getbar") !== "dismissed"); } catch { setGetBar(true); }
-  }, []);
-  const dismissGetBar = () => {
-    setGetBar(false);
-    try { sessionStorage.setItem("koth.getbar", "dismissed"); } catch { /* fine */ }
-  };
-
-  const today = todayUTC();
   const coachName = (uid: string) => board?.profiles[uid]?.coach ?? board?.profiles[uid]?.handle ?? "COACH";
 
   return (
-    <div className={`koth ${getBar ? "has-getbar" : ""}`}>
-      <Ticker items={ticker} />
+    <div className="koth">
       <Header fixed={false} transparent mark={<AllTimeFiveMark />} />
       <div className="max-w-[1180px] mx-auto px-4 sm:px-6 pb-20">
-        {/* The Hall of Champions: three honorees at equal weight (site redesign
-            passdown §3). LEGENDS gold, ALL-STARS violet, the coach teal — the
-            colour is how a reader tells them apart without reading. */}
-        {board && (
-          <section className="koth-hall" aria-label="Who's on top right now">
-            <div className="koth-hall-kicker mono">★ WHO&apos;S ON TOP ★</div>
-            <div className="koth-hall-grid">
-              {board.legends.throne && <ThroneCard hill={board.legends} label="LEGENDS" kind="is-legends" />}
-              {board.allStars.throne && <ThroneCard hill={board.allStars} label="ALL-STARS" kind="is-allstars" />}
-              <CoachOfWeekCard standing={board.weekTop3[0] ?? null} name={board.weekTop3[0] ? coachName(board.weekTop3[0].uid) : null} onWeek={goToWeek} />
-            </div>
-          </section>
-        )}
-
-        {board && board.standings.length > 0 && <SeasonSection board={board} coachName={coachName} />}
-
-        <div className="koth-mast">
-          <div>
-            <div className="mono" style={{ fontSize: 10, letterSpacing: ".3em", color: "var(--amber)", fontWeight: 700 }}>
-              COACH OF THE YEAR
-            </div>
-            <h1 className="display">The Board</h1>
-          </div>
-          <div className="koth-live mono">
-            <span className="dot" />
-            LIVE · {board ? minutesAgo(board.fetchedAt) : "CONNECTING"}
-          </div>
-        </div>
-        {/* On a phone LIVE and the venue share a row under the title (CSS
-            shows this row and hides the one above only there). */}
-        <div className="koth-mast-row mono">
-          <span className="koth-live"><span className="dot" />LIVE · {board ? minutesAgo(board.fetchedAt) : "CONNECTING"}</span>
-          {board && venueKnown(board.today) && <span className="koth-venue">{venueChip(board.today)}</span>}
-        </div>
-
-        <div className="koth-tabs mono" role="tablist" ref={tabsRef} id="board">
-          {TABS.map((t) => (
-            <button key={t} role="tab" aria-selected={tab === t}
-              className={`koth-tab ${tab === t ? "on" : ""}`} onClick={() => setTab(t)}>
-              {t}
-            </button>
-          ))}
-        </div>
+        <TodayCard board={board} coachName={coachName} />
 
         {failed && !board && (
           <p className="koth-empty mono">The board didn&apos;t answer. Refresh to try again.</p>
         )}
 
-        <div className="koth-grid">
-          <div>
-            {tab === "DAILY" && <Feed board={board} today={today} />}
-            {tab === "THE WEEK" && <WeekTab board={board} />}
-            {tab === "RECORDS" && <RecordsTab board={board} />}
-            {tab === "POST SEASON" && <ClimbTab board={board} />}
+        {/* The Hall of Champions: three honorees at equal weight. LEGENDS
+            gold, ALL-STARS violet, the coach teal — the colour is how a
+            reader tells them apart without reading. */}
+        {board && (
+          <>
+            <div className="koth-kicker mono">★ WHO&apos;S ON TOP ★</div>
+            <section className="koth-hall" aria-label="Who's on top right now">
+              <div className="koth-hall-grid">
+                {board.legends.throne && <ThroneCard hill={board.legends} label="LEGENDS" kind="is-legends" />}
+                {board.allStars.throne && <ThroneCard hill={board.allStars} label="ALL-STARS" kind="is-allstars" />}
+                <CoachOfWeekCard week={board.week} coachName={coachName} />
+              </div>
+            </section>
+          </>
+        )}
+
+        {board && board.standings.length > 0 && <SeasonSection board={board} coachName={coachName} />}
+
+        {board && <RecordsStrip board={board} coachName={coachName} />}
+
+        <section className="koth-app" aria-label="Get the app">
+          <img className="icon" src="/coty-icon.png" alt="" width={56} height={56} />
+          <div className="t">
+            <b>All-Time 5</b>
+            <span>Today&apos;s challenge, two thrones, and the whole league — on your phone.</span>
           </div>
-          <aside className="side koth-rail" id="rail">
-            <div className="koth-more mono" aria-hidden>MORE</div>
-            <div className="koth-card">
-              <div className="h mono">TOMORROW</div>
-              {board ? (
-                <>
-                  <div className="mono" style={{ fontSize: 13 }}>
-                    {venueKnown(board.tomorrow) ? venueChip(board.tomorrow) : "NOT ANNOUNCED"}
-                  </div>
-                  <div className="mono faint" style={{ fontSize: 10, marginTop: 4, letterSpacing: ".06em" }}>
-                    {[...(venueKnown(board.tomorrow) ? board.tomorrow.rule_tags.slice(0, 2) : []),
-                      "POOL FLIPS AT MIDNIGHT UTC"].join(" · ")}
-                  </div>
-                </>
-              ) : (
-                <div className="mono faint" style={{ fontSize: 12 }}>…</div>
-              )}
-            </div>
-
-            <div className="koth-card">
-              <div className="h mono">LONGEST REIGNS</div>
-              {board ? (
-                // Both ladders, each in its hill's colour — the same rule as
-                // the hall, so a reader who learned it there reads it here.
-                ([["LEGENDS", board.legends, "is-legends"], ["ALL-STARS", board.allStars, "is-allstars"]] as const).map(([label, hill, kind]) => {
-                  const rows = longestReigns(hill, 3);
-                  return rows.length === 0 ? (
-                    <div key={label} className={`koth-line mono ${kind}`}><span><span className="dot" /><span className="hill">{label}</span>no reign yet</span></div>
-                  ) : rows.map((r, i) => (
-                    <div key={`${label}${i}`} className={`koth-line mono ${kind}`}>
-                      <span>
-                        <span className="dot" /><span className="hill">{label} ·</span> {r.team_name}
-                        {r.reigning && <span className="faint"> · REIGNING</span>}
-                      </span>
-                      <b>{r.defenses}</b>
-                    </div>
-                  ));
-                })
-              ) : (
-                <div className="mono faint" style={{ fontSize: 12 }}>…</div>
-              )}
-            </div>
-
-            <div className="koth-card">
-              <div className="h mono">THIS WEEK&apos;S LEADERS</div>
-              {board ? (
-                board.weekTop3.length === 0 ? (
-                  <div className="mono faint" style={{ fontSize: 12 }}>No top-3 finish or season win yet this week.</div>
-                ) : (
-                  board.weekTop3.slice(0, 3).map((s) => (
-                    <div key={s.uid} className="koth-line mono">
-                      <span>{coachName(s.uid)}</span>
-                      <b><span className="teal">{s.percent}%</span></b>
-                    </div>
-                  ))
-                )
-              ) : (
-                <div className="mono faint" style={{ fontSize: 12 }}>…</div>
-              )}
-              {board && board.weekTop3.length > 0 && (
-                <button className="koth-linkish mono" onClick={goToWeek}>THE WEEK ↓</button>
-              )}
-            </div>
-          </aside>
-        </div>
+          <a className="koth-cta mono" href={APP_STORE_URL}>GET THE APP</a>
+        </section>
 
         <div className="koth-foot mono">
           Scores are player-reported for now · names and seasons shown as text only
+          {board && <> · {minutesAgo(board.fetchedAt).toLowerCase()}</>}
         </div>
       </div>
-
-      {/* Mobile only, by CSS: a phone is one tap from installing, and that is
-          the page's highest-value action (passdown §7). */}
-      {getBar && (
-        <div className="koth-getbar" role="complementary" aria-label="Get the app">
-          <img className="icon" src="/coty-icon.png" alt="" width={44} height={44} />
-          <div className="t">
-            <b>All-Time Five</b>
-            <span>Build a five. Take the throne.</span>
-          </div>
-          <a className="get mono" href={APP_STORE_URL}>GET</a>
-          <button className="x" onClick={dismissGetBar} aria-label="Dismiss">×</button>
-        </div>
-      )}
     </div>
   );
 }
 
 // ---- Pieces
 
-function Ticker({ items }: { items: string[][] }) {
-  if (items.length === 0) return <div className="koth-ticker mono" style={{ height: 37 }} />;
-  const loop = [...items, ...items];
+/** Today's challenge and today's board, side by side (one over the other
+ *  on a phone). The venue row names the city, the year and the rules; the
+ *  opponent and the decade follow from it. A day the calendar has not
+ *  reached says nothing it would have to guess. */
+function TodayCard({ board, coachName }: { board: Board | null; coachName: (uid: string) => string }) {
+  const [open, setOpen] = useState(false);
+  const v = board?.today;
+  const known = venueKnown(v);
+  const opponent = v?.venue_id ? DAILY_OPPONENTS[v.venue_id] : undefined;
+  const rows = board?.daily ?? [];
+  const shown = open ? rows : rows.slice(0, 4);
   return (
-    <div className="koth-ticker mono" aria-label="Latest results">
-      <div className="tk">
-        {loop.map(([lead, body, tail], i) => (
-          <span key={i}>
-            {lead && <b>{lead}</b>}{lead ? " " : ""}{body}{tail ? " " : ""}{tail && <i>{tail}</i>}
-          </span>
-        ))}
+    <section className="koth-today" aria-label="Today's challenge">
+      <div className="koth-today-main">
+        <div className="koth-today-k mono">TODAY&apos;S CHALLENGE · EVERYONE PLAYS THE SAME GAME</div>
+        {known && v ? (
+          <>
+            <h1 className="display">{venueCity(v)}<br />{v.year}</h1>
+            <p className="brief">
+              Draft five from the <b>{venueDecade(v)}</b>.
+              {opponent && <> Beat the <b>{opponent}</b>.</>} One shot.
+            </p>
+          </>
+        ) : (
+          <>
+            <h1 className="display">Today&apos;s<br />game</h1>
+            <p className="brief">Draft five. Beat today&apos;s team. One shot.</p>
+          </>
+        )}
+        <div className="chips mono">
+          {known && v && v.rule_tags.slice(0, 2).map((t) => <span key={t}>{t}</span>)}
+          <span>~4 MIN</span>
+        </div>
+        <div className="go">
+          <a className="koth-cta mono" href={APP_STORE_URL}>PLAY IN THE APP</a>
+          <span className="mono resets">RESETS IN {resetsIn()}</span>
+        </div>
       </div>
-    </div>
+      <div className="koth-today-board">
+        <div className="koth-today-k mono dim">
+          TODAY&apos;S BOARD · {rows.length} {rows.length === 1 ? "COACH" : "COACHES"} IN
+        </div>
+        {!board ? (
+          <div className="mono faint row-empty">…</div>
+        ) : rows.length === 0 ? (
+          <div className="row-empty">Nobody has played yet. The first result tops the board.</div>
+        ) : (
+          <>
+            {shown.map((r, i) => (
+              <div key={r.uid} className="koth-today-row">
+                <span className={`rk mono ${i < 3 ? "top" : ""}`}>{i + 1}</span>
+                <b>{coachName(r.uid)}</b>
+                <span className={`mono sc ${r.won ? "teal" : "red"}`}>{scoreline(r.score, r.score_opp)}</span>
+              </div>
+            ))}
+            {rows.length > 4 && (
+              <button className="koth-linkish mono" onClick={() => setOpen(!open)}>
+                {open ? "TOP FOUR ↑" : "FULL BOARD ↓"}
+              </button>
+            )}
+          </>
+        )}
+      </div>
+    </section>
   );
-}
-
-// The coach, and only the coach. The franchise name is identity — it makes
-// handles unique and pins the records — but it is not what the boards are
-// about (Dan, 2026-09-03), so it never reaches the page. A coach who has
-// named nobody falls back to their handle, which IS their franchise name and
-// so still reads as a name.
-function CoachName({ coach, handle }: { coach: string | null; handle: string }) {
-  return <b>{coach ?? handle}</b>;
 }
 
 /** One throne in the hall. Takes a Hill, so the two hills are one component. */
@@ -503,450 +313,181 @@ function ThroneCard({ hill, label, kind }: { hill: Hill; label: string; kind: "i
   );
 }
 
-/** The third honoree: most top-3 daily finishes this fixed Mon–Sun week.
- *  The rule and the window are on the card, because players will otherwise
- *  assume it means something else (passdown §3). */
-function CoachOfWeekCard({ standing, name, onWeek }: { standing: CoachRating | null; name: string | null; onWeek: () => void }) {
-  const range = weekRange(todayUTC());
+/** The third honoree: the best coach rating this fixed Mon–Sun week, three
+ *  games or more (lib.coachOfTheWeek). The rule is on the card, because
+ *  players will otherwise assume it means something else. */
+function CoachOfWeekCard({ week, coachName }: { week: CoachRating[]; coachName: (uid: string) => string }) {
+  const [open, setOpen] = useState(false);
+  const top = week[0] ?? null;
   return (
     <div className="koth-honoree is-coach">
       <div className="glyph" aria-hidden>◎</div>
       <div className="coach-text">
         <div className="label mono">COACH OF THE WEEK</div>
-        <div className="name display">{name ?? "Nobody yet"}</div>
-        <div className="lead">{standing ? `${standing.wins}-${standing.losses} in ${standing.games} games` : "three games this week to qualify"}</div>
-        <div className="meta mono">{range.toUpperCase()} · RESETS MON 00:00 UTC</div>
+        <div className="name display">{top ? coachName(top.uid) : "Nobody yet"}</div>
+        <div className="lead">
+          {top ? `${top.wins}-${top.losses} in ${top.games} games` : `${WEEK_MIN_GAMES} games this week to qualify`}
+        </div>
+        <div className="meta mono">{weekRange(todayUTC()).toUpperCase()} · RESETS MON 00:00 UTC</div>
       </div>
       <div className="hero-wrap">
-        <div className="hero mono">{standing ? `${standing.percent}%` : "—"}</div>
+        <div className="hero mono">{top ? `${top.percent}%` : "—"}</div>
         <div className="hero-l mono">COACH RATING</div>
       </div>
-      <button className="koth-cta outline mono" onClick={onWeek}>THE WEEK ↓</button>
+      {open && (
+        <div className="koth-week-list">
+          {week.length === 0 ? (
+            <div className="mono faint" style={{ fontSize: 11 }}>Nobody has {WEEK_MIN_GAMES} games yet.</div>
+          ) : week.slice(0, 5).map((c, i) => (
+            <div key={c.uid} className="koth-line mono">
+              <span>{i + 1}. <b className="who">{coachName(c.uid)}</b> <span className="faint">{c.wins}-{c.losses}</span></span>
+              <b className="teal">{c.percent}%</b>
+            </div>
+          ))}
+          <div className="koth-rule mono">
+            A win scores 1, plus up to 1 more for the margin (20+ is the max). A loss scores 0.
+            Daily and season games count.
+          </div>
+        </div>
+      )}
+      <button className="koth-cta outline mono" onClick={() => setOpen(!open)}>
+        {open ? "CLOSE ↑" : "THE WEEK ↓"}
+      </button>
     </div>
   );
 }
 
-/** The 2026-27 season: the league table the whole crowd moves, two
- *  conferences of three divisions, and the last dozen games anyone played.
- *  Rows come from `season_standings` in table order. A team with no games
- *  yet is still a row — the table is the league, not its activity. */
+/** Nickname from `Detroit Pistons`, `Portland Trail Blazers`. */
+const nickname = (name: string) =>
+  name.endsWith("Trail Blazers") ? "Trail Blazers" : name.split(" ").slice(-1)[0];
+
+/** The 2026-27 season: the ten busiest teams up front, the full league
+ *  table — two conferences of three divisions, every team a row, each
+ *  team's coaches under it — one tap away. */
 function SeasonSection({ board, coachName }: { board: Board; coachName: (uid: string) => string }) {
+  const [full, setFull] = useState(false);
   const played = board.standings.reduce((n, t) => n + t.games, 0) / 2;
+  const active = board.standings.filter((t) => t.games > 0)
+    .sort((a, b) => b.games - a.games || b.wins - a.wins || b.margin - a.margin || a.abbr.localeCompare(b.abbr))
+    .slice(0, 10);
+  const halves = [active.slice(0, 5), active.slice(5, 10)].filter((h) => h.length > 0);
   const divisions = (conf: "EAST" | "WEST") =>
     [...new Set(board.standings.filter((t) => t.conference === conf).map((t) => t.division))];
+  const pct = (t: Standing) => (t.games ? Number(t.pct).toFixed(3).replace(/^0/, "") : "—");
   return (
     <section className="koth-season" id="season" aria-label="The 2026-27 season">
-      <div className="koth-section-h mono">2026-27 SEASON · {played} {played === 1 ? "GAME" : "GAMES"} PLAYED · EVERY GAME ANYONE PLAYS COUNTS</div>
-      <div className="koth-season-grid">
-        {(["EAST", "WEST"] as const).map((conf) => (
-          <div key={conf} className="koth-card">
-            <div className="h mono">{conf}</div>
-            {divisions(conf).map((div) => (
-              <div key={div} className="koth-season-div">
-                <div className="koth-season-divh mono">{div.toUpperCase()}</div>
-                <div className="koth-season-cols mono faint"><span>TEAM</span><span>W</span><span>L</span><span>PCT</span><span>+/−</span></div>
-                {board.standings.filter((t) => t.division === div).map((t) => (
-                  <div key={t.abbr} className="koth-season-row mono">
-                    <span className="team"><b>{t.abbr}</b> {t.name.split(" ").slice(-1)[0]}</span>
+      <div className="koth-kicker mono">2026-27 SEASON · {played} {played === 1 ? "GAME" : "GAMES"} PLAYED</div>
+      <div className="koth-card">
+        <div className="koth-season-top mono">
+          <span>MOST ACTIVE TEAMS</span>
+          <span className="faint">EVERY GAME ANYONE PLAYS COUNTS</span>
+        </div>
+        {active.length === 0 ? (
+          <p className="koth-empty mono">No season game has been played yet.</p>
+        ) : (
+          <div className="koth-active">
+            {halves.map((half, h) => (
+              <div key={h}>
+                <div className="koth-active-cols mono faint"><span /><span>TEAM</span><span>W</span><span>L</span><span>+/−</span></div>
+                {half.map((t) => (
+                  <div key={t.abbr} className="koth-active-row mono">
+                    <span className="abbr">{t.abbr}</span>
+                    <span className="team">{nickname(t.name)}</span>
                     <span>{t.wins}</span><span>{t.losses}</span>
-                    <span>{t.games ? Number(t.pct).toFixed(3).replace(/^0/, "") : "—"}</span>
-                    <span>{t.margin > 0 ? `+${t.margin}` : t.margin}</span>
+                    <span>{signed(t.margin)}</span>
                   </div>
                 ))}
               </div>
             ))}
           </div>
+        )}
+        <button className="koth-linkish mono center" onClick={() => setFull(!full)} aria-expanded={full}>
+          {full ? "HIDE THE STANDINGS ↑" : "FULL 30-TEAM STANDINGS ↓"}
+        </button>
+      </div>
+
+      {full && (
+        <div className="koth-season-grid">
+          {(["EAST", "WEST"] as const).map((conf) => (
+            <div key={conf} className="koth-card">
+              <div className="h mono">{conf}</div>
+              {divisions(conf).map((div) => (
+                <div key={div} className="koth-season-div">
+                  <div className="koth-season-divh mono">{div.toUpperCase()}</div>
+                  <div className="koth-season-cols mono faint"><span>TEAM</span><span>W</span><span>L</span><span>PCT</span><span>+/−</span></div>
+                  {board.standings.filter((t) => t.division === div).map((t) => (
+                    <div key={t.abbr} className="koth-season-team">
+                      <div className="koth-season-row mono">
+                        <span className="team"><b>{t.abbr}</b> {nickname(t.name)}</span>
+                        <span>{t.wins}</span><span>{t.losses}</span>
+                        <span>{pct(t)}</span>
+                        <span>{signed(t.margin)}</span>
+                      </div>
+                      {/* The coaches who have run this team, best rating
+                          first: their own record with it this season. */}
+                      {teamCoaches(board.seasonGames, t.abbr).map((c) => (
+                        <div key={c.uid} className="koth-season-coach mono">
+                          <span className="who">{coachName(c.uid)}</span>
+                          <span>{c.wins}</span><span>{c.losses}</span>
+                          <span className="teal">{c.percent}%</span>
+                          <span>{signed(c.margin)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          ))}
+          <div className="koth-rule mono span">
+            Under each team: the coaches who have run it, best rating first. A win scores 1 plus up
+            to 1 more for the margin, a loss 0; the % is the average out of 2, steadied for coaches
+            with few games.
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
+/** Four tiles: the longest reign on each hill, the biggest daily win, the
+ *  most daily wins. The rest of the old RECORDS tab went with the Board. */
+function RecordsStrip({ board, coachName }: { board: Board; coachName: (uid: string) => string }) {
+  const legends = longestReign(board.legends);
+  const allStars = longestReign(board.allStars);
+  const tiles: { k: string; kind: string; v: string; sub: string }[] = [
+    { k: "LONGEST LEGENDS REIGN", kind: "is-legends", v: legends ? String(legends.defenses) : "—",
+      sub: legends ? `${legends.team_name}${legends.reigning ? " · reigning" : ""}` : "no reign yet" },
+    { k: "LONGEST ALL-STARS REIGN", kind: "is-allstars", v: allStars ? String(allStars.defenses) : "—",
+      sub: allStars ? `${allStars.team_name}${allStars.reigning ? " · reigning" : ""}` : "no reign yet" },
+    { k: "BIGGEST DAILY WIN", kind: "is-coach", v: board.bestMargin ? signed(board.bestMargin.margin) : "—",
+      sub: board.bestMargin
+        ? `${coachName(board.bestMargin.uid)} · ${board.bestMargin.scoreline} · ${shortDate(`${board.bestMargin.day}T12:00:00Z`)}`
+        : "no daily win yet" },
+    { k: "MOST DAILY WINS", kind: "is-coach", v: board.mostWins ? String(board.mostWins.wins) : "—",
+      sub: board.mostWins ? coachName(board.mostWins.uid) : "no daily win yet" },
+  ];
+  return (
+    <section className="koth-records" aria-label="Records">
+      <div className="koth-kicker mono">RECORDS</div>
+      <div className="koth-records-grid">
+        {tiles.map((t) => (
+          <div key={t.k} className={`koth-record ${t.kind}`}>
+            <div className="k mono">{t.k}</div>
+            <div className="v mono">{t.v}</div>
+            <div className="s">{t.sub}</div>
+          </div>
         ))}
       </div>
-      {board.seasonRecent.length > 0 && (
-        <div className="koth-card" style={{ marginTop: 12 }}>
-          <div className="h mono">LATEST GAMES</div>
-          {board.seasonRecent.map((g, i) => {
-            const won = seasonGameWon(g);
-            return (
-              <div key={`${g.uid}-${g.created_at ?? i}`} className="koth-line mono">
-                <span>
-                  <b>{g.home_abbr}</b> {g.home_score}–{g.away_score} <b>{g.away_abbr}</b>
-                  <span className="faint"> · {coachName(g.uid)} coached {g.coached_abbr}</span>
-                </span>
-                <b className={won ? "teal" : "faint"}>{won ? "W" : "L"}</b>
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </section>
-  );
-}
-
-function MoveLabel({ move }: { move: Move }) {
-  switch (move.kind) {
-    case "up": return <em>▲{move.n}</em>;
-    case "down": return <em style={{ color: "var(--red)" }}>▼{move.n}</em>;
-    case "new": return <em>NEW</em>;
-    default: return null;
-  }
-}
-
-/** The daily as a feed of result cards, with a sparse state that reads as
- *  "in progress" (passdown §4). Today's winner is named in the header so the
- *  daily result stays visible without a card of its own. */
-function Feed({ board, today }: { board: Board | null; today: string }) {
-  const rows = board?.daily ?? [];
-  const leader = rows[0];
-  const maxMargin = Math.max(1, ...rows.map((r) => Math.abs(r.margin)));
-  return (
-    <section>
-      <div className="koth-dateline mono">
-        <span>{longDate(today)}</span>
-        {board && venueKnown(board.today) && <span className="koth-venue">{venueChip(board.today)}</span>}
-        <span className="fill" />
-        {leader
-          ? <span>TODAY · <b style={{ color: "var(--chalk)" }}>{leader.coach ?? leader.handle}</b> {scoreline(leader.score, leader.score_opp)}</span>
-          : <span>EVERYBODY PLAYS THE SAME GAME</span>}
-      </div>
-      {!board ? (
-        <p className="koth-empty mono">Loading…</p>
-      ) : (
-        <>
-          {rows.length > 0 && (
-            <div className="koth-dateline mono" style={{ paddingTop: 0 }}>
-              <span className="fill" />
-              <span className="koth-count">{rows.length} {rows.length === 1 ? "RESULT" : "RESULTS"} IN</span>
-            </div>
-          )}
-          <div className="koth-feed">
-            {rows.map((r) => {
-              return (
-                <article key={r.uid} className={`koth-result ${r.won ? "win" : "loss"}`}>
-                  <div className="top">
-                    <div className={`rank mono ${r.rank === 1 ? "first" : ""}`}>{r.rank}</div>
-                    <div className="who">
-                      <CoachName coach={r.coach} handle={r.handle} />
-                      <div className="sub mono">{clockTime(r.created_at)}{r.move.kind !== "none" && r.move.kind !== "same" && <> · <MoveLabel move={r.move} /></>}</div>
-                    </div>
-                    <div className="score mono">
-                      <b>{scoreline(r.score, r.score_opp)}</b>
-                      <i>{signed(r.margin)}</i>
-                    </div>
-                  </div>
-                  <div className="bar"><i style={{ width: `${Math.round((Math.abs(r.margin) / maxMargin) * 100)}%` }} /></div>
-                  <div className="meta mono">
-                    {venueKnown(board.today) ? venueChip(board.today) : "VENUE NOT ANNOUNCED"} · <em>{r.won ? "WIN" : "LOSS"}</em>
-                  </div>
-                </article>
-              );
-            })}
-            {rows.length < 3 && (
-              <div className="koth-sparse">
-                The board is still filling up.
-                <div className="mono">EVERYBODY PLAYS THE SAME GAME · ONE SHOT A DAY</div>
-              </div>
-            )}
-          </div>
-        </>
-      )}
-    </section>
-  );
-}
-
-function WeekTab({ board }: { board: Board | null }) {
-  return (
-    <section>
-      <div className="koth-dateline mono">
-        <span>WEEK OF {mondayUTC()}</span>
-        <span className="fill" />
-        <span>SEVEN GAMES · LUCK AVERAGES OUT</span>
-      </div>
-      {!board ? (
-        <p className="koth-empty mono">Loading…</p>
-      ) : board.week.length === 0 ? (
-        <p className="koth-empty mono">Nobody has played this week yet.</p>
-      ) : (
-        <table>
-          <thead>
-            <tr className="mono"><th>#</th><th>COACH</th><th className="num">GAMES</th><th className="num">W–L</th><th className="num">MARGIN</th></tr>
-          </thead>
-          <tbody>
-            {board.week.map((r) => (
-              <tr key={r.uid}>
-                <td className={`rk mono ${r.rank <= 3 ? "top" : ""}`}>{r.rank}</td>
-                <td className="display"><CoachName coach={r.coach} handle={r.handle} /></td>
-                <td className="mono num dust">{r.games}</td>
-                <td className="mono num">{r.wins}–{r.games - r.wins}</td>
-                <td className={`mono num ${r.margin > 0 ? "teal" : r.margin < 0 ? "red" : "dust"}`}>{signed(r.margin)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-    </section>
-  );
-}
-
-function RecordsTab({ board }: { board: Board | null }) {
-  if (!board) return <p className="koth-empty mono">Loading…</p>;
-  const reigns = longestReigns(board.allStars, 10);
-  // The champions' reigns are throne 2's lineage plus whoever holds it now —
-  // the same derivation as ALL-STARS, on the other hill.
-  const championReigns = longestReigns(board.legends, 10);
-  // Only `solo` rows live here now: the user-built hill LEGENDS replaced.
-  const legacyReigns = board.solo;
-  return (
-    <section>
-      <div className="koth-section-h mono">
-        TOP 10 THIS MONTH · {monthName()} · RANKED BY A GAME&apos;S WORTH OF IMPACT
-      </div>
-      {board.topPlayers.length === 0 ? (
-        <p className="koth-empty mono">No game has been played this month yet.</p>
-      ) : (
-        <table><tbody>
-          {board.topPlayers.map((p, i) => (
-            <tr key={p.player_id}>
-              <td className={`rk mono ${i < 3 ? "top" : ""}`}>{i + 1}</td>
-              <td className="display">
-                <b>{playerLabel(p.player_name, p.player_season)}</b>
-                <div className="mono koth-subline">{statLine(p)}</div>
-              </td>
-              <td className="mono num dust" style={{ fontSize: 11 }}>
-                COACH {board.names[p.coach_handle] ?? p.coach_handle}
-                <div className="faint">{shortDate(`${p.played_on}T12:00:00Z`)}</div>
-              </td>
-            </tr>
-          ))}
-        </tbody></table>
-      )}
-
-      <div className="koth-section-h mono" style={{ marginTop: 28 }}>LONGEST REIGNS · ALL-STARS</div>
-      {reigns.length === 0 ? (
-        <p className="koth-empty mono">No reign on record yet.</p>
-      ) : (
-        <table><tbody>
-          {reigns.map((r, i) => (
-            <tr key={i}>
-              <td className={`rk mono ${i < 3 ? "top" : ""}`}>{i + 1}</td>
-              <td className="display"><b>{r.team_name}</b>{r.reigning && <span className="mono gold" style={{ fontSize: 10, marginLeft: 8 }}>· REIGNING</span>}</td>
-              <td className="mono num amber">{defensesLabel(r.defenses)}</td>
-            </tr>
-          ))}
-        </tbody></table>
-      )}
-
-      {/* **Titled for what it measures.** LEGENDS is a shared hill now
-          (2026-09-16): a defence is a challenger — any coach — turned back by
-          the champion holding it, and nobody coaches the champion. So this
-          ranks champions by resistance, and the coach's name on a reign says
-          who put that champion there, not who coached well. The note says so,
-          because the old one ("a defence means the player lost") was true of
-          the private hill and is false of this one. */}
-      <div className="koth-section-h mono" style={{ marginTop: 28 }}>LONGEST CHAMPION REIGNS</div>
-      <p className="koth-empty mono" style={{ marginTop: -4 }}>
-        Champions that proved hardest to dethrone. A defence is a challenger turned back by the
-        champion on the hill; the coach on a reign is who put that champion there.
-      </p>
-      {championReigns.length === 0 ? (
-        <p className="koth-empty mono">No champion has held the hill yet.</p>
-      ) : (
-        <table><tbody>
-          {championReigns.map((r, i) => (
-            <tr key={i}>
-              <td className={`rk mono ${i < 3 ? "top" : ""}`}>{i + 1}</td>
-              <td className="display"><b>{r.team_name}</b>{r.reigning && <span className="mono gold" style={{ fontSize: 10, marginLeft: 8 }}>· REIGNING</span>}</td>
-              <td className="mono num amber">{defensesLabel(r.defenses)}</td>
-            </tr>
-          ))}
-        </tbody></table>
-      )}
-
-      {/* Only while anyone still has one. The user-built local hill closed
-          when LEGENDS took its place, so this list can only shrink in
-          relevance and never grows. */}
-      {legacyReigns.length > 0 && (
-        <>
-          <div className="koth-section-h mono" style={{ marginTop: 28 }}>EARLIER HILL REIGNS</div>
-          <table><tbody>
-            {legacyReigns.slice(0, 10).map((r, i) => (
-              <tr key={i}>
-                <td className={`rk mono ${i < 3 ? "top" : ""}`}>{i + 1}</td>
-                <td className="display"><b>{r.team_name}</b></td>
-                <td className="mono num amber">{defensesLabel(r.defenses)}</td>
-              </tr>
-            ))}
-          </tbody></table>
-        </>
-      )}
-
-      <div className="koth-section-h mono" style={{ marginTop: 28 }}>BEST DAILY MARGIN</div>
-      {board.bestMargins.length === 0 ? (
-        <p className="koth-empty mono">No daily win on record yet.</p>
-      ) : (
-        <table><tbody>
-          {board.bestMargins.map((r, i) => (
-            <tr key={i}>
-              <td className={`rk mono ${i < 3 ? "top" : ""}`}>{i + 1}</td>
-              <td className="display"><b>{r.name}</b> <span className="mono faint" style={{ fontSize: 10 }}>{shortDate(`${r.day}T12:00:00Z`)}</span></td>
-              <td className="fin mono num w">{r.scoreline}</td>
-              <td className="mono num">{signed(r.margin)}</td>
-            </tr>
-          ))}
-        </tbody></table>
-      )}
-
-      {/* One lineage per hill, the same table. The house's seed row on LEGENDS
-          ('70 Knicks, THE GATEKEEPERS) prints like any other: a team, its
-          defences, and whom it fell to — nothing here names a holder. */}
-      {([["ALL-STARS", board.allStars, "No King has fallen yet. The Gatekeepers await."],
-         ["LEGENDS", board.legends, "No champion has fallen yet."]] as const).map(([label, hill, empty]) => (
-        <div key={label}>
-          <div className="koth-section-h mono" style={{ marginTop: 28 }}>THE LINEAGE · {label}</div>
-          {hill.lineage.length === 0 ? (
-            <p className="koth-empty mono">{empty}</p>
-          ) : (
-            <table><tbody>
-              {hill.lineage.map((r) => (
-                <tr key={r.id}>
-                  <td className="display"><b>{r.team_name}</b></td>
-                  <td className="mono num amber">{defensesLabel(r.defenses)}</td>
-                  <td className="mono num dust hide-sm" style={{ fontSize: 11 }}>{shortDate(r.claimed_at)} – {shortDate(r.ended_at)}</td>
-                  <td className="mono num faint" style={{ fontSize: 11 }}>FELL TO {board.names[r.dethroned_by_handle] ?? r.dethroned_by_handle}</td>
-                </tr>
-              ))}
-            </tbody></table>
-          )}
-        </div>
-      ))}
-
-      <div className="koth-section-h mono" style={{ marginTop: 28 }}>MOST DAILY WINS</div>
-      {board.mostWins.length === 0 ? (
-        <p className="koth-empty mono">No daily win on record yet.</p>
-      ) : (
-        <table><tbody>
-          {board.mostWins.map((r, i) => (
-            <tr key={i}>
-              <td className={`rk mono ${i < 3 ? "top" : ""}`}>{i + 1}</td>
-              <td className="display"><b>{r.name}</b></td>
-              <td className="mono num amber">{r.wins} {r.wins === 1 ? "WIN" : "WINS"}</td>
-            </tr>
-          ))}
-        </tbody></table>
-      )}
-    </section>
-  );
-}
-
-function ClimbTab({ board }: { board: Board | null }) {
-  if (!board) return <p className="koth-empty mono">Loading…</p>;
-  return (
-    <section>
-      <div className="koth-dateline mono">
-        <span>BEST CLIMB PER COACH</span>
-        <span className="fill" />
-        <span>THE UNDERDOG MULTIPLIER PAYS THE WEAKER ROSTER</span>
-      </div>
-      {board.runs.length === 0 ? (
-        <p className="koth-empty mono">No climb has been banked yet.</p>
-      ) : (
-        <table>
-          <thead>
-            <tr className="mono">
-              <th>#</th><th>COACH</th><th>CLEARED</th>
-              <th className="num hide-sm">FINISHED</th><th className="num">SCORE</th>
-            </tr>
-          </thead>
-          <tbody>
-            {board.runs.map((r, i) => (
-              <tr key={r.run_id}>
-                <td className={`rk mono ${i < 3 ? "top" : ""}`}>{i + 1}</td>
-                <td className="display">
-                  <CoachName coach={board.profiles[r.uid]?.coach ?? null} handle={board.names[r.coach_handle] ?? r.coach_handle} />
-                </td>
-                <td className="mono dust" style={{ fontSize: 11 }}>
-                  {r.ran_the_table ? "RAN THE TABLE" : `${r.rungs_cleared} OF ${r.summit_tier}`}
-                  {r.top_rung && <span className="faint"> · {r.top_rung}</span>}
-                  {r.clean && <span className="teal"> · CLEAN</span>}
-                </td>
-                <td className="mono num faint hide-sm" style={{ fontSize: 11 }}>
-                  {shortDate(r.finished_at)}
-                </td>
-                <td className="mono num amber" style={{ fontWeight: 700 }}>{grouped(r.score)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
     </section>
   );
 }
 
 // ---- Derivations
 
-function longestReigns(hill: Hill, limit = 5) {
-  const rows = hill.lineage.map((r) => ({
-    team_name: r.team_name, defenses: r.defenses, reigning: false,
-  }));
-  if (hill.throne) {
-    rows.push({
-      team_name: hill.throne.team_name,
-      defenses: hill.throne.defenses, reigning: true,
-    });
-  }
-  return rows.sort((a, b) => b.defenses - a.defenses).slice(0, limit);
-}
-
-/** ~10 ticker items as [lead, body, tail] triples. */
-function tickerItems(board: Board): string[][] {
-  const items: string[][] = [];
-  // A version number only means something on its own hill — both count from
-  // 1 — so the King a challenge was fought against is looked up on the hill
-  // the challenge row says it was on. That is what `throne_id` is for.
-  const kingAt = (hill: Hill, version: number) =>
-    hill.throne?.version === version
-      ? hill.throne.team_name
-      : hill.lineage.find((l) => l.version === version)?.team_name ?? "THE KING";
-  const hillOf = (id: ThroneId) => (id === 2 ? board.legends : board.allStars);
-  const who = (handle: string) => board.names[handle] ?? handle;
-
-  // Both hills' latest series, most recent first across the two.
-  const recent = [...board.allStars.challenges, ...board.legends.challenges]
-    .filter((c) => c.applied)
-    .sort((a, b) => b.created_at.localeCompare(a.created_at))
-    .slice(0, 5);
-  for (const c of recent) {
-    const hill = hillOf(c.throne_id);
-    if (c.result === "defended") {
-      items.push([kingAt(hill, c.throne_version), `held off ${who(c.challenger_handle)}`, `${c.wins_king}–${c.wins_you}`]);
-    } else if (c.throne_id === 2) {
-      // The coach took the champions' hill with a champion, not a five they
-      // built: the champion's name is the news, so it leads the line. The
-      // dethrone bumped the version, so the new King sits at version + 1.
-      items.push([kingAt(hill, c.throne_version + 1), `took the Legends hill · ${who(c.challenger_handle)}`, `${c.wins_you}–${c.wins_king}`]);
-    } else {
-      items.push([who(c.challenger_handle), "took the throne", `${c.wins_you}–${c.wins_king}`]);
-    }
-  }
-  for (const hill of [board.legends, board.allStars]) {
-    if (!hill.throne) continue;
-    const where = hill.id === 2 ? "Legends" : "All-Stars";
-    if (hill.throne.defenses > 0) {
-      items.unshift([hill.throne.team_name, hill.id === 2 ? "defended the hill" : "defended the throne", `${ordinal(hill.throne.defenses)} STRAIGHT`]);
-    } else {
-      // A King with no defence yet was crowned recently: that is the news.
-      items.unshift([hill.throne.team_name, `crowned in ${where}`, shortDate(hill.throne.claimed_at).toUpperCase()]);
-    }
-  }
-  const leader = board.daily[0];
-  if (leader) items.push([leader.coach ?? leader.handle, "tops today's board", scoreline(leader.score, leader.score_opp)]);
-  for (const r of board.daily.filter((r) => !r.won).slice(0, 2)) {
-    items.push([r.coach ?? r.handle,
-                venueKnown(board.today) ? `fell at ${board.today.short_name}` : "fell today",
-                scoreline(r.score, r.score_opp)]);
-  }
-  if (venueKnown(board.today)) items.push(["", "TODAY'S VENUE", venueChip(board.today)]);
-  for (const r of board.daily.filter((r) => r.move.kind === "new").slice(0, 2)) {
-    items.push([r.coach ?? r.handle, "enters the daily board", ""]);
-  }
-  if (items.length < 4 && venueKnown(board.tomorrow)) {
-    items.push(["", "TOMORROW", venueChip(board.tomorrow)]);
-  }
-  return items.slice(0, 10);
+/** The hill's longest reign: its lineage plus whoever holds it now. */
+function longestReign(hill: Hill): Reign | null {
+  const rows: Reign[] = hill.lineage.map((r) => ({ team_name: r.team_name, defenses: r.defenses, reigning: false }));
+  if (hill.throne) rows.push({ team_name: hill.throne.team_name, defenses: hill.throne.defenses, reigning: true });
+  return rows.sort((a, b) => b.defenses - a.defenses)[0] ?? null;
 }
