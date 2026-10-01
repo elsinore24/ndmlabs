@@ -69,7 +69,7 @@ type Board = {
   weekTop3: CoachOfWeek[];
   /** The 2026-27 league table, `season_standings`, in table order. */
   standings: Standing[];
-  /** The last twelve season games anyone played, newest first. */
+  /** The last five season games anyone played, newest first (Dan, 2026-09-30: cap it at five). */
   seasonRecent: SeasonGameRow[];
   fetchedAt: number;
 };
@@ -154,7 +154,7 @@ export default function KothLive() {
             `season_standings?season=eq.${SEASON}&select=abbr,name,conference,division,games,wins,losses,margin,pct`
           ),
           rest<SeasonGameRow[]>(
-            `season_games?season=eq.${SEASON}&select=uid,coach_handle,played_on,home_abbr,away_abbr,home_score,away_score,coached_abbr,created_at&order=created_at.desc&limit=12`
+            `season_games?season=eq.${SEASON}&select=uid,coach_handle,played_on,home_abbr,away_abbr,home_score,away_score,coached_abbr,created_at&order=created_at.desc&limit=5`
           ),
           // This week's season games, for COACH OF THE WEEK: a win is a point.
           rest<SeasonGameRow[]>(
