@@ -220,6 +220,7 @@ export default function KothLive() {
                 {board.legends.throne && <ThroneCard hill={board.legends} label="LEGENDS" kind="is-legends" />}
                 {board.allStars.throne && <ThroneCard hill={board.allStars} label="ALL-STARS" kind="is-allstars" />}
                 <CoachOfWeekCard week={board.week} coachTag={coachTag} />
+                <AllTimeCoachCard career={board.career} coachTag={coachTag} />
               </div>
             </section>
           </>
@@ -402,6 +403,31 @@ function CoachOfWeekCard({ week, coachTag }: { week: CoachRating[]; coachTag: (u
   );
 }
 
+/** The fourth honoree: the best career rating, ten games or more (Dan,
+ *  2026-10-02: the all-time coach beside the coach of the week). Its own
+ *  colour, sky blue, so the hall's four read apart at a glance. */
+function AllTimeCoachCard({ career, coachTag }: { career: CoachRating[]; coachTag: (uid: string) => ReactNode }) {
+  const top = career[0] ?? null;
+  return (
+    <div className="koth-honoree is-coach is-alltime">
+      <div className="glyph" aria-hidden>★</div>
+      <div className="coach-text">
+        <div className="label mono">ALL-TIME COACH</div>
+        <div className="name display">{top ? coachTag(top.uid) : "Nobody yet"}</div>
+        <div className="lead">
+          {top ? `${top.wins}-${top.losses} in ${top.games} games` : `${CAREER_MIN_GAMES} games to qualify`}
+        </div>
+        <div className="meta mono">DAILY + SEASON · {CAREER_MIN_GAMES}+ GAMES</div>
+      </div>
+      <div className="hero-wrap">
+        <div className="hero mono">{top ? ratingLabel(top.rating) : "—"}</div>
+        <div className="hero-l mono">PTS / GAME</div>
+      </div>
+      <a className="koth-cta outline mono" href="#alltime">ALL-TIME ↓</a>
+    </div>
+  );
+}
+
 /** Nickname from `Detroit Pistons`, `Portland Trail Blazers`. */
 const nickname = (name: string) =>
   name.endsWith("Trail Blazers") ? "Trail Blazers" : name.split(" ").slice(-1)[0];
@@ -525,7 +551,7 @@ function AllTimeCoaches({ career, coachTag }: { career: CoachRating[]; coachTag:
   const [all, setAll] = useState(false);
   const shown = all ? career : career.slice(0, 10);
   return (
-    <section className="koth-career" aria-label="All-time coaches">
+    <section className="koth-career" id="alltime" aria-label="All-time coaches">
       <div className="koth-kicker mono">ALL-TIME COACHES</div>
       <div className="koth-card">
         <div className="koth-season-top mono">

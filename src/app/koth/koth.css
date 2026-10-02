@@ -30,6 +30,9 @@
   --allstars-cta: linear-gradient(180deg, #cbb0fa, #9b78e8);
   --coach: #5ee0b8;
   --coach-cta: linear-gradient(180deg, #7ff0cc, #3fc9a0);
+  /* The all-time coach (2026-10-02): sky blue, apart from the week's teal. */
+  --alltime: #7cc4ff;
+  --alltime-cta: linear-gradient(180deg, #a3d6ff, #5aa9ef);
   background: var(--ink);
   color: var(--chalk);
   min-height: 100vh;
@@ -94,6 +97,9 @@
 .is-legends  { --accent: var(--legends);  --accent-cta: var(--legends-cta); --accent-ink: #1a1205; }
 .is-allstars { --accent: var(--allstars); --accent-cta: var(--allstars-cta); --accent-ink: #160f2a; }
 .is-coach    { --accent: var(--coach);    --accent-cta: var(--coach-cta);    --accent-ink: #062a20; }
+/* After .is-coach on purpose: the all-time card wears the coach card's
+   layout (class is-coach) and overrides only its colour. */
+.is-alltime  { --accent: var(--alltime);  --accent-cta: var(--alltime-cta);  --accent-ink: #06203a; }
 
 .koth-hall {
   margin-top: 0;
@@ -478,3 +484,15 @@
 @media (max-width: 720px) {
   .koth-season-cols, .koth-season-row { grid-template-columns: 1fr 26px 26px 46px 40px; gap: 6px; }
 }
+
+/* ---- Four honorees (2026-10-02): the hall goes to four columns on a wide
+   screen, its labels a size down to fit; on a phone the two coaches are each
+   a full-width strip under the thrones (the is-coach rules). */
+@media (min-width: 821px) {
+  .koth-hall-grid { grid-template-columns: repeat(4, 1fr); }
+  .koth-honoree { padding: 6px 16px 0; }
+  .koth-honoree .label { font-size: 15px; letter-spacing: 0.14em; }
+  .koth-honoree .name { font-size: 26px; }
+  .koth-honoree .hero { font-size: 44px; }
+}
+.koth-honoree a.koth-cta { text-decoration: none; display: block; }
