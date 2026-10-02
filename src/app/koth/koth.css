@@ -374,7 +374,10 @@
 .koth-active-row span:nth-child(n+3) { color: #ffffff; font-weight: 600; }
 .koth-linkish.center { margin: 14px auto 0; color: var(--gold); }
 .koth-season-grid { margin-top: 12px; }
-@media (max-width: 720px) { .koth-active { grid-template-columns: 1fr; } .koth-active > div + div .koth-active-cols { display: none; } }
+/* On a phone the two columns would stack into one list of ten; the phone
+   shows the top five, the same five rows a column holds on a wide screen
+   (Dan, 2026-10-02). The full table is still one tap away. */
+@media (max-width: 720px) { .koth-active { grid-template-columns: 1fr; } .koth-active > div + div { display: none; } }
 
 /* ---- Records: four tiles, each in its entity's colour. */
 .koth-records-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
@@ -440,4 +443,9 @@
   color: var(--gold);
   vertical-align: 0.12em;
   white-space: nowrap;
+}
+/* On a phone the all-time board's number columns give the name its room
+   back; at full width "Jackie Moon ♛3" was cut to "Jackie …". */
+@media (max-width: 720px) {
+  .koth-career-cols, .koth-career-row { grid-template-columns: 22px 1fr 28px 28px 32px 46px; gap: 6px; }
 }
