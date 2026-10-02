@@ -228,8 +228,6 @@ export default function KothLive() {
 
         {board && board.standings.length > 0 && <SeasonSection board={board} coachName={coachName} />}
 
-        {board && <AllTimeCoaches career={board.career} coachTag={coachTag} />}
-
         {board && <RecordsStrip board={board} coachName={coachName} />}
 
         <section className="koth-app" aria-label="Get the app">
@@ -407,7 +405,10 @@ function CoachOfWeekCard({ week, coachTag }: { week: CoachRating[]; coachTag: (u
  *  2026-10-02: the all-time coach beside the coach of the week). Its own
  *  colour, sky blue, so the hall's four read apart at a glance. */
 function AllTimeCoachCard({ career, coachTag }: { career: CoachRating[]; coachTag: (uid: string) => ReactNode }) {
+  const [open, setOpen] = useState(false);
+  const [all, setAll] = useState(false);
   const top = career[0] ?? null;
+  const shown = all ? career : career.slice(0, 10);
   return (
     <div className="koth-honoree is-coach is-alltime">
       <div className="glyph" aria-hidden>★</div>
@@ -423,7 +424,32 @@ function AllTimeCoachCard({ career, coachTag }: { career: CoachRating[]; coachTa
         <div className="hero mono">{top ? ratingLabel(top.rating) : "—"}</div>
         <div className="hero-l mono">PTS / GAME</div>
       </div>
-      <a className="koth-cta outline mono" href="#alltime">ALL-TIME ↓</a>
+      {/* The board opens in the card, as THE WEEK does (Dan, 2026-10-02:
+          the separate section under the season went). Top ten, then all. */}
+      {open && (
+        <div className="koth-week-list">
+          {career.length === 0 ? (
+            <div className="mono faint" style={{ fontSize: 11 }}>Nobody has {CAREER_MIN_GAMES} games yet.</div>
+          ) : shown.map((c, i) => (
+            <div key={c.uid} className="koth-line mono">
+              <span>{i + 1}. <b className="who">{coachTag(c.uid)}</b> <span className="faint">{c.wins}-{c.losses}</span></span>
+              <b className="alltime">{ratingLabel(c.rating)}</b>
+            </div>
+          ))}
+          {career.length > 10 && (
+            <button className="koth-linkish mono" onClick={() => setAll(!all)}>
+              {all ? "TOP TEN ↑" : `ALL ${career.length} COACHES ↓`}
+            </button>
+          )}
+          <div className="koth-rule mono">
+            Every daily and season game a coach has played, {CAREER_MIN_GAMES} or more. Points per game:
+            a win scores 1, plus up to 1 more for the margin; a loss scores 0.
+          </div>
+        </div>
+      )}
+      <button className="koth-cta outline mono" onClick={() => setOpen(!open)}>
+        {open ? "CLOSE ↑" : "ALL-TIME ↓"}
+      </button>
     </div>
   );
 }
@@ -541,45 +567,6 @@ function TeamPlayers({ board, team }: { board: Board; team: Standing }) {
         {covered < team.games && `Stats from ${covered} of ${team.games} games: earlier games saved only the coached team's players.`}
       </p>
     </div>
-  );
-}
-
-/** ALL-TIME COACHES (Dan, 2026-10-01): every daily and season game a coach
- *  has played, rated as Coach of the Week is, ten games to appear. Top ten,
- *  the rest one tap away. */
-function AllTimeCoaches({ career, coachTag }: { career: CoachRating[]; coachTag: (uid: string) => ReactNode }) {
-  const [all, setAll] = useState(false);
-  const shown = all ? career : career.slice(0, 10);
-  return (
-    <section className="koth-career" id="alltime" aria-label="All-time coaches">
-      <div className="koth-kicker mono">ALL-TIME COACHES</div>
-      <div className="koth-card">
-        <div className="koth-season-top mono">
-          <span>EVERY DAILY AND SEASON GAME</span>
-          <span className="faint">{CAREER_MIN_GAMES}+ GAMES TO QUALIFY</span>
-        </div>
-        {career.length === 0 ? (
-          <p className="koth-empty mono">Nobody has {CAREER_MIN_GAMES} games yet.</p>
-        ) : (
-          <>
-            <div className="koth-career-cols mono faint"><span>#</span><span>COACH</span><span>W</span><span>L</span><span>GP</span><span>PTS/G</span></div>
-            {shown.map((c, i) => (
-              <div key={c.uid} className="koth-career-row mono">
-                <span className={`rk ${i < 3 ? "top" : ""}`}>{i + 1}</span>
-                <span className="who">{coachTag(c.uid)}</span>
-                <span>{c.wins}</span><span>{c.losses}</span><span>{c.games}</span>
-                <span className="teal">{ratingLabel(c.rating)}</span>
-              </div>
-            ))}
-            {career.length > 10 && (
-              <button className="koth-linkish mono center" onClick={() => setAll(!all)} aria-expanded={all}>
-                {all ? "TOP TEN ↑" : `ALL ${career.length} COACHES ↓`}
-              </button>
-            )}
-          </>
-        )}
-      </div>
-    </section>
   );
 }
 
