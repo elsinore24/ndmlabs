@@ -449,3 +449,32 @@
 @media (max-width: 720px) {
   .koth-career-cols, .koth-career-row { grid-template-columns: 22px 1fr 28px 28px 32px 46px; gap: 6px; }
 }
+
+/* ---- A team's players, under its row (2026-10-02). The row itself is a
+   button: no button chrome, the row's own grid and type, a small ▾ to say it
+   opens. */
+.koth-team-row {
+  width: 100%; background: none; border: 0; border-top: 1px solid rgba(255, 255, 255, 0.12);
+  color: inherit; text-align: left; cursor: pointer; margin: 0;
+}
+.koth-active-row.koth-team-row { border-top: 0; border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
+.koth-team-row:hover .team, .koth-team-row.open .team { color: var(--amber); }
+.koth-team-row .team i { font-style: normal; font-size: 10px; color: var(--gold); margin-left: 4px; }
+.koth-team-players { padding: 8px 0 12px 14px; border-left: 2px solid rgba(217, 178, 74, 0.45); margin: 4px 0 8px; }
+.koth-team-players .cols, .koth-team-players .row {
+  display: grid; grid-template-columns: 1fr 30px 44px 40px 40px 48px; gap: 6px; padding: 5px 0;
+}
+.koth-team-players .cols { font-size: 10px; letter-spacing: 0.12em; color: #8f98ab; font-weight: 700; border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
+.koth-team-players .row { font-size: 13px; color: #ffffff; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+.koth-team-players .cols span:not(:first-child), .koth-team-players .row span:not(:first-child) { text-align: right; }
+.koth-team-players .who { font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.koth-team-players .note { font-size: 11px; color: #9aa3b5; margin-top: 8px; line-height: 1.5; }
+@media (max-width: 720px) {
+  .koth-team-players { padding-left: 10px; }
+  .koth-team-players .cols, .koth-team-players .row { grid-template-columns: 1fr 22px 38px 34px 34px 42px; gap: 4px; font-size: 12px; }
+}
+/* The full table's number columns narrow on a phone so a nickname and its ▾
+   fit ("Raptor…" otherwise). */
+@media (max-width: 720px) {
+  .koth-season-cols, .koth-season-row { grid-template-columns: 1fr 26px 26px 46px 40px; gap: 6px; }
+}

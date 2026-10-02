@@ -280,6 +280,37 @@ export type Standing = {
   games: number; wins: number; losses: number; margin: number; pct: number;
 };
 
+/** One player's season so far for one team, as `season_player_lines`
+ *  returns it (app migration 0017): games and totals. */
+export type SeasonPlayerLine = {
+  season: number; team_abbr: string; player_id: string; player_name: string; games: number;
+  pts: number; reb: number; ast: number; stl: number; blk: number; tov: number; fg_m: number; fg_a: number;
+};
+
+/** A row of a team's drop-down: per-game averages. With one game played
+ *  they are that game's line — one game is the whole season so far. */
+export type TeamPlayerRow = { id: string; name: string; gp: number; ppg: string; rpg: string; apg: string; fg: string };
+
+const perGame = (total: number, games: number) => (games > 0 ? (total / games).toFixed(1) : "0.0");
+
+/** `.531`, or `—` with no shot taken. */
+export function fgPct(made: number, attempts: number): string {
+  return attempts > 0 ? (made / attempts).toFixed(3).replace(/^0/, "") : "—";
+}
+
+/** A team's players, best scorer a game first (ties: more games, then name). */
+export function teamPlayers(lines: SeasonPlayerLine[], abbr: string): TeamPlayerRow[] {
+  return lines
+    .filter((l) => l.team_abbr === abbr)
+    .sort((a, b) => b.pts / Math.max(b.games, 1) - a.pts / Math.max(a.games, 1)
+      || b.games - a.games || a.player_name.localeCompare(b.player_name))
+    .map((l) => ({
+      id: l.player_id, name: l.player_name, gp: l.games,
+      ppg: perGame(l.pts, l.games), rpg: perGame(l.reb, l.games), apg: perGame(l.ast, l.games),
+      fg: fgPct(l.fg_m, l.fg_a),
+    }));
+}
+
 /** Whether the coach's side won a season game. */
 export function seasonGameWon(g: SeasonGameRow): boolean {
   return g.coached_abbr === g.home_abbr ? g.home_score > g.away_score : g.away_score > g.home_score;

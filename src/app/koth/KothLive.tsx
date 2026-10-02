@@ -12,9 +12,9 @@ import AllTimeFiveMark from "@/components/AllTimeFiveMark";
 import {
   APP_STORE_URL, DAILY_OPPONENTS, HOUSE_UID, RETIRED_HANDLE,
   type Challenge, type CoachRating, type DailyRaw, type LineageEntry,
-  type CoachTotals, type Profile, type ThroneWin, type Standing, type SeasonGameRow, type Throne, type ThroneId, type Venue, type WeekDayRow,
+  type CoachTotals, type Profile, type SeasonPlayerLine, type ThroneWin, type Standing, type SeasonGameRow, type Throne, type ThroneId, type Venue, type WeekDayRow,
   CAREER_MIN_GAMES, WEEK_MIN_GAMES,
-  allTimeCoaches, coachOfTheWeek, leadPlayer, ratingLabel, thronesTaken, minutesAgo, mondayUTC, profileMap, resetsIn, rest, scoreline,
+  allTimeCoaches, coachOfTheWeek, leadPlayer, ratingLabel, teamPlayers, thronesTaken, minutesAgo, mondayUTC, profileMap, resetsIn, rest, scoreline,
   shortDate, signed, todayUTC, venueCity, venueDecade, venueFallback, venueKnown,
   weekRange } from "./lib";
 import "./koth.css";
@@ -59,6 +59,11 @@ type Board = {
   profiles: Record<string, Profile>;
   /** uid → thrones taken (lib.thronesTaken): the crown beside a coach. */
   thrones: Record<string, number>;
+  /** Every season player's games and totals, by team (app migration 0017). */
+  playerLines: SeasonPlayerLine[];
+  /** team → games its player lines cover; short of its games played while
+   *  games from before both sides were saved still count. */
+  boxGames: Record<string, number>;
   fetchedAt: number;
 };
 
@@ -87,7 +92,7 @@ export default function KothLive() {
       const today = todayUTC();
       const monday = mondayUTC();
       const [throne1, lineage1, challenges1, throne2, lineage2, challenges2,
-             dailyRaw, venues, winsRaw, weekDays, standings, seasonGames, careerRaw, throneWins] =
+             dailyRaw, venues, winsRaw, weekDays, standings, seasonGames, careerRaw, throneWins, playerLines, boxGamesRaw] =
         await Promise.all([
           ...hillReads(1),
           ...hillReads(2),
@@ -119,6 +124,10 @@ export default function KothLive() {
           // Every series that took a throne. A few a week at most, so a raw
           // read stays far under PostgREST's 1,000-row cap for years.
           rest<ThroneWin[]>("challenges?result=eq.dethroned&applied=is.true&select=challenger_uid,throne_id&limit=1000"),
+          // A team's players, for the standings' drop-downs: one row per
+          // player per team, so a few hundred at most.
+          rest<SeasonPlayerLine[]>(`season_player_lines?season=eq.${SEASON}&select=*&limit=1000`),
+          rest<{ team_abbr: string; games: number }[]>(`season_team_box_games?season=eq.${SEASON}&select=team_abbr,games`),
         ]);
 
       const winCounts = new Map<string, number>();
@@ -157,6 +166,8 @@ export default function KothLive() {
         mostWins: most ? { uid: most[0], wins: most[1] } : null,
         profiles,
         thrones: thronesTaken(throneWins),
+        playerLines,
+        boxGames: Object.fromEntries(boxGamesRaw.map((r) => [r.team_abbr, r.games])),
         fetchedAt: Date.now(),
       });
       setFailed(false);
@@ -400,6 +411,9 @@ const nickname = (name: string) =>
  *  away. Teams only (Dan, 2026-10-01: no coach names under the teams). */
 function SeasonSection({ board, coachName }: { board: Board; coachName: (uid: string) => string }) {
   const [full, setFull] = useState(false);
+  /** The one team whose players are open, if any (Dan, 2026-10-02). */
+  const [open, setOpen] = useState<string | null>(null);
+  const toggle = (abbr: string) => setOpen(open === abbr ? null : abbr);
   const played = board.standings.reduce((n, t) => n + t.games, 0) / 2;
   const active = board.standings.filter((t) => t.games > 0)
     .sort((a, b) => b.games - a.games || b.wins - a.wins || b.margin - a.margin || a.abbr.localeCompare(b.abbr))
@@ -424,11 +438,16 @@ function SeasonSection({ board, coachName }: { board: Board; coachName: (uid: st
               <div key={h}>
                 <div className="koth-active-cols mono faint"><span /><span>TEAM</span><span>W</span><span>L</span><span>+/−</span></div>
                 {half.map((t) => (
-                  <div key={t.abbr} className="koth-active-row mono">
-                    <span className="abbr">{t.abbr}</span>
-                    <span className="team">{nickname(t.name)}</span>
-                    <span>{t.wins}</span><span>{t.losses}</span>
-                    <span>{signed(t.margin)}</span>
+                  <div key={t.abbr}>
+                    <button className={`koth-active-row koth-team-row mono ${open === t.abbr ? "open" : ""}`}
+                            onClick={() => toggle(t.abbr)} aria-expanded={open === t.abbr}
+                            aria-label={`${t.name}: show player stats`}>
+                      <span className="abbr">{t.abbr}</span>
+                      <span className="team">{nickname(t.name)} <i aria-hidden>{open === t.abbr ? "▴" : "▾"}</i></span>
+                      <span>{t.wins}</span><span>{t.losses}</span>
+                      <span>{signed(t.margin)}</span>
+                    </button>
+                    {open === t.abbr && <TeamPlayers board={board} team={t} />}
                   </div>
                 ))}
               </div>
@@ -451,12 +470,15 @@ function SeasonSection({ board, coachName }: { board: Board; coachName: (uid: st
                   <div className="koth-season-cols mono faint"><span>TEAM</span><span>W</span><span>L</span><span>PCT</span><span>+/−</span></div>
                   {board.standings.filter((t) => t.division === div).map((t) => (
                     <div key={t.abbr} className="koth-season-team">
-                      <div className="koth-season-row mono">
-                        <span className="team"><b>{t.abbr}</b> {nickname(t.name)}</span>
+                      <button className={`koth-season-row koth-team-row mono ${open === t.abbr ? "open" : ""}`}
+                              onClick={() => toggle(t.abbr)} aria-expanded={open === t.abbr}
+                              aria-label={`${t.name}: show player stats`}>
+                        <span className="team"><b>{t.abbr}</b> {nickname(t.name)} <i aria-hidden>{open === t.abbr ? "▴" : "▾"}</i></span>
                         <span>{t.wins}</span><span>{t.losses}</span>
                         <span>{pct(t)}</span>
                         <span>{signed(t.margin)}</span>
-                      </div>
+                      </button>
+                      {open === t.abbr && <TeamPlayers board={board} team={t} />}
                     </div>
                   ))}
                 </div>
@@ -466,6 +488,33 @@ function SeasonSection({ board, coachName }: { board: Board; coachName: (uid: st
         </div>
       )}
     </section>
+  );
+}
+
+/** A team's players so far, under its row (Dan, 2026-10-02): per-game
+ *  averages, which with one game played are that game's line. Games from
+ *  before both sides were saved have only the coached side's players, so
+ *  the card says how many of the team's games its numbers cover. */
+function TeamPlayers({ board, team }: { board: Board; team: Standing }) {
+  const rows = teamPlayers(board.playerLines, team.abbr);
+  const covered = board.boxGames[team.abbr] ?? 0;
+  if (rows.length === 0) {
+    return <div className="koth-team-players mono"><p className="note">No player stats yet.</p></div>;
+  }
+  return (
+    <div className="koth-team-players mono">
+      <div className="cols faint"><span>PLAYER</span><span>GP</span><span>PTS</span><span>REB</span><span>AST</span><span>FG%</span></div>
+      {rows.map((r) => (
+        <div key={r.id} className="row">
+          <span className="who">{r.name}</span>
+          <span>{r.gp}</span><span>{r.ppg}</span><span>{r.rpg}</span><span>{r.apg}</span><span>{r.fg}</span>
+        </div>
+      ))}
+      <p className="note">
+        {team.games <= 1 ? "One game — this is the season so far. " : "Per game. "}
+        {covered < team.games && `Stats from ${covered} of ${team.games} games: earlier games saved only the coached team's players.`}
+      </p>
+    </div>
   );
 }
 
