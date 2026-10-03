@@ -36,3 +36,13 @@ test("field goal percentage reads as a basketball number", () => {
   assert.equal(fgPct(0, 0), "—");
   assert.equal(fgPct(5, 5), "1.000");
 });
+
+import { leagueLeaders } from "../lib.ts";
+test("league leaders: best record first, then wins, then margin; no-game teams left off", () => {
+  const t = (abbr, wins, losses, margin) => ({ abbr, name: abbr, conference: "EAST", division: "X",
+    games: wins + losses, wins, losses, margin, pct: 0 });
+  const table = [t("AAA", 3, 1, 43), t("BBB", 1, 0, 34), t("CCC", 4, 2, 11), t("DDD", 0, 0, 0),
+                 t("EEE", 2, 0, 33), t("FFF", 2, 0, 7), t("GGG", 2, 5, -65)];
+  assert.deepEqual(leagueLeaders(table).map((x) => x.abbr), ["EEE", "FFF", "BBB", "AAA", "CCC"]);
+  assert.ok(!leagueLeaders(table, 10).some((x) => x.abbr === "DDD"));
+});

@@ -311,6 +311,16 @@ export function teamPlayers(lines: SeasonPlayerLine[], abbr: string): TeamPlayer
     }));
 }
 
+/** LEAGUE LEADERS (Dan, 2026-10-02): the best records, win percentage
+ *  first, then wins, then margin, then code so the order is total. Teams
+ *  without a game are left off. */
+export function leagueLeaders(standings: Standing[], count = 5): Standing[] {
+  const pct = (t: Standing) => (t.games > 0 ? t.wins / t.games : 0);
+  return standings.filter((t) => t.games > 0)
+    .sort((a, b) => pct(b) - pct(a) || b.wins - a.wins || b.margin - a.margin || a.abbr.localeCompare(b.abbr))
+    .slice(0, count);
+}
+
 /** Whether the coach's side won a season game. */
 export function seasonGameWon(g: SeasonGameRow): boolean {
   return g.coached_abbr === g.home_abbr ? g.home_score > g.away_score : g.away_score > g.home_score;

@@ -371,8 +371,9 @@
 
 /* ---- Most active teams: two columns of five, the mockup's table. */
 .koth-season-top { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-size: 11px; letter-spacing: 0.22em; color: #c3cad6; font-weight: 700; }
-.koth-active { display: grid; grid-template-columns: 1fr 1fr; gap: 0 36px; margin-top: 12px; }
-.koth-active-cols, .koth-active-row { display: grid; grid-template-columns: 48px 1fr 40px 40px 52px; gap: 8px; padding: 9px 0; }
+/* LEAGUE LEADERS (2026-10-02): one table of five, at every width. */
+.koth-active { display: grid; grid-template-columns: 1fr; gap: 0; margin-top: 12px; }
+.koth-active-cols, .koth-active-row { display: grid; grid-template-columns: 48px 1fr 40px 40px 56px 52px; gap: 8px; padding: 9px 0; }
 .koth-active-cols { font-size: 10px; letter-spacing: 0.14em; color: #8f98ab; font-weight: 700; border-bottom: 1px solid rgba(255, 255, 255, 0.12); }
 .koth-active-row { font-size: 14px; color: var(--chalk); border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
 .koth-active-row .abbr { color: var(--amber); font-weight: 700; }
@@ -384,7 +385,9 @@
 /* On a phone the two columns would stack into one list of ten; the phone
    shows the top five, the same five rows a column holds on a wide screen
    (Dan, 2026-10-02). The full table is still one tap away. */
-@media (max-width: 720px) { .koth-active { grid-template-columns: 1fr; } .koth-active > div + div { display: none; } }
+@media (max-width: 720px) {
+  .koth-active-cols, .koth-active-row { grid-template-columns: 34px 1fr 22px 22px 44px 38px; gap: 5px; }
+}
 
 /* ---- Records: four tiles, each in its entity's colour. */
 .koth-records-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }

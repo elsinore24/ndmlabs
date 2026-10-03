@@ -14,7 +14,7 @@ import {
   type Challenge, type CoachRating, type DailyRaw, type LineageEntry,
   type CoachTotals, type Profile, type SeasonPlayerLine, type ThroneWin, type Standing, type SeasonGameRow, type Throne, type ThroneId, type Venue, type WeekDayRow,
   CAREER_MIN_GAMES, WEEK_MIN_GAMES,
-  allTimeCoaches, coachOfTheWeek, leadPlayer, ratingLabel, teamPlayers, thronesTaken, minutesAgo, mondayUTC, profileMap, resetsIn, rest, scoreline,
+  allTimeCoaches, coachOfTheWeek, leadPlayer, leagueLeaders, ratingLabel, teamPlayers, thronesTaken, minutesAgo, mondayUTC, profileMap, resetsIn, rest, scoreline,
   shortDate, signed, todayUTC, venueCity, venueDecade, venueFallback, venueKnown,
   weekRange } from "./lib";
 import "./koth.css";
@@ -467,10 +467,10 @@ function SeasonSection({ board, coachName }: { board: Board; coachName: (uid: st
   const [open, setOpen] = useState<string | null>(null);
   const toggle = (abbr: string) => setOpen(open === abbr ? null : abbr);
   const played = board.standings.reduce((n, t) => n + t.games, 0) / 2;
-  const active = board.standings.filter((t) => t.games > 0)
-    .sort((a, b) => b.games - a.games || b.wins - a.wins || b.margin - a.margin || a.abbr.localeCompare(b.abbr))
-    .slice(0, 10);
-  const halves = [active.slice(0, 5), active.slice(5, 10)].filter((h) => h.length > 0);
+  // LEAGUE LEADERS (Dan, 2026-10-02): the five best records — win
+  // percentage, then wins, then margin. Teams with no game yet are not on it.
+  const active = leagueLeaders(board.standings);
+  const halves = [active];
   const divisions = (conf: "EAST" | "WEST") =>
     [...new Set(board.standings.filter((t) => t.conference === conf).map((t) => t.division))];
   const pct = (t: Standing) => (t.games ? Number(t.pct).toFixed(3).replace(/^0/, "") : "—");
@@ -479,7 +479,7 @@ function SeasonSection({ board, coachName }: { board: Board; coachName: (uid: st
       <div className="koth-kicker mono">2026-27 SEASON · {played} {played === 1 ? "GAME" : "GAMES"} PLAYED</div>
       <div className="koth-card">
         <div className="koth-season-top mono">
-          <span>MOST ACTIVE TEAMS</span>
+          <span>LEAGUE LEADERS</span>
           <span className="faint">EVERY GAME ANYONE PLAYS COUNTS</span>
         </div>
         {active.length === 0 ? (
@@ -488,7 +488,7 @@ function SeasonSection({ board, coachName }: { board: Board; coachName: (uid: st
           <div className="koth-active">
             {halves.map((half, h) => (
               <div key={h}>
-                <div className="koth-active-cols mono faint"><span /><span>TEAM</span><span>W</span><span>L</span><span>+/−</span></div>
+                <div className="koth-active-cols mono faint"><span /><span>TEAM</span><span>W</span><span>L</span><span>PCT</span><span>+/−</span></div>
                 {half.map((t) => (
                   <div key={t.abbr}>
                     <button className={`koth-active-row koth-team-row mono ${open === t.abbr ? "open" : ""}`}
@@ -497,6 +497,7 @@ function SeasonSection({ board, coachName }: { board: Board; coachName: (uid: st
                       <span className="abbr">{t.abbr}</span>
                       <span className="team">{nickname(t.name)} <i aria-hidden>{open === t.abbr ? "▴" : "▾"}</i></span>
                       <span>{t.wins}</span><span>{t.losses}</span>
+                      <span>{pct(t)}</span>
                       <span>{signed(t.margin)}</span>
                     </button>
                     {open === t.abbr && <TeamPlayers board={board} team={t} />}
