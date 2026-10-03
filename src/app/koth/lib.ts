@@ -311,6 +311,34 @@ export function teamPlayers(lines: SeasonPlayerLine[], abbr: string): TeamPlayer
     }));
 }
 
+/** STAT LEADERS (Dan, 2026-10-03): individual players, per game. */
+export type StatKey = "pts" | "reb" | "ast";
+export type StatLeader = { id: string; name: string; team: string; games: number; value: number };
+
+/** The top players a game in one stat. A man who played for two teams is
+ *  one man (summed; his team is the one he played most for). To qualify, a
+ *  player needs at least half the games of whoever has played the most, so
+ *  one hot night can't lead the league. */
+export function statLeaders(lines: SeasonPlayerLine[], stat: StatKey, count = 5): StatLeader[] {
+  const by = new Map<string, { name: string; games: number; total: number; teams: Map<string, number> }>();
+  for (const l of lines) {
+    const p = by.get(l.player_id) ?? by.set(l.player_id, { name: l.player_name, games: 0, total: 0, teams: new Map() }).get(l.player_id)!;
+    p.games += l.games;
+    p.total += l[stat];
+    p.teams.set(l.team_abbr, (p.teams.get(l.team_abbr) ?? 0) + l.games);
+  }
+  const most = Math.max(0, ...[...by.values()].map((p) => p.games));
+  const floor = Math.max(1, Math.ceil(most / 2));
+  return [...by.entries()]
+    .filter(([, p]) => p.games >= floor)
+    .map(([id, p]) => ({
+      id, name: p.name, games: p.games, value: p.total / p.games,
+      team: [...p.teams.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0][0],
+    }))
+    .sort((a, b) => b.value - a.value || b.games - a.games || a.name.localeCompare(b.name))
+    .slice(0, count);
+}
+
 /** LEAGUE LEADERS (Dan, 2026-10-02): the best records, win percentage
  *  first, then wins, then margin, then code so the order is total. Teams
  *  without a game are left off. */

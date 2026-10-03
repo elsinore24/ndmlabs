@@ -12,9 +12,9 @@ import AllTimeFiveMark from "@/components/AllTimeFiveMark";
 import {
   APP_STORE_URL, DAILY_OPPONENTS, HOUSE_UID, RETIRED_HANDLE,
   type Challenge, type CoachRating, type DailyRaw, type LineageEntry,
-  type CoachTotals, type Profile, type SeasonPlayerLine, type ThroneWin, type Standing, type SeasonGameRow, type Throne, type ThroneId, type Venue, type WeekDayRow,
+  type CoachTotals, type Profile, type SeasonPlayerLine, type StatKey, type ThroneWin, type Standing, type SeasonGameRow, type Throne, type ThroneId, type Venue, type WeekDayRow,
   CAREER_MIN_GAMES, WEEK_MIN_GAMES,
-  allTimeCoaches, coachOfTheWeek, leadPlayer, leagueLeaders, ratingLabel, teamPlayers, thronesTaken, minutesAgo, mondayUTC, profileMap, resetsIn, rest, scoreline,
+  allTimeCoaches, coachOfTheWeek, leadPlayer, leagueLeaders, ratingLabel, statLeaders, teamPlayers, thronesTaken, minutesAgo, mondayUTC, profileMap, resetsIn, rest, scoreline,
   shortDate, signed, todayUTC, venueCity, venueDecade, venueFallback, venueKnown,
   weekRange } from "./lib";
 import "./koth.css";
@@ -471,6 +471,12 @@ function SeasonSection({ board, coachName }: { board: Board; coachName: (uid: st
   // percentage, then wins, then margin. Teams with no game yet are not on it.
   const active = leagueLeaders(board.standings);
   const halves = [active];
+  // TEAMS or PLAYERS (Dan, 2026-10-03): the same card, the individual stat
+  // leaders one tap away, per game in points, rebounds or assists.
+  const [leaders, setLeaders] = useState<"teams" | "players">("teams");
+  const [stat, setStat] = useState<StatKey>("pts");
+  const players = statLeaders(board.playerLines, stat);
+  const statLabel = { pts: "PTS", reb: "REB", ast: "AST" } as const;
   const divisions = (conf: "EAST" | "WEST") =>
     [...new Set(board.standings.filter((t) => t.conference === conf).map((t) => t.division))];
   const pct = (t: Standing) => (t.games ? Number(t.pct).toFixed(3).replace(/^0/, "") : "—");
@@ -480,9 +486,44 @@ function SeasonSection({ board, coachName }: { board: Board; coachName: (uid: st
       <div className="koth-card">
         <div className="koth-season-top mono">
           <span>LEAGUE LEADERS</span>
-          <span className="faint">EVERY GAME ANYONE PLAYS COUNTS</span>
+          <span className="koth-seg" role="tablist" aria-label="Teams or players">
+            {(["teams", "players"] as const).map((k) => (
+              <button key={k} role="tab" aria-selected={leaders === k}
+                      className={leaders === k ? "on" : ""} onClick={() => setLeaders(k)}>
+                {k.toUpperCase()}
+              </button>
+            ))}
+          </span>
         </div>
-        {active.length === 0 ? (
+        {leaders === "players" ? (
+          <div className="koth-statleaders">
+            <div className="koth-seg small" role="tablist" aria-label="Stat">
+              {(["pts", "reb", "ast"] as const).map((k) => (
+                <button key={k} role="tab" aria-selected={stat === k}
+                        className={stat === k ? "on" : ""} onClick={() => setStat(k)}>
+                  {statLabel[k]}
+                </button>
+              ))}
+            </div>
+            {players.length === 0 ? (
+              <p className="koth-empty mono">No player stats yet.</p>
+            ) : (
+              <>
+                <div className="koth-stat-cols mono faint"><span>#</span><span>PLAYER</span><span>TEAM</span><span>GP</span><span>{statLabel[stat]}</span></div>
+                {players.map((p, i) => (
+                  <div key={p.id} className="koth-stat-row mono">
+                    <span className={`rk ${i < 3 ? "top" : ""}`}>{i + 1}</span>
+                    <span className="who">{p.name}</span>
+                    <span className="abbr">{p.team}</span>
+                    <span>{p.games}</span>
+                    <span className="val">{p.value.toFixed(1)}</span>
+                  </div>
+                ))}
+                <p className="koth-rule mono">Per game. A player needs half the games of whoever has played the most.</p>
+              </>
+            )}
+          </div>
+        ) : active.length === 0 ? (
           <p className="koth-empty mono">No season game has been played yet.</p>
         ) : (
           <div className="koth-active">

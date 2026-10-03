@@ -486,3 +486,27 @@
   .koth-honoree .hero { font-size: 44px; }
 }
 .koth-honoree a.koth-cta { text-decoration: none; display: block; }
+
+/* ---- TEAMS | PLAYERS on the league leaders card (2026-10-03): a small
+   segmented switch, amber when on; the stat tabs are its smaller twin. */
+.koth-seg { display: inline-flex; border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 999px; overflow: hidden; }
+.koth-seg button {
+  background: none; border: 0; color: #9aa3b5; cursor: pointer;
+  font: inherit; font-size: 10px; letter-spacing: 0.18em; font-weight: 700; padding: 6px 12px; min-height: 30px;
+}
+.koth-seg button.on { background: rgba(255, 176, 32, 0.16); color: var(--amber); }
+.koth-seg.small { margin: 12px 0 4px; }
+.koth-seg.small button { padding: 5px 14px; }
+.koth-stat-cols, .koth-stat-row { display: grid; grid-template-columns: 30px 1fr 52px 40px 56px; gap: 8px; padding: 9px 0; }
+.koth-stat-cols { font-size: 10px; letter-spacing: 0.14em; color: #8f98ab; font-weight: 700; border-bottom: 1px solid rgba(255, 255, 255, 0.12); margin-top: 8px; }
+.koth-stat-row { font-size: 14px; color: #ffffff; border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
+.koth-stat-cols span:nth-child(n+3), .koth-stat-row span:nth-child(n+3) { text-align: right; }
+.koth-stat-row .rk { color: var(--faint); font-weight: 700; }
+.koth-stat-row .rk.top { color: var(--amber); }
+.koth-stat-row .who { font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.koth-stat-row .abbr { color: var(--amber); font-weight: 700; }
+.koth-stat-row .val { color: var(--teal); font-weight: 800; }
+@media (max-width: 720px) {
+  .koth-season-top { align-items: center; }
+  .koth-stat-cols, .koth-stat-row { grid-template-columns: 22px 1fr 40px 28px 46px; gap: 5px; }
+}

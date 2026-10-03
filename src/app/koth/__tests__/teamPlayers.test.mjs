@@ -46,3 +46,22 @@ test("league leaders: best record first, then wins, then margin; no-game teams l
   assert.deepEqual(leagueLeaders(table).map((x) => x.abbr), ["EEE", "FFF", "BBB", "AAA", "CCC"]);
   assert.ok(!leagueLeaders(table, 10).some((x) => x.abbr === "DDD"));
 });
+
+import { statLeaders } from "../lib.ts";
+test("stat leaders: per game, one man across two teams, half the games to qualify", () => {
+  const l = (team, id, name, games, pts, reb, ast) =>
+    ({ season: 2027, team_abbr: team, player_id: id, player_name: name, games, pts, reb, ast, stl: 0, blk: 0, tov: 0, fg_m: 0, fg_a: 0 });
+  const lines = [
+    l("CLE", "a", "Harden", 4, 112, 20, 36),      // 28.0 ppg
+    l("CLE", "b", "Mitchell", 4, 100, 16, 24),    // 25.0
+    l("TOR", "c", "Leonard", 1, 38, 13, 5),       // one game: under the floor (4 / 2 = 2)
+    l("IND", "d", "Siakam", 2, 40, 12, 6),        // 20.0, exactly the floor
+    l("MIL", "e", "Traded", 1, 30, 5, 2), l("IND", "e", "Traded", 2, 30, 4, 4),  // 3 games, 20.0, mostly IND
+  ];
+  const pts = statLeaders(lines, "pts");
+  assert.deepEqual(pts.map((x) => x.name), ["Harden", "Mitchell", "Traded", "Siakam"]);
+  assert.equal(pts[0].value, 28);
+  assert.equal(pts.find((x) => x.name === "Traded").team, "IND");
+  assert.equal(statLeaders(lines, "ast")[0].name, "Harden");
+  assert.deepEqual(statLeaders([], "pts"), []);
+});
