@@ -339,14 +339,21 @@ export function statLeaders(lines: SeasonPlayerLine[], stat: StatKey, count = 5)
     .slice(0, count);
 }
 
-/** LEAGUE LEADERS (Dan, 2026-10-02): the best records, win percentage
- *  first, then wins, then margin, then code so the order is total. Teams
- *  without a game are left off. */
-export function leagueLeaders(standings: Standing[], count = 5): Standing[] {
+/** **The standings' order**, one rule for every table on the page: games
+ *  over .500 first (wins minus losses — what games back counts), then win
+ *  percentage, wins, margin and code, so the order is total. */
+export function standingsOrder(a: Standing, b: Standing): number {
   const pct = (t: Standing) => (t.games > 0 ? t.wins / t.games : 0);
-  return standings.filter((t) => t.games > 0)
-    .sort((a, b) => pct(b) - pct(a) || b.wins - a.wins || b.margin - a.margin || a.abbr.localeCompare(b.abbr))
-    .slice(0, count);
+  return (b.wins - b.losses) - (a.wins - a.losses) || pct(b) - pct(a) || b.wins - a.wins
+    || b.margin - a.margin || a.abbr.localeCompare(b.abbr);
+}
+
+/** LEAGUE LEADERS: the top of the standings across both conferences, in
+ *  the standings' own order (Dan, 2026-10-05: "cannot strictly be
+ *  percentage … the top 5 matching the current standings"). Teams without
+ *  a game are left off. */
+export function leagueLeaders(standings: Standing[], count = 5): Standing[] {
+  return standings.filter((t) => t.games > 0).sort(standingsOrder).slice(0, count);
 }
 
 /** A conference's table (Dan, 2026-10-04: East and West only, no
@@ -357,13 +364,9 @@ export function leagueLeaders(standings: Standing[], count = 5): Standing[] {
  *  by games back, then percentage, wins, margin and code, so the order is
  *  total; nobody is ever ahead of the leader. */
 export function conferenceTable(standings: Standing[], conf: "EAST" | "WEST"): { team: Standing; gb: number }[] {
-  const pct = (t: Standing) => (t.games > 0 ? t.wins / t.games : 0);
-  const teams = standings.filter((t) => t.conference === conf);
-  const best = Math.max(...teams.map((t) => t.wins - t.losses));
-  return teams
-    .map((team) => ({ team, gb: teams.length ? (best - (team.wins - team.losses)) / 2 : 0 }))
-    .sort((a, b) => a.gb - b.gb || pct(b.team) - pct(a.team) || b.team.wins - a.team.wins
-      || b.team.margin - a.team.margin || a.team.abbr.localeCompare(b.team.abbr));
+  const teams = standings.filter((t) => t.conference === conf).sort(standingsOrder);
+  const best = teams.length ? teams[0].wins - teams[0].losses : 0;
+  return teams.map((team) => ({ team, gb: (best - (team.wins - team.losses)) / 2 }));
 }
 
 /** As ESPN prints it (Dan, 2026-10-04): `–` for the leader (or level),
