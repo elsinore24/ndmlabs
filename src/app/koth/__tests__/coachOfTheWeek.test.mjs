@@ -2,7 +2,7 @@
 // (node --test with type-stripping, so lib.ts is imported as it is).
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { allTimeCoaches, coachOfTheWeek, gamePoints, rateCoaches, ratingLabel, thronesTaken } from "../lib.ts";
+import { allTimeCoaches, CAREER_MIN_GAMES, coachOfTheWeek, gamePoints, rateCoaches, ratingLabel, thronesTaken, WEEK_MIN_GAMES } from "../lib.ts";
 
 const daily = (uid, margin, created_at) =>
   ({ uid, day: created_at.slice(0, 10), score: 100 + margin, score_opp: 100, won: margin > 0, margin, created_at });
@@ -31,7 +31,7 @@ test("the rating is shrunk toward an even 1.0 over three games", () => {
   assert.deepEqual(ranked.map((c) => c.uid), ["b", "a"]);
 });
 
-test("Coach of the Week counts dailies and season games, and needs three games", () => {
+test("Coach of the Week counts dailies and season games, and needs WEEK_MIN_GAMES", () => {
   const rows = [
     daily("a", 25, "2026-09-28T01:00Z"), daily("a", 25, "2026-09-29T01:00Z"),     // two blowouts, no third game
     daily("b", 10, "2026-09-28T02:00Z"), daily("b", -4, "2026-09-29T02:00Z"),
@@ -41,10 +41,13 @@ test("Coach of the Week counts dailies and season games, and needs three games",
     game("c", "BOS", "LAL", 99, 110, "LAL", "2026-09-30T02:00Z"),    // c wins by 11 away
   ];
   const week = coachOfTheWeek(rows, games);
-  assert.deepEqual(week.map((c) => c.uid), ["b"]);  // a and c have under three games
-  assert.equal(week[0].games, 3); assert.equal(week[0].wins, 2); assert.equal(week[0].losses, 1);
-  assert.equal(week[0].margin, 16);
-  assert.equal(ratingLabel(week[0].rating), "1.00");   // (1.5 + 0 + 1.5 + 3) / 6
+  // a has 2 games, b 3, c 1: whoever meets the minimum is on the board.
+  const expected = [["a", 2], ["b", 3], ["c", 1]].filter(([, n]) => n >= WEEK_MIN_GAMES).map(([u]) => u);
+  assert.deepEqual(week.map((c) => c.uid).sort(), expected);
+  const b = week.find((c) => c.uid === "b");
+  assert.equal(b.games, 3); assert.equal(b.wins, 2); assert.equal(b.losses, 1);
+  assert.equal(b.margin, 16);
+  assert.equal(ratingLabel(b.rating), "1.00");   // (1.5 + 0 + 1.5 + 3) / 6
 });
 
 test("ties break on wins, then margin, then the earlier first game, then uid", () => {
@@ -76,7 +79,7 @@ test("an empty week is an empty ranking, not an error", () => {
   assert.deepEqual(coachOfTheWeek([]), []);
 });
 
-test("the all-time board rates career totals the same way, ten games to appear", () => {
+test("the all-time board rates career totals the same way, CAREER_MIN_GAMES to appear", () => {
   const career = (uid, games, wins, points, margin = 0, first_at = "2026-09-13T00:00Z") =>
     ({ uid, games, wins, points, margin, first_at });
   const board = allTimeCoaches([
@@ -84,9 +87,13 @@ test("the all-time board rates career totals the same way, ten games to appear",
     career("new", 3, 3, 6, 75),         // a perfect start, but three games
     career("mid", 10, 5, 7.5, 10),      // (7.5 + 3) / 13
   ]);
-  assert.deepEqual(board.map((c) => c.uid), ["vet", "mid"]);
-  assert.equal(ratingLabel(board[0].rating), "1.29");
-  assert.equal(board[0].losses, 4);
+  // Best rating first among those with the minimum: new (6 + 3) / 6 = 1.50
+  // when three games count, then vet 1.29, then mid.
+  const order = [["new", 3], ["vet", 20], ["mid", 10]].filter(([, n]) => n >= CAREER_MIN_GAMES).map(([u]) => u);
+  assert.deepEqual(board.map((c) => c.uid), order);
+  const vet = board.find((c) => c.uid === "vet");
+  assert.equal(ratingLabel(vet.rating), "1.29");
+  assert.equal(vet.losses, 4);
   // Totals and games agree: the same games rate the same, however they arrive.
   const g = (won, margin, at) => ({ uid: "x", won, margin, at });
   const games = [g(true, 20, "a"), g(false, -4, "b"), g(true, 10, "c")];

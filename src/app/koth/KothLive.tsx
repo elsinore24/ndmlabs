@@ -370,7 +370,7 @@ function CoachOfWeekCard({ week, coachTag }: { week: CoachRating[]; coachTag: (u
         <div className="label mono">COACH OF THE WEEK</div>
         <div className="name display">{top ? coachTag(top.uid) : "Nobody yet"}</div>
         <div className="lead">
-          {top ? `${top.wins}-${top.losses} in ${top.games} games` : `${WEEK_MIN_GAMES} games this week to qualify`}
+          {top ? `${top.wins}-${top.losses} in ${top.games} games` : (WEEK_MIN_GAMES > 1 ? `${WEEK_MIN_GAMES} games this week to qualify` : "No games this week yet")}
         </div>
         <div className="meta mono">{weekRange(todayUTC()).toUpperCase()} · RESETS MON 00:00 UTC</div>
       </div>
@@ -381,7 +381,7 @@ function CoachOfWeekCard({ week, coachTag }: { week: CoachRating[]; coachTag: (u
       {open && (
         <div className="koth-week-list">
           {week.length === 0 ? (
-            <div className="mono faint" style={{ fontSize: 11 }}>Nobody has {WEEK_MIN_GAMES} games yet.</div>
+            <div className="mono faint" style={{ fontSize: 11 }}>{WEEK_MIN_GAMES > 1 ? `Nobody has ${WEEK_MIN_GAMES} games yet.` : "Nobody has played this week yet."}</div>
           ) : week.slice(0, 5).map((c, i) => (
             <div key={c.uid} className="koth-line mono">
               <span>{i + 1}. <b className="who">{coachTag(c.uid)}</b> <span className="faint">{c.wins}-{c.losses}</span></span>
@@ -416,9 +416,9 @@ function AllTimeCoachCard({ career, coachTag }: { career: CoachRating[]; coachTa
         <div className="label mono">ALL-TIME COACH</div>
         <div className="name display">{top ? coachTag(top.uid) : "Nobody yet"}</div>
         <div className="lead">
-          {top ? `${top.wins}-${top.losses} in ${top.games} games` : `${CAREER_MIN_GAMES} games to qualify`}
+          {top ? `${top.wins}-${top.losses} in ${top.games} games` : (CAREER_MIN_GAMES > 1 ? `${CAREER_MIN_GAMES} games to qualify` : "No games yet")}
         </div>
-        <div className="meta mono">DAILY + SEASON · {CAREER_MIN_GAMES}+ GAMES</div>
+        <div className="meta mono">DAILY + SEASON{CAREER_MIN_GAMES > 1 ? ` · ${CAREER_MIN_GAMES}+ GAMES` : ""}</div>
       </div>
       <div className="hero-wrap">
         <div className="hero mono">{top ? ratingLabel(top.rating) : "—"}</div>
@@ -429,7 +429,7 @@ function AllTimeCoachCard({ career, coachTag }: { career: CoachRating[]; coachTa
       {open && (
         <div className="koth-week-list">
           {career.length === 0 ? (
-            <div className="mono faint" style={{ fontSize: 11 }}>Nobody has {CAREER_MIN_GAMES} games yet.</div>
+            <div className="mono faint" style={{ fontSize: 11 }}>{CAREER_MIN_GAMES > 1 ? `Nobody has ${CAREER_MIN_GAMES} games yet.` : "Nobody has played yet."}</div>
           ) : shown.map((c, i) => (
             <div key={c.uid} className="koth-line mono">
               <span>{i + 1}. <b className="who">{coachTag(c.uid)}</b> <span className="faint">{c.wins}-{c.losses}</span></span>
@@ -442,7 +442,7 @@ function AllTimeCoachCard({ career, coachTag }: { career: CoachRating[]; coachTa
             </button>
           )}
           <div className="koth-rule mono">
-            Every daily and season game a coach has played, {CAREER_MIN_GAMES} or more. Points per game:
+            Every daily and season game a coach has played{CAREER_MIN_GAMES > 1 ? `, ${CAREER_MIN_GAMES} or more` : ""}. Points per game:
             a win scores 1, plus up to 1 more for the margin; a loss scores 0.
           </div>
         </div>

@@ -392,10 +392,12 @@ export function seasonGameWon(g: SeasonGameRow): boolean {
 export const RATING_PRIOR = 1.0;
 export const RATING_WEIGHT = 3;
 export const MARGIN_CAP = 20;
-/** Games in the week before a coach can be Coach of the Week. */
-export const WEEK_MIN_GAMES = 3;
-/** Career games before a coach is on the ALL-TIME COACHES board. */
-export const CAREER_MIN_GAMES = 10;
+/** Games in the week before a coach can be Coach of the Week. 1 for
+ *  testing (Dan, 2026-10-05: "I need more names"); it was 3. */
+export const WEEK_MIN_GAMES = 1;
+/** Career games before a coach is on the ALL-TIME COACHES board. 1 for
+ *  testing (2026-10-05); it was 10. */
+export const CAREER_MIN_GAMES = 1;
 
 /** One finished game from a coach's side. */
 export type RatedGame = { uid: string; won: boolean; margin: number; at: string };
