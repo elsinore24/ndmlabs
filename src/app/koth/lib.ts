@@ -366,9 +366,11 @@ export function conferenceTable(standings: Standing[], conf: "EAST" | "WEST"): {
       || b.team.margin - a.team.margin || a.team.abbr.localeCompare(b.team.abbr));
 }
 
-/** `—` for the leader (or level), else `1.5`, `3.0`. */
+/** As ESPN prints it (Dan, 2026-10-04): `–` for the leader (or level),
+ *  `0.5`, `1.5` for half games, `1`, `3` for whole ones. */
 export function gamesBack(gb: number): string {
-  return gb <= 0 ? "—" : gb.toFixed(1);
+  if (gb <= 0) return "–";
+  return Number.isInteger(gb) ? String(gb) : gb.toFixed(1);
 }
 
 /** Whether the coach's side won a season game. */

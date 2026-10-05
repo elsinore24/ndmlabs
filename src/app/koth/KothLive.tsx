@@ -527,7 +527,7 @@ function SeasonSection({ board, coachName }: { board: Board; coachName: (uid: st
           <div className="koth-active">
             {halves.map((half, h) => (
               <div key={h}>
-                <div className="koth-active-cols mono faint"><span /><span>TEAM</span><span>W</span><span>L</span><span>PCT</span><span>+/−</span></div>
+                <div className="koth-active-cols mono faint"><span /><span>TEAM</span><span>W</span><span>L</span><span>PCT</span></div>
                 {half.map((t) => (
                   <div key={t.abbr}>
                     <button className={`koth-active-row koth-team-row mono ${open === t.abbr ? "open" : ""}`}
@@ -537,7 +537,6 @@ function SeasonSection({ board, coachName }: { board: Board; coachName: (uid: st
                       <span className="team">{nickname(t.name)} <i aria-hidden>{open === t.abbr ? "▴" : "▾"}</i></span>
                       <span>{t.wins}</span><span>{t.losses}</span>
                       <span>{pct(t)}</span>
-                      <span>{signed(t.margin)}</span>
                     </button>
                     {open === t.abbr && <TeamPlayers board={board} team={t} />}
                   </div>

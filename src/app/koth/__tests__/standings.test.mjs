@@ -27,7 +27,9 @@ test("games back from the leader, never negative", () => {
   assert.equal(gb.OKC, 1);          // 1-0 against 4-1
   assert.equal(gb.SAC, 2);
   assert.ok(Object.values(gb).every((g) => g >= 0));
-  assert.equal(gamesBack(0), "—");
+  // As ESPN prints it.
+  assert.equal(gamesBack(0), "–");
+  assert.equal(gamesBack(0.5), "0.5");
   assert.equal(gamesBack(1.5), "1.5");
-  assert.equal(gamesBack(3), "3.0");
+  assert.equal(gamesBack(3), "3");
 });
