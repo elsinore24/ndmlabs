@@ -12,7 +12,7 @@ import AllTimeFiveMark from "@/components/AllTimeFiveMark";
 import {
   APP_STORE_URL, DAILY_OPPONENTS, HOUSE_UID, RETIRED_HANDLE,
   type Challenge, type CoachRating, type DailyRaw, type LineageEntry,
-  type CoachTotals, type Profile, type SeasonPlayerLine, type StatKey, type ThroneWin, type Standing, type SeasonGameRow, type Throne, type ThroneId, type Venue, type WeekDayRow,
+  type CoachTotals, type Profile, type SeasonPlayerLine, type StatKey, type ThroneWin, type Standing, conferenceTable, gamesBack, type SeasonGameRow, type Throne, type ThroneId, type Venue, type WeekDayRow,
   CAREER_MIN_GAMES, WEEK_MIN_GAMES,
   allTimeCoaches, coachOfTheWeek, leadPlayer, leagueLeaders, ratingLabel, statLeaders, teamPlayers, thronesTaken, minutesAgo, mondayUTC, profileMap, resetsIn, rest, scoreline,
   shortDate, signed, todayUTC, venueCity, venueDecade, venueFallback, venueKnown,
@@ -459,7 +459,7 @@ const nickname = (name: string) =>
   name.endsWith("Trail Blazers") ? "Trail Blazers" : name.split(" ").slice(-1)[0];
 
 /** The 2026-27 season: the ten busiest teams up front, the full league
- *  table — two conferences of three divisions, every team a row — one tap
+ *  table — East and West, every team a row with its games back — one tap
  *  away. Teams only (Dan, 2026-10-01: no coach names under the teams). */
 function SeasonSection({ board, coachName }: { board: Board; coachName: (uid: string) => string }) {
   const [full, setFull] = useState(false);
@@ -477,8 +477,6 @@ function SeasonSection({ board, coachName }: { board: Board; coachName: (uid: st
   const [stat, setStat] = useState<StatKey>("pts");
   const players = statLeaders(board.playerLines, stat);
   const statLabel = { pts: "PTS", reb: "REB", ast: "AST" } as const;
-  const divisions = (conf: "EAST" | "WEST") =>
-    [...new Set(board.standings.filter((t) => t.conference === conf).map((t) => t.division))];
   const pct = (t: Standing) => (t.games ? Number(t.pct).toFixed(3).replace(/^0/, "") : "—");
   return (
     <section className="koth-season" id="season" aria-label="The 2026-27 season">
@@ -558,23 +556,18 @@ function SeasonSection({ board, coachName }: { board: Board; coachName: (uid: st
           {(["EAST", "WEST"] as const).map((conf) => (
             <div key={conf} className="koth-card">
               <div className="h mono">{conf}</div>
-              {divisions(conf).map((div) => (
-                <div key={div} className="koth-season-div">
-                  <div className="koth-season-divh mono">{div.toUpperCase()}</div>
-                  <div className="koth-season-cols mono faint"><span>TEAM</span><span>W</span><span>L</span><span>PCT</span><span>+/−</span></div>
-                  {board.standings.filter((t) => t.division === div).map((t) => (
-                    <div key={t.abbr} className="koth-season-team">
-                      <button className={`koth-season-row koth-team-row mono ${open === t.abbr ? "open" : ""}`}
-                              onClick={() => toggle(t.abbr)} aria-expanded={open === t.abbr}
-                              aria-label={`${t.name}: show player stats`}>
-                        <span className="team"><b>{t.abbr}</b> {nickname(t.name)} <i aria-hidden>{open === t.abbr ? "▴" : "▾"}</i></span>
-                        <span>{t.wins}</span><span>{t.losses}</span>
-                        <span>{pct(t)}</span>
-                        <span>{signed(t.margin)}</span>
-                      </button>
-                      {open === t.abbr && <TeamPlayers board={board} team={t} />}
-                    </div>
-                  ))}
+              <div className="koth-season-cols mono faint"><span>TEAM</span><span>W</span><span>L</span><span>PCT</span><span>GB</span></div>
+              {conferenceTable(board.standings, conf).map(({ team: t, gb }) => (
+                <div key={t.abbr} className="koth-season-team">
+                  <button className={`koth-season-row koth-team-row mono ${open === t.abbr ? "open" : ""}`}
+                          onClick={() => toggle(t.abbr)} aria-expanded={open === t.abbr}
+                          aria-label={`${t.name}: show player stats`}>
+                    <span className="team"><b>{t.abbr}</b> {nickname(t.name)} <i aria-hidden>{open === t.abbr ? "▴" : "▾"}</i></span>
+                    <span>{t.wins}</span><span>{t.losses}</span>
+                    <span>{pct(t)}</span>
+                    <span>{gamesBack(gb)}</span>
+                  </button>
+                  {open === t.abbr && <TeamPlayers board={board} team={t} />}
                 </div>
               ))}
             </div>

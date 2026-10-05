@@ -349,6 +349,28 @@ export function leagueLeaders(standings: Standing[], count = 5): Standing[] {
     .slice(0, count);
 }
 
+/** A conference's table (Dan, 2026-10-04: East and West only, no
+ *  divisions; games back instead of the margin). Games back counts from the
+ *  team furthest over .500 — half the gap in wins-minus-losses — because
+ *  teams here play very different numbers of games, and a 1-0 team "leading"
+ *  a 4-1 team on percentage would put the 4-1 team at no games back. Sorted
+ *  by games back, then percentage, wins, margin and code, so the order is
+ *  total; nobody is ever ahead of the leader. */
+export function conferenceTable(standings: Standing[], conf: "EAST" | "WEST"): { team: Standing; gb: number }[] {
+  const pct = (t: Standing) => (t.games > 0 ? t.wins / t.games : 0);
+  const teams = standings.filter((t) => t.conference === conf);
+  const best = Math.max(...teams.map((t) => t.wins - t.losses));
+  return teams
+    .map((team) => ({ team, gb: teams.length ? (best - (team.wins - team.losses)) / 2 : 0 }))
+    .sort((a, b) => a.gb - b.gb || pct(b.team) - pct(a.team) || b.team.wins - a.team.wins
+      || b.team.margin - a.team.margin || a.team.abbr.localeCompare(b.team.abbr));
+}
+
+/** `—` for the leader (or level), else `1.5`, `3.0`. */
+export function gamesBack(gb: number): string {
+  return gb <= 0 ? "—" : gb.toFixed(1);
+}
+
 /** Whether the coach's side won a season game. */
 export function seasonGameWon(g: SeasonGameRow): boolean {
   return g.coached_abbr === g.home_abbr ? g.home_score > g.away_score : g.away_score > g.home_score;
