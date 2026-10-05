@@ -386,7 +386,7 @@
    shows the top five, the same five rows a column holds on a wide screen
    (Dan, 2026-10-02). The full table is still one tap away. */
 @media (max-width: 720px) {
-  .koth-active-cols, .koth-active-row { grid-template-columns: 34px 1fr 22px 22px 44px; gap: 5px; }
+  .koth-active-cols, .koth-active-row { grid-template-columns: 34px 1fr 22px 22px 60px; gap: 5px; }
 }
 
 /* ---- Records: four tiles, each in its entity's colour. */
@@ -472,7 +472,8 @@
 /* The full table's number columns narrow on a phone so a nickname and its ▾
    fit ("Raptor…" otherwise). */
 @media (max-width: 720px) {
-  .koth-season-cols, .koth-season-row { grid-template-columns: 1fr 26px 26px 46px 40px; gap: 6px; }
+  /* PCT wider than its "1.000", so it clears the L column (Dan, 2026-10-05). */
+  .koth-season-cols, .koth-season-row { grid-template-columns: 1fr 24px 24px 58px 42px; gap: 6px; }
 }
 
 /* ---- Four honorees (2026-10-02): the hall goes to four columns on a wide
