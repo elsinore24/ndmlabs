@@ -12,7 +12,7 @@ import AllTimeFiveMark from "@/components/AllTimeFiveMark";
 import {
   APP_STORE_URL, DAILY_OPPONENTS, HOUSE_UID, RETIRED_HANDLE,
   type Challenge, type CoachRating, type DailyRaw, type LineageEntry,
-  type CoachTotals, type Profile, type SeasonPlayerLine, type StatKey, type ThroneWin, type Standing, conferenceTable, gamesBack, type SeasonGameRow, type Throne, type ThroneId, type Venue, type WeekDayRow,
+  type CareerRow, careerTotals, type Profile, type SeasonPlayerLine, type StatKey, type ThroneWin, type Standing, conferenceTable, gamesBack, type SeasonGameRow, type Throne, type ThroneId, type Venue, type WeekDayRow,
   CAREER_MIN_GAMES, marginLabel,
   allTimeCoaches, coachOfTheWeek, leadPlayer, leagueLeaders, ratingLabel, statLeaders, teamPlayers, thronesTaken, minutesAgo, mondayUTC, profileMap, resetsIn, rest, scoreline,
   shortDate, signed, todayUTC, venueCity, venueDecade, venueFallback, venueKnown,
@@ -118,9 +118,10 @@ export default function KothLive() {
           rest<SeasonGameRow[]>(
             `season_games?season=eq.${SEASON}&select=uid,coach_handle,played_on,home_abbr,away_abbr,home_score,away_score,coached_abbr,created_at&order=created_at.asc&limit=5000`
           ),
-          // Careers, totalled on the server (app migration 0016): a board
-          // of every game ever cannot be read raw past PostgREST's cap.
-          rest<CoachTotals[]>("coach_career?select=uid,games,wins,points,margin,first_at"),
+          // Careers, totalled on the server (app migration 0023): a board
+          // of every game ever cannot be read raw past PostgREST's cap. The
+          // view returns margins only; lib.ts scores them.
+          rest<CareerRow[]>("coach_career?select=uid,games,wins,margin,first_at,margins"),
           // Every series that took a throne. A few a week at most, so a raw
           // read stays far under PostgREST's 1,000-row cap for years.
           rest<ThroneWin[]>("challenges?result=eq.dethroned&applied=is.true&select=challenger_uid,throne_id&limit=1000"),
@@ -135,7 +136,7 @@ export default function KothLive() {
       const most = [...winCounts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0];
       const best = winsRaw[0];
       const week = coachOfTheWeek(weekDays, seasonGames.filter((g) => g.played_on >= monday));
-      const career = allTimeCoaches(careerRaw);
+      const career = allTimeCoaches(careerTotals(careerRaw));
 
       // One profile read covers every name on the page. The house holds no
       // profile, so a lookup for it is a wasted row.
@@ -399,7 +400,7 @@ function CoachOfWeekCard({ week, coachTag }: { week: CoachRating[]; coachTag: (u
   const [open, setOpen] = useState(false);
   const top = week[0] ?? null;
   return (
-    <div className="koth-honoree is-coach">
+    <div className={`koth-honoree is-coach${open ? " is-open" : ""}`}>
       <div className="glyph" aria-hidden>◎</div>
       <div className="coach-text">
         <div className="label mono">COACH OF THE WEEK</div>
@@ -436,7 +437,7 @@ function AllTimeCoachCard({ career, coachTag }: { career: CoachRating[]; coachTa
   const top = career[0] ?? null;
   const shown = all ? career : career.slice(0, 10);
   return (
-    <div className="koth-honoree is-coach is-alltime">
+    <div className={`koth-honoree is-coach is-alltime${open ? " is-open" : ""}`}>
       <div className="glyph" aria-hidden>★</div>
       <div className="coach-text">
         <div className="label mono">ALL-TIME COACH</div>

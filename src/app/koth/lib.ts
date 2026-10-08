@@ -398,20 +398,30 @@ export function seasonGameWon(g: SeasonGameRow): boolean {
 //
 // The rating is the average with PHANTOM_GAMES games at PHANTOM_VALUE (an
 // even .500) added, so unplayed days count as average until a coach has
-// played a full week. That replaces a minimum: a 3-0 week of blowouts
-// (.632) no longer tops a strong full week (11-3 is .647), though it still
-// edges a 10-4 or 9-5 of modest margins; a 1-0 coach shows on the board at
-// .550, mid-table, rather than hidden. Printed to three decimals,
+// played a full week. That replaces a minimum: priced at .400 (see
+// PHANTOM_VALUE), a 3-0 week of blowouts (.550) sits under a full 9-5 of
+// 11-point wins and 6-point losses (.552) — a near-crossover, so a 9-5 run
+// off the floor in its losses can still trail it — and a 1-0 coach shows
+// on the board at .457, honestly low, rather than hidden. Printed to three decimals,
 // like the stat it imitates.
 //
-// The app's `coach_career` view (migrations 0016, 0021) carries the same
-// per-game rule in SQL; change the two together.
+// This file is the rule's only owner. The app's `coach_career` view
+// (migration 0023) returns raw facts — each career's signed margins as a
+// histogram — and `careerTotals` scores them here, so the week board and
+// the all-time board cannot disagree about what a game is worth.
 
 export const MARGIN_CAP = 20;
 export const KICKER = 0.25;
 /** One period of games: a two-a-day week. */
 export const PHANTOM_GAMES = 14;
-export const PHANTOM_VALUE = 0.5;
+/** What a phantom game is worth: .400, a shade under even (Dan,
+ *  2026-10-08). The phantoms are a bigger share of a short record (14 of 17
+ *  games for a 3-0 week, 14 of 28 for a full one), so pricing them under
+ *  .500 is what stops a 3-0 week of blowouts (.550) edging a full 9-5
+ *  (.552): an unplayed day counts slightly against you, on a board for a
+ *  daily game. Raising PHANTOM_GAMES instead needed ~37 games and crushed
+ *  every real record toward the middle. */
+export const PHANTOM_VALUE = 0.4;
 /** Career games before a coach is on the ALL-TIME COACHES board. 1 for
  *  testing (2026-10-05); it was 10. The phantom games already keep a short
  *  career mid-table, so it may not need to come back. */
@@ -420,10 +430,29 @@ export const CAREER_MIN_GAMES = 1;
 /** One finished game from a coach's side. */
 export type RatedGame = { uid: string; won: boolean; margin: number; at: string };
 
-/** One coach's games, totalled — what `coach_career` returns. */
+/** One coach's games, totalled and scored. */
 export type CoachTotals = {
   uid: string; games: number; wins: number; points: number; margin: number; first_at: string;
 };
+
+/** One career as `coach_career` returns it: raw facts, no scoring. `margins`
+ *  maps a signed margin to how many games ended by it ("12": three wins by
+ *  12; "-4": losses by 4). */
+export type CareerRow = {
+  uid: string; games: number; wins: number; margin: number; first_at: string;
+  margins: Record<string, number>;
+};
+
+/** Careers scored by {@link gamePoints}: the rule applied here, not in SQL. */
+export function careerTotals(rows: CareerRow[]): CoachTotals[] {
+  return rows.map((r) => ({
+    uid: r.uid, games: r.games, wins: r.wins, margin: r.margin, first_at: r.first_at,
+    points: Object.entries(r.margins ?? {}).reduce((sum, [m, n]) => {
+      const margin = Number(m);
+      return sum + n * gamePoints(margin > 0, margin);
+    }, 0),
+  }));
+}
 
 export type CoachRating = {
   uid: string;

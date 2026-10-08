@@ -489,6 +489,11 @@
    a full-width strip under the thrones (the is-coach rules). */
 @media (min-width: 821px) {
   .koth-hall-grid { grid-template-columns: repeat(4, 1fr); }
+  /* An open coach board is a table and needs the width a quarter of the hall
+     cannot give it (names cut to "Jackie Mo…", 2026-10-08): while one is
+     open the hall goes two by two, thrones above, coaches below. */
+  .koth-hall-grid:has(.is-open) { grid-template-columns: repeat(2, 1fr); row-gap: 26px; }
+  .koth-hall-grid:has(.is-open) > .koth-honoree:nth-child(odd) { border-image: none; border-left-color: transparent; }
   .koth-honoree { padding: 6px 16px 0; }
   .koth-honoree .label { font-size: 15px; letter-spacing: 0.14em; }
   .koth-honoree .name { font-size: 26px; }
