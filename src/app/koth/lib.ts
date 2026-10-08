@@ -381,25 +381,40 @@ export function seasonGameWon(g: SeasonGameRow): boolean {
   return g.coached_abbr === g.home_abbr ? g.home_score > g.away_score : g.away_score > g.home_score;
 }
 
-// ---- The coach rating (Dan, 2026-10-01). It replaces the top-3 tally:
-// it sets Coach of the Week and ranks the ALL-TIME COACHES board.
+// ---- The coach rating (Dan, 2026-10-01; reworked 2026-10-08). It sets
+// Coach of the Week and ranks the ALL-TIME COACHES board.
 //
-// Every game is worth points: a loss 0, a win 1 plus up to 1 more for the
-// margin, the whole extra point at 20 or more. The rating is the average,
-// shrunk toward an even 1.0 as if every coach had already played three
-// such games, so one blowout does not top a coach with a full week. It is
-// printed as points per game, 0.00 to 2.00 (Dan, 2026-10-01: points, not a
-// percentage). The app's `coach_career` view (migration 0016) carries the
-// same per-game rule in SQL; change the two together.
+// The record leads and the margin refines it. A win is worth 1; winning big
+// adds up to KICKER more, losing big costs up to KICKER, both in full at
+// MARGIN_CAP points. Until 2026-10-08 a win's margin could double it and a
+// loss scored 0 however close, so an 8-6 week of blowouts outranked 11-3
+// and a 40-point loss read like a 1-point one.
+//
+// What it guarantees, exactly: over a 14-game week the kicker moves a
+// record by at most 3.5 points, so records three or more wins apart never
+// swap; one or two apart can, at the extremes (8-6 on 25-point wins and
+// 2-point losses edges a 9-5 of 11-point wins and 8-point losses), which is
+// the margin refining a near-equal record rather than overriding a better one.
+//
+// The rating is the average with PHANTOM_GAMES games at PHANTOM_VALUE (an
+// even .500) added, so unplayed days count as average until a coach has
+// played a full week. That replaces a minimum: a 3-0 week of blowouts
+// (.632) no longer tops a strong full week (11-3 is .647), though it still
+// edges a 10-4 or 9-5 of modest margins; a 1-0 coach shows on the board at
+// .550, mid-table, rather than hidden. Printed to three decimals,
+// like the stat it imitates.
+//
+// The app's `coach_career` view (migrations 0016, 0021) carries the same
+// per-game rule in SQL; change the two together.
 
-export const RATING_PRIOR = 1.0;
-export const RATING_WEIGHT = 3;
 export const MARGIN_CAP = 20;
-/** Games in the week before a coach can be Coach of the Week. 1 for
- *  testing (Dan, 2026-10-05: "I need more names"); it was 3. */
-export const WEEK_MIN_GAMES = 1;
+export const KICKER = 0.25;
+/** One period of games: a two-a-day week. */
+export const PHANTOM_GAMES = 14;
+export const PHANTOM_VALUE = 0.5;
 /** Career games before a coach is on the ALL-TIME COACHES board. 1 for
- *  testing (2026-10-05); it was 10. */
+ *  testing (2026-10-05); it was 10. The phantom games already keep a short
+ *  career mid-table, so it may not need to come back. */
 export const CAREER_MIN_GAMES = 1;
 
 /** One finished game from a coach's side. */
@@ -417,19 +432,31 @@ export type CoachRating = {
   losses: number;
   /** Net margin over the games, for the tie-break. */
   margin: number;
-  /** Points per game after shrinkage, 0–2: the number the boards print. */
+  /** Mean margin per game, the board's MARGIN column. */
+  avgMargin: number;
+  /** The rating, −.25 to 1.25 in principle and near .500 for a short
+   *  record: the number the boards print. */
   rating: number;
   /** When the coach's first game in the set finished. */
   firstAt: string;
 };
 
 export function gamePoints(won: boolean, margin: number): number {
-  return won ? 1 + Math.min(Math.max(margin, 0), MARGIN_CAP) / MARGIN_CAP : 0;
+  const by = Math.min(Math.abs(margin), MARGIN_CAP) / MARGIN_CAP;
+  return won ? 1 + KICKER * by : 0 - KICKER * by;   // 0 - 0 is +0, not -0
 }
 
-/** `1.09`: a rating as the boards print it. */
+/** `.647`, `1.031`, `-.012`: a rating as the boards print it, three decimals
+ *  with no leading zero, as a batting average is written. */
 export function ratingLabel(rating: number): string {
-  return rating.toFixed(2);
+  const text = rating.toFixed(3);
+  return text.replace(/^(-?)0\./, "$1.");
+}
+
+/** `+4.2`, `-1.0`, `0.0`: a mean margin per game. */
+export function marginLabel(avg: number): string {
+  const text = avg.toFixed(1);
+  return avg > 0 && text !== "0.0" ? `+${text}` : text === "-0.0" ? "0.0" : text;
 }
 
 /** A season game, from the coach's side. */
@@ -452,7 +479,8 @@ export function dailyRated(r: WeekDayRow): RatedGame {
 export function rateTotals(totals: CoachTotals[]): CoachRating[] {
   return totals.map((t) => ({
     uid: t.uid, games: t.games, wins: t.wins, losses: t.games - t.wins, margin: t.margin,
-    rating: (t.points + RATING_WEIGHT * RATING_PRIOR) / (t.games + RATING_WEIGHT),
+    avgMargin: t.games > 0 ? t.margin / t.games : 0,
+    rating: (t.points + PHANTOM_GAMES * PHANTOM_VALUE) / (t.games + PHANTOM_GAMES),
     firstAt: t.first_at,
   })).sort((a, b) =>
     b.rating - a.rating || b.wins - a.wins || b.margin - a.margin ||
@@ -494,11 +522,10 @@ export function thronesTaken(wins: ThroneWin[]): Record<string, number> {
 }
 
 /** This week's ranking: dailies and season games together, Mon–Sun UTC,
- *  only coaches with {@link WEEK_MIN_GAMES} or more. The first is Coach of
- *  the Week. Callers pass this week's rows only. */
+ *  every coach who played (no minimum: the phantom games do that job). The
+ *  first is Coach of the Week. Callers pass this week's rows only. */
 export function coachOfTheWeek(rows: WeekDayRow[], seasonGames: SeasonGameRow[] = []): CoachRating[] {
-  return rateCoaches([...rows.map(dailyRated), ...seasonGames.map(seasonGameRated)])
-    .filter((c) => c.games >= WEEK_MIN_GAMES);
+  return rateCoaches([...rows.map(dailyRated), ...seasonGames.map(seasonGameRated)]);
 }
 
 /** `SEP 14 – SEP 20`: the fixed Mon–Sun week that holds `dayKey`. */

@@ -13,7 +13,7 @@ import {
   APP_STORE_URL, DAILY_OPPONENTS, HOUSE_UID, RETIRED_HANDLE,
   type Challenge, type CoachRating, type DailyRaw, type LineageEntry,
   type CoachTotals, type Profile, type SeasonPlayerLine, type StatKey, type ThroneWin, type Standing, conferenceTable, gamesBack, type SeasonGameRow, type Throne, type ThroneId, type Venue, type WeekDayRow,
-  CAREER_MIN_GAMES, WEEK_MIN_GAMES,
+  CAREER_MIN_GAMES, marginLabel,
   allTimeCoaches, coachOfTheWeek, leadPlayer, leagueLeaders, ratingLabel, statLeaders, teamPlayers, thronesTaken, minutesAgo, mondayUTC, profileMap, resetsIn, rest, scoreline,
   shortDate, signed, todayUTC, venueCity, venueDecade, venueFallback, venueKnown,
   weekRange } from "./lib";
@@ -357,9 +357,44 @@ function ThroneCard({ hill, label, kind }: { hill: Hill; label: string; kind: "i
   );
 }
 
-/** The third honoree: the best coach rating this fixed Mon–Sun week, three
- *  games or more (lib.coachOfTheWeek). The rule is on the card, because
- *  players will otherwise assume it means something else. */
+/** A coach board: rank, coach, W-L, mean margin, rating (Dan, 2026-10-08).
+ *  The rating's inputs sit beside it, so a 9-5 above a 10-4 shows why
+ *  without being told; a composite alone next to a W-L it contradicts reads
+ *  as a bug. The rule is one tap away, not on the board. */
+function CoachBoard({ rows, coachTag, tone }: {
+  rows: CoachRating[]; coachTag: (uid: string) => ReactNode; tone: "teal" | "alltime";
+}) {
+  const [rule, setRule] = useState(false);
+  return (
+    <>
+      <div className="koth-coach-row head mono">
+        <span>#</span><span>COACH</span><span>W-L</span><span>MARGIN</span><span>RATING</span>
+      </div>
+      {rows.map((c, i) => (
+        <div key={c.uid} className="koth-coach-row mono">
+          <span className="faint">{i + 1}</span>
+          <b className="who">{coachTag(c.uid)}</b>
+          <span>{c.wins}-{c.losses}</span>
+          <span className="faint">{marginLabel(c.avgMargin)}</span>
+          <b className={tone}>{ratingLabel(c.rating)}</b>
+        </div>
+      ))}
+      <button className={`koth-linkish mono ${tone}`} onClick={() => setRule(!rule)}>
+        {rule ? "HOW IT'S RATED ↑" : "HOW IT'S RATED ↓"}
+      </button>
+      {rule && (
+        <div className="koth-rule mono">
+          A win is 1.000. Winning big adds up to .250, losing big costs up to .250.
+          Fourteen games at .500 count until you have played them.
+        </div>
+      )}
+    </>
+  );
+}
+
+/** The third honoree: the best coach rating this fixed Mon–Sun week
+ *  (lib.coachOfTheWeek). No minimum: the rating's phantom games keep a
+ *  short week honestly mid-table. */
 function CoachOfWeekCard({ week, coachTag }: { week: CoachRating[]; coachTag: (uid: string) => ReactNode }) {
   const [open, setOpen] = useState(false);
   const top = week[0] ?? null;
@@ -370,28 +405,19 @@ function CoachOfWeekCard({ week, coachTag }: { week: CoachRating[]; coachTag: (u
         <div className="label mono">COACH OF THE WEEK</div>
         <div className="name display">{top ? coachTag(top.uid) : "Nobody yet"}</div>
         <div className="lead">
-          {top ? `${top.wins}-${top.losses} in ${top.games} games` : (WEEK_MIN_GAMES > 1 ? `${WEEK_MIN_GAMES} games this week to qualify` : "No games this week yet")}
+          {top ? `${top.wins}-${top.losses} in ${top.games} games` : "No games this week yet"}
         </div>
         <div className="meta mono">{weekRange(todayUTC()).toUpperCase()} · RESETS MON 00:00 UTC</div>
       </div>
       <div className="hero-wrap">
         <div className="hero mono">{top ? ratingLabel(top.rating) : "—"}</div>
-        <div className="hero-l mono">PTS / GAME</div>
+        <div className="hero-l mono">RATING</div>
       </div>
       {open && (
         <div className="koth-week-list">
           {week.length === 0 ? (
-            <div className="mono faint" style={{ fontSize: 11 }}>{WEEK_MIN_GAMES > 1 ? `Nobody has ${WEEK_MIN_GAMES} games yet.` : "Nobody has played this week yet."}</div>
-          ) : week.slice(0, 5).map((c, i) => (
-            <div key={c.uid} className="koth-line mono">
-              <span>{i + 1}. <b className="who">{coachTag(c.uid)}</b> <span className="faint">{c.wins}-{c.losses}</span></span>
-              <b className="teal">{ratingLabel(c.rating)}</b>
-            </div>
-          ))}
-          <div className="koth-rule mono">
-            Points per game. A win scores 1, plus up to 1 more for the margin (20+ is the max).
-            A loss scores 0. Daily and season games count.
-          </div>
+            <div className="mono faint" style={{ fontSize: 11 }}>Nobody has played this week yet.</div>
+          ) : <CoachBoard rows={week.slice(0, 5)} coachTag={coachTag} tone="teal" />}
         </div>
       )}
       <button className="koth-cta outline mono" onClick={() => setOpen(!open)}>
@@ -422,7 +448,7 @@ function AllTimeCoachCard({ career, coachTag }: { career: CoachRating[]; coachTa
       </div>
       <div className="hero-wrap">
         <div className="hero mono">{top ? ratingLabel(top.rating) : "—"}</div>
-        <div className="hero-l mono">PTS / GAME</div>
+        <div className="hero-l mono">RATING</div>
       </div>
       {/* The board opens in the card, as THE WEEK does (Dan, 2026-10-02:
           the separate section under the season went). Top ten, then all. */}
@@ -430,21 +456,12 @@ function AllTimeCoachCard({ career, coachTag }: { career: CoachRating[]; coachTa
         <div className="koth-week-list">
           {career.length === 0 ? (
             <div className="mono faint" style={{ fontSize: 11 }}>{CAREER_MIN_GAMES > 1 ? `Nobody has ${CAREER_MIN_GAMES} games yet.` : "Nobody has played yet."}</div>
-          ) : shown.map((c, i) => (
-            <div key={c.uid} className="koth-line mono">
-              <span>{i + 1}. <b className="who">{coachTag(c.uid)}</b> <span className="faint">{c.wins}-{c.losses}</span></span>
-              <b className="alltime">{ratingLabel(c.rating)}</b>
-            </div>
-          ))}
+          ) : <CoachBoard rows={shown} coachTag={coachTag} tone="alltime" />}
           {career.length > 10 && (
             <button className="koth-linkish mono" onClick={() => setAll(!all)}>
               {all ? "TOP TEN ↑" : `ALL ${career.length} COACHES ↓`}
             </button>
           )}
-          <div className="koth-rule mono">
-            Every daily and season game a coach has played{CAREER_MIN_GAMES > 1 ? `, ${CAREER_MIN_GAMES} or more` : ""}. Points per game:
-            a win scores 1, plus up to 1 more for the margin; a loss scores 0.
-          </div>
         </div>
       )}
       <button className="koth-cta outline mono" onClick={() => setOpen(!open)}>

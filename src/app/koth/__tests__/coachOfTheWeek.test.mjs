@@ -2,38 +2,68 @@
 // (node --test with type-stripping, so lib.ts is imported as it is).
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { allTimeCoaches, CAREER_MIN_GAMES, coachOfTheWeek, gamePoints, rateCoaches, ratingLabel, thronesTaken, WEEK_MIN_GAMES } from "../lib.ts";
+import { allTimeCoaches, CAREER_MIN_GAMES, coachOfTheWeek, gamePoints, marginLabel, rateCoaches, ratingLabel, thronesTaken } from "../lib.ts";
 
 const daily = (uid, margin, created_at) =>
   ({ uid, day: created_at.slice(0, 10), score: 100 + margin, score_opp: 100, won: margin > 0, margin, created_at });
 const game = (uid, home, away, hs, as, coached, created_at) =>
   ({ uid, played_on: created_at.slice(0, 10), home_abbr: home, away_abbr: away, home_score: hs, away_score: as, coached_abbr: coached, created_at });
 
-test("a game is worth 0 for a loss, 1 to 2 for a win, the full 2 at a 20-point margin", () => {
-  assert.equal(gamePoints(false, -30), 0);
+const close = (x, y) => Math.abs(x - y) < 1e-9;
+
+test("a win is 1 and a loss 0, the margin moving either by up to .25 at 20 points", () => {
+  assert.equal(gamePoints(true, 0), 1);
+  assert.equal(gamePoints(true, 10), 1.125);
+  assert.equal(gamePoints(true, 20), 1.25);
+  assert.equal(gamePoints(true, 45), 1.25);         // capped
   assert.equal(gamePoints(false, 0), 0);
-  assert.equal(gamePoints(true, 1), 1.05);
-  assert.equal(gamePoints(true, 10), 1.5);
-  assert.equal(gamePoints(true, 20), 2);
-  assert.equal(gamePoints(true, 45), 2);           // capped
+  assert.ok(close(gamePoints(false, -1), -0.0125));  // close losses cost almost nothing
+  assert.equal(gamePoints(false, -20), -0.25);
+  assert.equal(gamePoints(false, -40), -0.25);      // capped
 });
 
-test("the rating is shrunk toward an even 1.0 over three games", () => {
+test("fourteen phantom games at .500: a short record sits near the middle", () => {
   const g = (uid, won, margin, at = "2026-09-28T01:00Z") => ({ uid, won, margin, at });
   const [one] = rateCoaches([g("a", true, 20)]);
-  assert.equal(one.rating, (2 + 3) / 4); assert.equal(ratingLabel(one.rating), "1.25");
-  const [three] = rateCoaches([g("b", true, 20), g("b", true, 20), g("b", true, 20)]);
-  assert.equal(ratingLabel(three.rating), "1.50");
+  assert.ok(close(one.rating, (1.25 + 7) / 15)); assert.equal(ratingLabel(one.rating), ".550");
   const [loser] = rateCoaches([g("c", false, -5)]);
-  assert.equal(ratingLabel(loser.rating), "0.75");   // 3 / 4
-  // A full week of good wins beats one blowout.
-  const ranked = rateCoaches([g("a", true, 20), g("b", true, 20), g("b", true, 20), g("b", true, 20)]);
-  assert.deepEqual(ranked.map((c) => c.uid), ["b", "a"]);
+  assert.ok(close(loser.rating, (-0.0625 + 7) / 15));
 });
 
-test("Coach of the Week counts dailies and season games, and needs WEEK_MIN_GAMES", () => {
+test("the record leads; a short perfect week sits below a strong full one (Dan, 2026-10-08)", () => {
+  const g = (uid, won, margin) => ({ uid, won, margin, at: "2026-09-28T01:00Z" });
+  const week = (uid, wins, losses, winBy, loseBy) =>
+    [...Array(wins)].map(() => g(uid, true, winBy)).concat([...Array(losses)].map(() => g(uid, false, -loseBy)));
+  const ranked = rateCoaches([
+    ...week("eleven", 11, 3, 1, 1),     // 11-3, narrow wins
+    ...week("ten", 10, 4, 1, 1),        // 10-4, narrow wins
+    ...week("nine", 9, 5, 11, 8),       // 9-5, wins by 11
+    ...week("eight", 8, 6, 25, 8),      // 8-6, blowout wins
+    ...week("three", 3, 0, 25, 0),      // 3-0, blowouts
+    ...week("one", 1, 0, 25, 0),        // 1-0, a blowout
+  ]);
+  // 3-0 on blowouts (.632) is below 11-3 but above 10-4 and 9-5 played on
+  // narrower margins: fourteen phantom games pull it to the middle, not the
+  // bottom. A larger PHANTOM_GAMES would push it further down.
+  assert.deepEqual(ranked.map((c) => c.uid), ["eleven", "three", "ten", "nine", "eight", "one"]);
+  assert.equal(ratingLabel(ranked.find((c) => c.uid === "three").rating), ".632");
+});
+
+test("the margin can swap records a win or two apart at the extremes, never three", () => {
+  const g = (uid, won, margin) => ({ uid, won, margin, at: "2026-09-28T01:00Z" });
+  const week = (uid, wins, losses, winBy, loseBy) =>
+    [...Array(wins)].map(() => g(uid, true, winBy)).concat([...Array(losses)].map(() => g(uid, false, -loseBy)));
+  // One win apart, extreme margins: the blowouts edge it. Documented, not hidden.
+  const near = rateCoaches([...week("nine", 9, 5, 11, 8), ...week("eight", 8, 6, 25, 2)]);
+  assert.deepEqual(near.map((c) => c.uid), ["eight", "nine"]);
+  // Three wins apart, the most extreme margins both ways: the record holds.
+  const far = rateCoaches([...week("eleven", 11, 3, 0, 20), ...week("eight", 8, 6, 20, 0)]);
+  assert.deepEqual(far.map((c) => c.uid), ["eleven", "eight"]);
+});
+
+test("Coach of the Week counts dailies and season games, every coach who played", () => {
   const rows = [
-    daily("a", 25, "2026-09-28T01:00Z"), daily("a", 25, "2026-09-29T01:00Z"),     // two blowouts, no third game
+    daily("a", 25, "2026-09-28T01:00Z"), daily("a", 25, "2026-09-29T01:00Z"),
     daily("b", 10, "2026-09-28T02:00Z"), daily("b", -4, "2026-09-29T02:00Z"),
   ];
   const games = [
@@ -41,23 +71,35 @@ test("Coach of the Week counts dailies and season games, and needs WEEK_MIN_GAME
     game("c", "BOS", "LAL", 99, 110, "LAL", "2026-09-30T02:00Z"),    // c wins by 11 away
   ];
   const week = coachOfTheWeek(rows, games);
-  // a has 2 games, b 3, c 1: whoever meets the minimum is on the board.
-  const expected = [["a", 2], ["b", 3], ["c", 1]].filter(([, n]) => n >= WEEK_MIN_GAMES).map(([u]) => u);
-  assert.deepEqual(week.map((c) => c.uid).sort(), expected);
+  assert.deepEqual(week.map((c) => c.uid).sort(), ["a", "b", "c"]);
   const b = week.find((c) => c.uid === "b");
   assert.equal(b.games, 3); assert.equal(b.wins, 2); assert.equal(b.losses, 1);
   assert.equal(b.margin, 16);
-  assert.equal(ratingLabel(b.rating), "1.00");   // (1.5 + 0 + 1.5 + 3) / 6
+  assert.ok(close(b.avgMargin, 16 / 3)); assert.equal(marginLabel(b.avgMargin), "+5.3");
+  assert.ok(close(b.rating, (1.125 - 0.05 + 1.125 + 7) / 17));
+});
+
+test("labels read like the stats they imitate", () => {
+  assert.equal(ratingLabel(0.6471), ".647");
+  assert.equal(ratingLabel(1.0312), "1.031");
+  assert.equal(ratingLabel(-0.012), "-.012");
+  assert.equal(marginLabel(4.24), "+4.2");
+  assert.equal(marginLabel(-1), "-1.0");
+  assert.equal(marginLabel(0.01), "0.0");
+  assert.equal(marginLabel(-0.01), "0.0");
 });
 
 test("ties break on wins, then margin, then the earlier first game, then uid", () => {
   const g = (uid, won, margin, at) => ({ uid, won, margin, at });
-  // Equal points: a 20-point win and a loss (2 + 0) against two 0-margin wins (1 + 1).
+  // Equal points, more wins first: two 10-point wins (1.125 + 1.125) against
+  // two 0-margin wins and ... no — equal points with different wins cannot
+  // happen with one game each way, so tie on points and wins, break on margin.
   const r = rateCoaches([
-    g("x", true, 20, "2026-09-28T01:00Z"), g("x", false, -3, "2026-09-28T02:00Z"),
-    g("y", true, 0, "2026-09-28T03:00Z"), g("y", true, 0, "2026-09-28T04:00Z"),
+    g("x", true, 20, "2026-09-28T01:00Z"), g("x", true, 0, "2026-09-28T02:00Z"),
+    g("y", true, 10, "2026-09-28T03:00Z"), g("y", true, 10, "2026-09-28T04:00Z"),
   ]);
-  assert.deepEqual(r.map((c) => c.uid), ["y", "x"]);   // same rating, y has more wins
+  assert.ok(close(r[0].rating, r[1].rating));
+  assert.deepEqual(r.map((c) => c.uid), ["x", "y"]);   // same rating and wins and margin: earlier first game
   const same = rateCoaches([g("q", true, 5, "2026-09-28T02:00Z"), g("p", true, 5, "2026-09-28T01:00Z")]);
   assert.deepEqual(same.map((c) => c.uid), ["p", "q"]); // earlier first game
   const dead = rateCoaches([g("q", true, 5, "2026-09-28T01:00Z"), g("p", true, 5, "2026-09-28T01:00Z")]);
@@ -83,21 +125,19 @@ test("the all-time board rates career totals the same way, CAREER_MIN_GAMES to a
   const career = (uid, games, wins, points, margin = 0, first_at = "2026-09-13T00:00Z") =>
     ({ uid, games, wins, points, margin, first_at });
   const board = allTimeCoaches([
-    career("vet", 20, 16, 26.6, 232),   // (26.6 + 3) / 23
-    career("new", 3, 3, 6, 75),         // a perfect start, but three games
-    career("mid", 10, 5, 7.5, 10),      // (7.5 + 3) / 13
+    career("vet", 40, 30, 31.5, 300),   // (31.5 + 7) / 54
+    career("new", 3, 3, 3.75, 75),      // a perfect start: (3.75 + 7) / 17
+    career("mid", 10, 5, 5.2, 10),      // (5.2 + 7) / 24
   ]);
-  // Best rating first among those with the minimum: new (6 + 3) / 6 = 1.50
-  // when three games count, then vet 1.29, then mid.
-  const order = [["new", 3], ["vet", 20], ["mid", 10]].filter(([, n]) => n >= CAREER_MIN_GAMES).map(([u]) => u);
+  const order = [["vet", 40], ["new", 3], ["mid", 10]].filter(([, n]) => n >= CAREER_MIN_GAMES).map(([u]) => u);
   assert.deepEqual(board.map((c) => c.uid), order);
   const vet = board.find((c) => c.uid === "vet");
-  assert.equal(ratingLabel(vet.rating), "1.29");
-  assert.equal(vet.losses, 4);
+  assert.equal(ratingLabel(vet.rating), ".713");
+  assert.equal(vet.losses, 10);
   // Totals and games agree: the same games rate the same, however they arrive.
   const g = (won, margin, at) => ({ uid: "x", won, margin, at });
   const games = [g(true, 20, "a"), g(false, -4, "b"), g(true, 10, "c")];
-  assert.equal(rateCoaches(games)[0].rating, (2 + 0 + 1.5 + 3) / 6);
+  assert.ok(close(rateCoaches(games)[0].rating, (1.25 - 0.05 + 1.125 + 7) / 17));
 });
 
 test("thrones taken count every series that took a throne, both hills, per coach", () => {

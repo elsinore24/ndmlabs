@@ -366,6 +366,14 @@
 .koth-week-list { width: 100%; margin: 4px 0 14px; text-align: left; }
 .koth-week-list .koth-line { font-size: 13px; color: #c3cad6; }
 .koth-week-list .who { color: #ffffff; font-weight: 700; text-align: left; }
+/* A coach board's rows (2026-10-08): rank, coach, W-L, margin, rating.
+   Pixel columns, so the smaller header shares the rows' grid exactly, and
+   narrow enough that a four-across card still has room for a name. */
+.koth-coach-row { display: grid; grid-template-columns: 14px minmax(0, 1fr) 40px 38px 40px; column-gap: 6px; align-items: baseline; font-size: 12px; padding: 7px 0; border-top: 1px solid var(--hair); color: #c3cad6; }
+.koth-coach-row > :nth-child(n+3) { text-align: right; white-space: nowrap; }
+.koth-coach-row .who { font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif; font-size: 13px; font-weight: 700; color: var(--chalk); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.koth-coach-row.head { font-size: 8.5px; letter-spacing: 0.06em; color: #8792a6; border-top: 0; padding-bottom: 3px; }
+.koth-coach-row .faint { color: #9aa3b5; }
 .koth-rule { font-size: 11px; line-height: 1.6; color: #9aa3b5; margin-top: 10px; letter-spacing: 0.02em; }
 .koth-rule.span { grid-column: 1 / -1; text-align: center; }
 
