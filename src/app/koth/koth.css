@@ -524,3 +524,7 @@
   .koth-season-top { align-items: center; }
   .koth-stat-cols, .koth-stat-row { grid-template-columns: 22px 1fr 40px 28px 46px; gap: 5px; }
 }
+
+/* IQ mode (2026-10-10): drafted with no stats. Marked, ranked with everyone. */
+.koth-iq { margin-left: 8px; padding: 0 5px; font-size: 10px; font-weight: 800;
+  color: var(--amber); border: 1px solid var(--amber); border-radius: 4px; vertical-align: 2px; }

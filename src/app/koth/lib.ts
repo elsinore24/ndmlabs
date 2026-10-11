@@ -102,6 +102,8 @@ export type DailyRaw = {
   won: boolean;
   margin: number;
   five: FiveEntry[] | null;
+  /** Drafted with the stats hidden (IQ mode, migration 0024). */
+  iq?: boolean;
 };
 export type DailyRow = DailyRaw & {
   rank: number; handle: string; coach: string | null; move: Move;

@@ -99,7 +99,7 @@ export default function KothLive() {
           // Winners first, then margin — the daily_board view computes both
           // so the ordering happens server-side (Dan, 2026-09-02).
           rest<DailyRaw[]>(
-            `daily_board?day=eq.${today}&select=uid,score,score_opp,venue,created_at,won,margin,five&order=won.desc,margin.desc,created_at.asc&limit=200`
+            `daily_board?day=eq.${today}&select=uid,score,score_opp,venue,created_at,won,margin,five,iq&order=won.desc,margin.desc,created_at.asc&limit=200`
           ),
           rest<Venue[]>(`daily_venues?day=eq.${today}&select=*`),
           // Every daily win, biggest first: BIGGEST DAILY WIN and MOST DAILY WINS.
@@ -302,7 +302,7 @@ function TodayCard({ board, coachTag }: { board: Board | null; coachTag: (uid: s
             {shown.map((r, i) => (
               <div key={r.uid} className="koth-today-row">
                 <span className={`rk mono ${i < 3 ? "top" : ""}`}>{i + 1}</span>
-                <b>{coachTag(r.uid)}</b>
+                <b>{coachTag(r.uid)}{r.iq && <span className="koth-iq mono" title="Drafted with no stats">IQ</span>}</b>
                 <span className={`mono sc ${r.won ? "teal" : "red"}`}>{scoreline(r.score, r.score_opp)}</span>
               </div>
             ))}
