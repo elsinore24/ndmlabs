@@ -26,6 +26,17 @@ export function challengeCode(search: string): string | null {
   return raw.toUpperCase();
 }
 
+/** A throne holder's dare, /c?hill=allstars (2026-10-10): no code, just
+ *  the hill to come and take. */
+export type DareHill = "allstars" | "legends";
+export function challengeHill(search: string): DareHill | null {
+  const raw = new URLSearchParams(search).get("hill")?.trim().toLowerCase();
+  return raw === "allstars" || raw === "legends" ? raw : null;
+}
+export function hillAppLink(hill: DareHill): string {
+  return `${APP_SCHEME}://c?hill=${hill}`;
+}
+
 /** The app's own link for a code: alltime5://c?code=… */
 export function challengeAppLink(code: string): string {
   return `${APP_SCHEME}://c?code=${encodeURIComponent(code)}`;
