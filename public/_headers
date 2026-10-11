@@ -1,0 +1,3 @@
+# Apple fetches this to know which links open All-Time 5 (2026-10-10).
+/.well-known/apple-app-site-association
+  Content-Type: application/json

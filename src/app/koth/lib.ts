@@ -12,6 +12,25 @@ export const SUPABASE_KEY = "sb_publishable_Jy4XRKu11PdztPoCSZfduw_kHed6SyY";
 // games section rather than a dead store link.
 export const APP_STORE_URL = "/#games";
 
+// A friend's challenge link, ndmlabs.net/c?code=K7M2-9QXF-3B8T (2026-10-10).
+// With the app installed the link opens the app (the AASA file in
+// public/.well-known); without it, /c shows the code and the store. The
+// scheme opens the app from /c itself, where a universal link will not fire
+// (Apple ignores a link to the page you are already on).
+export const APP_SCHEME = "alltime5";
+
+/** The code in /c's query string, trimmed and upper-cased, or null. */
+export function challengeCode(search: string): string | null {
+  const raw = new URLSearchParams(search).get("code")?.trim() ?? "";
+  if (!/^[A-Za-z0-9-]{4,40}$/.test(raw)) return null;
+  return raw.toUpperCase();
+}
+
+/** The app's own link for a code: alltime5://c?code=… */
+export function challengeAppLink(code: string): string {
+  return `${APP_SCHEME}://c?code=${encodeURIComponent(code)}`;
+}
+
 // The name a deleted account leaves behind on shared history.
 //
 // Deleting an account (guideline 5.1.1(v)) does not erase the throne's

@@ -1,0 +1,11 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["9KV57MUYZQ.com.ndmlabs.coachoftheyear"],
+        "components": [{ "/": "/c", "comment": "A friend's challenge: /c?code=…" },
+                       { "/": "/c/", "comment": "The same, with the export's trailing slash" }]
+      }
+    ]
+  }
+}
