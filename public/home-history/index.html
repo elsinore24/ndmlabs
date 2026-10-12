@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Home History – Clark County, WA | NDMLABS</title>
+<meta name="description" content="Look up the public record for any house in Clark County, WA: year built, size, condition, values, last sale, taxes, zoning and schools.">
+<style>
+  :root {
+    --bg: #f6f4ef; --card: #ffffff; --ink: #1d2320; --muted: #66706b;
+    --line: #e3e0d8; --accent: #2f6b4f; --accent-soft: #e4efe8; --warn: #9a5b12;
+    --radius: 14px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #141816; --card: #1c211f; --ink: #e9ece9; --muted: #9aa49f;
+      --line: #2c3330; --accent: #6fbf95; --accent-soft: #22322a; --warn: #e0a35a;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 40px 16px 64px; }
+  header h1 { font-size: clamp(28px, 6vw, 40px); line-height: 1.1; margin: 0 0 8px; letter-spacing: -0.02em; }
+  header p { color: var(--muted); margin: 0 0 28px; }
+
+  .search { position: relative; }
+  .search input {
+    width: 100%; font-size: 18px; padding: 16px 18px; border-radius: var(--radius);
+    border: 1px solid var(--line); background: var(--card); color: var(--ink); outline: none;
+  }
+  .search input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .hint { color: var(--muted); font-size: 14px; margin: 8px 2px 0; }
+
+  .results {
+    list-style: none; margin: 6px 0 0; padding: 6px; position: absolute; left: 0; right: 0; z-index: 5;
+    background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+    box-shadow: 0 10px 30px rgba(0,0,0,.12);
+  }
+  .results li { padding: 10px 12px; border-radius: 10px; cursor: pointer; display: flex; justify-content: space-between; gap: 12px; }
+  .results li:hover, .results li[aria-selected="true"] { background: var(--accent-soft); }
+  .results small { color: var(--muted); white-space: nowrap; }
+  .results .empty { cursor: default; color: var(--muted); }
+  .results .empty:hover { background: none; }
+
+  .status { margin-top: 24px; color: var(--muted); }
+  .status.error { color: var(--warn); }
+
+  .report { margin-top: 28px; }
+  .report-head {
+    background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 22px; margin-bottom: 16px;
+  }
+  .report-head h2 { margin: 0 0 4px; font-size: 24px; }
+  .report-head .sub { color: var(--muted); font-size: 14px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+  .chip { background: var(--accent-soft); color: var(--accent); border-radius: 999px; padding: 4px 12px; font-size: 14px; font-weight: 600; }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+  section.card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px 20px; }
+  section.card h3 { margin: 0 0 10px; font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+  dl { margin: 0; display: grid; grid-template-columns: 1fr auto; gap: 6px 16px; }
+  dt { color: var(--muted); }
+  dd { margin: 0; text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+  .note { margin-top: 20px; font-size: 13px; color: var(--muted); }
+  .note a { color: var(--accent); }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Home History</h1>
+    <p>The public record for any house in Clark County, WA: when it was built, what it's made of, what it's worth on paper, and when it last sold.</p>
+  </header>
+
+  <div class="search">
+    <input id="q" type="search" autocomplete="off" spellcheck="false"
+           placeholder="Start typing an address, e.g. 1300 Franklin"
+           aria-label="Address or parcel number" role="combobox" aria-expanded="false" aria-controls="results">
+    <ul id="results" class="results" role="listbox" hidden></ul>
+    <p class="hint">Search by street address or parcel number. Clark County only, for now.</p>
+  </div>
+
+  <div id="status" class="status" hidden></div>
+  <div id="report" class="report" hidden></div>
+</div>
+
+<script>
+(() => {
+  const API = "/api/parcel";
+  const $q = document.getElementById("q");
+  const $results = document.getElementById("results");
+  const $status = document.getElementById("status");
+  const $report = document.getElementById("report");
+  let timer, active = -1, items = [], lastQuery = "";
+
+  // ---------- helpers ----------
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const money = (n) => (n == null || n === 0) ? null :
+    n.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+  const num = (n, unit = "") => (n == null || n === 0) ? null : Math.round(n).toLocaleString("en-US") + unit;
+  const acres = (n) => (n == null || n === 0) ? null : n.toFixed(2) + " acres";
+  const date = (ms) => ms == null ? null :
+    new Date(ms).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric", timeZone: "UTC" });
+  const txt = (s) => (s == null || String(s).trim() === "") ? null : String(s).trim();
+
+  function rows(pairs) {
+    const shown = pairs.filter(([, v]) => v != null);
+    if (!shown.length) return '<p class="hint">No data on file.</p>';
+    return "<dl>" + shown.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("") + "</dl>";
+  }
+
+  function showStatus(msg, isError = false) {
+    $status.textContent = msg;
+    $status.className = "status" + (isError ? " error" : "");
+    $status.hidden = !msg;
+  }
+
+  // ---------- search / autocomplete ----------
+  function closeList() {
+    $results.hidden = true; $q.setAttribute("aria-expanded", "false"); active = -1;
+  }
+
+  function renderList() {
+    if (!items.length) {
+      $results.innerHTML = '<li class="empty">No matching addresses in Clark County.</li>';
+    } else {
+      $results.innerHTML = items.map((r, i) =>
+        `<li role="option" data-i="${i}" aria-selected="${i === active}">
+           <span>${esc(r.address)}</span>${r.yearBuilt ? `<small>Built ${r.yearBuilt}</small>` : ""}
+         </li>`).join("");
+    }
+    $results.hidden = false; $q.setAttribute("aria-expanded", "true");
+  }
+
+  async function search(q) {
+    lastQuery = q;
+    try {
+      const res = await fetch(`${API}?q=${encodeURIComponent(q)}`);
+      const data = await res.json();
+      if (q !== lastQuery) return; // a newer search already started
+      if (data.error) { showStatus(data.error, true); closeList(); return; }
+      showStatus("");
+      items = data.results || []; active = -1; renderList();
+    } catch {
+      showStatus("Search is unavailable right now.", true);
+    }
+  }
+
+  $q.addEventListener("input", () => {
+    clearTimeout(timer);
+    const q = $q.value.trim();
+    if (q.length < 3) { closeList(); return; }
+    timer = setTimeout(() => search(q), 250);
+  });
+
+  $q.addEventListener("keydown", (e) => {
+    if ($results.hidden) return;
+    if (e.key === "ArrowDown") { active = Math.min(active + 1, items.length - 1); renderList(); e.preventDefault(); }
+    else if (e.key === "ArrowUp") { active = Math.max(active - 1, 0); renderList(); e.preventDefault(); }
+    else if (e.key === "Enter") { const pick = items[active >= 0 ? active : 0]; if (pick) choose(pick); e.preventDefault(); }
+    else if (e.key === "Escape") closeList();
+  });
+
+  $results.addEventListener("click", (e) => {
+    const li = e.target.closest("li[data-i]");
+    if (li) choose(items[+li.dataset.i]);
+  });
+  document.addEventListener("click", (e) => { if (!e.target.closest(".search")) closeList(); });
+
+  function choose(item) {
+    $q.value = item.address; closeList();
+    history.replaceState(null, "", `?id=${item.id}`);
+    loadReport(item.id);
+  }
+
+  // ---------- report ----------
+  async function loadReport(id) {
+    $report.hidden = true; showStatus("Loading the record…");
+    try {
+      const res = await fetch(`${API}?id=${encodeURIComponent(id)}`);
+      const data = await res.json();
+      if (data.error) { showStatus(data.error, true); return; }
+      showStatus(""); renderReport(data.parcel);
+    } catch {
+      showStatus("Couldn't load that record. Try again in a moment.", true);
+    }
+  }
+
+  function renderReport(p) {
+    const age = p.BldgYrBlt ? new Date().getFullYear() - p.BldgYrBlt : null;
+    const chips = [
+      p.BldgYrBlt && `Built ${p.BldgYrBlt}`,
+      age != null && `${age} years old`,
+      p.BLDGSQFT && `${num(p.BLDGSQFT)} sq ft`,
+      p.AssrAc && acres(p.AssrAc),
+      txt(p.BldgCond) && `Condition: ${txt(p.BldgCond)}`,
+    ].filter(Boolean);
+
+    $report.innerHTML = `
+      <div class="report-head">
+        <h2>${esc(p.SitusAddrsFull || "Address not on file")}</h2>
+        <div class="sub">Parcel ${esc(p.Prop_id)}${txt(p.PropertyUseClass) ? " · " + esc(p.PropertyUseClass) : ""}</div>
+        <div class="chips">${chips.map((c) => `<span class="chip">${esc(c)}</span>`).join("")}</div>
+      </div>
+      <div class="grid">
+        <section class="card"><h3>The building</h3>${rows([
+          ["Type", txt(p.BLDGTYPE) || txt(p.PT1DESC)],
+          ["Style", txt(p.BldgStyle)],
+          ["Year built", p.BldgYrBlt || null],
+          ["Effective year built", (p.BldgEffYrBlt && p.BldgEffYrBlt !== p.BldgYrBlt) ? p.BldgEffYrBlt : null],
+          ["Living area", num(p.BLDGSQFT, " sq ft")],
+          ["Condition", txt(p.BldgCond)],
+          ["Quality class", txt(p.BldgClass)],
+          ["Buildings on lot", num(p.BldgCount)],
+          ["Housing units", num(p.UNITS)],
+        ])}</section>
+
+        <section class="card"><h3>Last sale</h3>${rows([
+          ["Sale date", date(p.SaleDate)],
+          ["Sale price", money(p.SaleAmount)],
+          ["Excise record", p.SaleExcise || null],
+        ])}</section>
+
+        <section class="card"><h3>Assessed value${p.AvYear ? " (" + esc(p.AvYear) + ")" : ""}</h3>${rows([
+          ["Land", money(p.MktLandVal)],
+          ["Building", money(p.MktBldgVal)],
+          ["Total market value", money(p.MktTotVal)],
+          ["Taxable value", money(p.TAXTOTVAL)],
+          ["New construction added", money(p.NewCon)],
+        ])}</section>
+
+        <section class="card"><h3>Taxes</h3>${rows([
+          ["Annual tax", money(p.TaxAmount)],
+          ["Tax year", p.TaxYear || null],
+          ["Status", txt(p.TaxStat)],
+        ])}</section>
+
+        <section class="card"><h3>Land &amp; zoning</h3>${rows([
+          ["Lot size", acres(p.AssrAc)],
+          ["Lot sq ft", num(p.AssrSqFt)],
+          ["Zoning", txt(p.ZoneDesc)],
+          ["Comprehensive plan", txt(p.ComplanDesc)],
+          ["Jurisdiction", txt(p.JurisDesc)],
+          ["Urban growth area", txt(p.CityUGA)],
+        ])}</section>
+
+        <section class="card"><h3>Subdivision</h3>${rows([
+          ["Plat", txt(p.PlatName)],
+          ["Plat type", txt(p.PlatType)],
+          ["Plat recorded", date(p.PlatDate)],
+          ["Census tract", p.CensusTract || null],
+        ])}</section>
+
+        <section class="card"><h3>Schools</h3>${rows([
+          ["District", txt(p.SchoolDistrict)],
+          ["Elementary", txt(p.ElementarySchool)],
+          ["Middle", txt(p.JuniorSchool)],
+          ["High", txt(p.SeniorSchool)],
+        ])}</section>
+      </div>
+
+      <p class="note">
+        Source: Clark County GIS and Assessor public records${p.PublishDt ? ", updated " + esc(date(p.PublishDt)) : ""}.
+        The county does not guarantee this data is current or accurate. Assessed value is not the same as market price.
+        For the official record, see the <a href="https://gis.clark.wa.gov/gishome/property/" target="_blank" rel="noopener">Clark County Property Information Center</a>.
+      </p>`;
+    $report.hidden = false;
+  }
+
+  // Open a shared link like ?id=55735000
+  const startId = new URLSearchParams(location.search).get("id");
+  if (startId) loadReport(startId);
+})();
+</script>
+</body>
+</html>
