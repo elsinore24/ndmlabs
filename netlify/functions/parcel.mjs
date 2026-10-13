@@ -87,8 +87,10 @@ export function normalize(attrs, fields) {
 async function queryCounty(params, { withGeometry = false } = {}) {
   const url = `${LAYER}?${new URLSearchParams({ f: "json", returnGeometry: String(withGeometry), ...params })}`;
   const res = await fetch(url, { headers: UA });
-  if (!res.ok) throw new Error(`County server responded ${res.status}`);
-  const data = await res.json();
+  if (!res.ok) throw new Error(`County server responded ${res.status} ${res.statusText || ""}`.trim());
+  const text = await res.text();
+  let data;
+  try { data = JSON.parse(text); } catch { throw new Error(`County sent a non-JSON reply: ${text.slice(0, 80)}`); }
   if (data.error) throw new Error(data.error.message || "County query error");
   const fields = String(params.outFields).split(",");
   return (data.features || []).map((f) => {
@@ -358,7 +360,13 @@ export default async (req) => {
 
     return json({ results }, 200, 3600);
   } catch (err) {
-    return json({ error: "Could not reach the county records right now. Try again shortly." }, 502);
+    // "detail" says why (e.g. county server refused, timed out, or returned an error),
+    // so problems can be diagnosed from the browser without digging through logs
+    const cause = err && err.cause ? ` (${err.cause.code || err.cause.message || err.cause})` : "";
+    return json({
+      error: "Could not reach the county records right now. Try again shortly.",
+      detail: String((err && err.message) || err).slice(0, 200) + cause,
+    }, 502);
   }
 };
 

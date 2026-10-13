@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Home History – Clark County, WA | NDMLABS</title>
 <meta name="description" content="Look up the public record for any house in Clark County, WA: sales history, flood and earthquake hazards, septic records, easements, year built, size, condition, values, taxes, zoning and schools.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath d='M8 30 32 10l24 20M14 25v29h36V25M27 54V40h10v14' fill='none' stroke='%232f6b4f' stroke-width='5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 <style>
   :root {
     --bg: #f6f4ef; --card: #ffffff; --ink: #1d2320; --muted: #66706b;
@@ -96,13 +97,42 @@
   .records { list-style: none; margin: 0; padding: 0; }
   .records > li { padding: 10px 0; border-top: 1px solid var(--line); }
   .records > li:first-child { border-top: 0; padding-top: 0; }
+  /* ---------- header house ---------- */
+  .brand { display: flex; align-items: flex-end; gap: 18px; margin-bottom: 8px; }
+  .brand h1 { margin: 0; }
+  .house { flex: none; width: 76px; height: 64px; color: var(--accent); overflow: visible; }
+  .house .line { fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+  .house .ground { stroke: var(--line); }
+  .house .glow { fill: #f0b75a; stroke: none; }
+  .house .draw { stroke-dasharray: var(--len); stroke-dashoffset: var(--len); animation: draw 1.1s cubic-bezier(.6,.05,.3,1) forwards; animation-delay: var(--d, 0s); }
+  .house .glow { opacity: 0; animation: fade .6s ease forwards 1.2s; }
+  @keyframes draw { to { stroke-dashoffset: 0; } }
+  @keyframes fade { to { opacity: .55; } }
+  /* the window lights up while a report loads */
+  body.loading .house .glow { animation: pulse 1.2s ease-in-out infinite; opacity: .55; }
+  @keyframes pulse { 0%, 100% { opacity: .55; } 50% { opacity: .12; } }
+  @media (prefers-reduced-motion: reduce) {
+    .house .draw { animation: none; stroke-dashoffset: 0; }
+    .house .glow, body.loading .house .glow { animation: none; opacity: .55; }
+  }
   [hidden] { display: none !important; }
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
-    <h1>Home History</h1>
+    <div class="brand">
+      <svg class="house" viewBox="0 0 76 64" aria-hidden="true">
+        <rect class="glow" x="45" y="33" width="11" height="10" rx="1"/>
+        <path class="line ground draw" style="--len:76;--d:0s" d="M2 61h72"/>
+        <path class="line draw" style="--len:82;--d:.1s" d="M6 30 38 6l32 24"/>
+        <path class="line draw" style="--len:34;--d:.35s" d="M53 17V7h7v15"/>
+        <path class="line draw" style="--len:120;--d:.45s" d="M13 25v36h50V25"/>
+        <path class="line draw" style="--len:56;--d:.8s" d="M24 61V40h11v21"/>
+        <path class="line draw" style="--len:44;--d:.95s" d="M45 33h11v10H45z"/>
+      </svg>
+      <h1>Home History</h1>
+    </div>
     <p>The public record for any house in Clark County, WA: every recorded sale, natural hazards, things to check, and what it's worth on paper.</p>
   </header>
 
@@ -397,6 +427,7 @@
   // ---------- report ----------
   async function loadReport(id) {
     $report.hidden = true; showStatus("Loading the record…");
+    document.body.classList.add("loading");
     try {
       const res = await fetch(`${API}?id=${encodeURIComponent(id)}`);
       const data = await res.json();
@@ -404,6 +435,8 @@
       showStatus(""); renderReport(data);
     } catch {
       showStatus("Couldn't load that record. Try again in a moment.", true);
+    } finally {
+      document.body.classList.remove("loading");
     }
   }
 
