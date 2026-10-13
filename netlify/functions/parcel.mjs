@@ -2,9 +2,11 @@
 // Looks up Clark County, WA parcels from the county's public ArcGIS layer.
 //
 //   GET /api/parcel?q=1300 franklin   -> up to 8 address matches (for search/autocomplete)
-//   GET /api/parcel?id=55735000        -> full report for one parcel
+//   GET /api/parcel?id=55735000        -> full report for one parcel, plus sales history
 //
 // Owner names are intentionally NOT returned (see RCW 42.56.070(8)).
+
+const PIC = "https://gis.clark.wa.gov/gishome/property/index.cfm?fuseaction=report&account=";
 
 const LAYER =
   "https://gis.clark.wa.gov/arcgisfed/rest/services/ClarkView_Public/TaxlotsPublic/MapServer/0/query";
@@ -82,6 +84,93 @@ async function queryCounty(params) {
   return (data.features || []).map((f) => normalize(f.attributes, fields));
 }
 
+// ---------- Sales history + past values (from the county's property page) ----------
+// The county builds this page as HTML (no JSON), so we read just two sections:
+// Sales History and Assessment Data. The owner name and mailing address on the
+// same page are never extracted. If the county redesigns the page, these
+// parsers return empty lists and the rest of the report still works.
+
+const decode = (s) =>
+  s.replace(/<[^>]*>/g, " ")
+   .replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&#39;/g, "'").replace(/&quot;/g, '"')
+   .replace(/\s+/g, " ").trim();
+
+// All <td> texts inside html[start .. end)
+function cells(html, start, end) {
+  const part = html.slice(start, end);
+  return [...part.matchAll(/<td\b[^>]*>([\s\S]*?)<\/td>/gi)].map((m) => decode(m[1]));
+}
+
+const money = (s) => {
+  const n = Number(String(s || "").replace(/[$,\s]/g, ""));
+  return Number.isFinite(n) ? n : null;
+};
+
+// MM/DD/YYYY -> YYYY-MM-DD ; the county uses 01/01/1900 as "unknown"
+const isoDate = (s) => {
+  const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(String(s || "").trim());
+  if (!m || m[3] === "1900") return null;
+  return `${m[3]}-${m[1]}-${m[2]}`;
+};
+
+export function parseSales(html) {
+  const i = html.indexOf(">Sales History<");
+  if (i < 0) return [];
+  const end = html.indexOf("</table>", i);
+  const c = cells(html, i, end < 0 ? html.length : end);
+  const sales = [];
+  let cur = null;
+  for (let k = 0; k < c.length - 1; k++) {
+    const label = c[k], value = c[k + 1];
+    if (label === "Date of Sale") { cur = { date: isoDate(value), docType: null, docNumber: null, excise: null, amount: null }; sales.push(cur); k++; }
+    else if (!cur) continue;
+    else if (label === "Document Type") { cur.docType = value || null; k++; }
+    else if (label === "Document Number") { cur.docNumber = value || null; k++; }
+    else if (label === "Excise Number") { cur.excise = value || null; k++; }
+    else if (label === "Sale Amount") { cur.amount = money(value); k++; }
+  }
+  // Newest first; unknown dates last
+  return sales.sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+}
+
+export function parseValues(html) {
+  const i = html.indexOf("Assessment Data");
+  if (i < 0) return [];
+  let end = html.indexOf("<b>General</b>", i);
+  if (end < 0) end = html.indexOf("</table>", i);
+  const c = cells(html, i, end);
+  const years = [];
+  let cur = null;
+  for (let k = 0; k < c.length; k++) {
+    const yr = /^(\d{4}) Values for (\d{4}) Taxes$/.exec(c[k]);
+    if (yr) { cur = { valueYear: +yr[1], taxYear: +yr[2], land: null, building: null, total: null, taxable: null }; years.push(cur); continue; }
+    if (!cur) continue;
+    const v = c[k + 1];
+    if (c[k] === "Land Value") cur.land = money(v);
+    else if (c[k] === "Building Value") cur.building = money(v);
+    else if (c[k] === "Total Property") cur.total = money(v);
+    else if (c[k] === "Total") cur.taxable = money(v);
+  }
+  return years;
+}
+
+function parsePic(html) {
+  return { sales: parseSales(html), values: parseValues(html) };
+}
+
+async function fetchHistory(id) {
+  try {
+    const res = await fetch(PIC + id, {
+      headers: { "User-Agent": "ndmlabs-home-history/1.0" },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) return null;
+    return parsePic(await res.text());
+  } catch {
+    return null; // report still works without history
+  }
+}
+
 export default async (req) => {
   const url = new URL(req.url);
   const id = url.searchParams.get("id");
@@ -90,12 +179,12 @@ export default async (req) => {
   try {
     if (id) {
       if (!/^\d{1,12}$/.test(id)) return json({ error: "Bad parcel id" }, 400);
-      const rows = await queryCounty({
-        where: `Prop_id = ${Number(id)}`,
-        outFields: REPORT_FIELDS.join(","),
-      });
+      const [rows, history] = await Promise.all([
+        queryCounty({ where: `Prop_id = ${Number(id)}`, outFields: REPORT_FIELDS.join(",") }),
+        fetchHistory(Number(id)),
+      ]);
       if (!rows.length) return json({ error: "Parcel not found" }, 404);
-      return json({ parcel: rows[0], source: "Clark County GIS / Assessor" }, 200, 86400);
+      return json({ parcel: rows[0], history, source: "Clark County GIS / Assessor" }, 200, 86400);
     }
 
     if (q.length < 3) return json({ results: [] });

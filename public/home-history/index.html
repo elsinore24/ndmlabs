@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Home History – Clark County, WA | NDMLABS</title>
-<meta name="description" content="Look up the public record for any house in Clark County, WA: year built, size, condition, values, last sale, taxes, zoning and schools.">
+<meta name="description" content="Look up the public record for any house in Clark County, WA: sales history, year built, size, condition, values, taxes, zoning and schools.">
 <style>
   :root {
     --bg: #f6f4ef; --card: #ffffff; --ink: #1d2320; --muted: #66706b;
@@ -67,6 +67,23 @@
 
   .note { margin-top: 20px; font-size: 13px; color: var(--muted); }
   .note a { color: var(--accent); }
+  .wide { grid-column: 1 / -1; }
+  .summary { margin: 0 0 14px; padding: 0; list-style: none; display: grid; gap: 6px; }
+  .summary li { padding-left: 18px; position: relative; }
+  .summary li::before { content: ""; position: absolute; left: 4px; top: .65em; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+  .summary li.flag::before { background: var(--warn); }
+  .sales { list-style: none; margin: 0; padding: 0; }
+  .sales li { display: grid; grid-template-columns: 112px 1fr auto; gap: 4px 14px; padding: 12px 0; border-top: 1px solid var(--line); align-items: baseline; }
+  .sales li:first-child { border-top: 0; padding-top: 2px; }
+  .sales .when { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .sales .what { font-weight: 600; }
+  .sales .why { display: block; font-weight: 400; color: var(--muted); font-size: 14px; }
+  .sales .price { font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; }
+  .sales .price.zero { font-weight: 400; color: var(--muted); }
+  @media (max-width: 520px) {
+    .sales li { grid-template-columns: 1fr auto; }
+    .sales .when { grid-column: 1 / -1; font-size: 14px; }
+  }
   [hidden] { display: none !important; }
 </style>
 </head>
@@ -74,7 +91,7 @@
 <div class="wrap">
   <header>
     <h1>Home History</h1>
-    <p>The public record for any house in Clark County, WA: when it was built, what it's made of, what it's worth on paper, and when it last sold.</p>
+    <p>The public record for any house in Clark County, WA: every recorded sale, when it was built, what it's worth on paper, and more.</p>
   </header>
 
   <div class="search">
@@ -119,6 +136,85 @@
     $status.textContent = msg;
     $status.className = "status" + (isError ? " error" : "");
     $status.hidden = !msg;
+  }
+
+  // ---------- sales history ----------
+  // Document codes seen on real Clark County records, in plain English
+  const DOC_TYPES = {
+    "D-SWD": ["Warranty deed", "A standard sale"],
+    "DEED":  ["Deed", ""],
+    "D":     ["Deed", ""],
+    "D-QCD": ["Quitclaim deed", "Often between family or spouses, or into a trust or LLC"],
+    "D-B&S": ["Bargain and sale deed", ""],
+    "D-TOD": ["Transfer-on-death deed", "Names who inherits the home"],
+    "EXEC":  ["Executor's deed", "Transfer through an estate"],
+    "D-PREP":["Personal representative's deed", "Transfer through an estate"],
+    "LPROB": ["Probate", "Transfer through an estate"],
+    "DEATH": ["Death record", "Ownership passed after an owner died"],
+    "CONT":  ["Real estate contract", "Buyer paid the seller over time"],
+    "D-CORR":["Correction deed", "Fixes an error in an earlier deed"],
+    "D-TRST":["Trustee's deed", "Can follow a foreclosure sale, or a transfer out of a trust"],
+    "TRST":  ["Trustee's deed", "Can follow a foreclosure sale, or a transfer out of a trust"],
+    "AFF":   ["Affidavit", ""],
+  };
+  const ESTATE = new Set(["EXEC", "D-PREP", "LPROB", "DEATH"]);
+  const docLabel = (code) => DOC_TYPES[code] || [code || "Recorded transfer", ""];
+  const isoToDate = (iso) => iso ? new Date(iso + "T00:00:00Z").getTime() : null;
+  const pct = (a, b) => Math.round(((b - a) / a) * 100);
+
+  function salesSummary(sales) {
+    const lines = [];
+    const dated = sales.filter((s) => s.date);
+    const market = dated.filter((s) => s.amount > 1000); // real sale prices
+    if (market.length) {
+      const oldest = market[market.length - 1].date.slice(0, 4);
+      lines.push([`Sold for a price ${market.length} time${market.length > 1 ? "s" : ""} since ${oldest}.`]);
+    }
+    if (dated.length) {
+      const years = Math.floor((Date.now() - isoToDate(dated[0].date)) / 3.15576e10);
+      lines.push([`Last ownership change ${date(isoToDate(dated[0].date))}` + (years >= 1 ? ` (${years} year${years > 1 ? "s" : ""} ago).` : ".")]);
+    }
+    if (market.length >= 2) {
+      const [b, a] = market; // newest, previous
+      const ch = pct(a.amount, b.amount);
+      lines.push([`Price went from ${money(a.amount)} (${a.date.slice(0,4)}) to ${money(b.amount)} (${b.date.slice(0,4)}), ${ch >= 0 ? "up" : "down"} ${Math.abs(ch)}%.`]);
+    }
+    const codes = new Set(sales.map((s) => s.docType));
+    if ([...codes].some((c) => ESTATE.has(c))) lines.push(["Changed hands through an estate at least once.", true]);
+    if (codes.has("D-TRST") || codes.has("TRST")) lines.push(["Has a trustee's deed. Worth checking the recorded document to see if it was a foreclosure.", true]);
+    if (codes.has("CONT")) lines.push(["Was sold on a real estate contract (seller financing) at least once.", true]);
+    if (codes.has("D-CORR")) lines.push(["Has a correction deed, meaning an earlier deed was fixed.", true]);
+    if (market.length >= 2) {
+      const gapDays = (isoToDate(market[0].date) - isoToDate(market[1].date)) / 8.64e7;
+      if (gapDays < 365) lines.push([`Resold within ${Math.max(1, Math.round(gapDays / 30))} months. Could be a flip, so ask what work was done.`, true]);
+    }
+    return lines;
+  }
+
+  function salesCard(history) {
+    if (!history) return `<section class="card wide"><h3>Sales history</h3><p class="hint">Sales history couldn't be loaded right now.</p></section>`;
+    const sales = history.sales || [];
+    if (!sales.length) return `<section class="card wide"><h3>Sales history</h3><p class="hint">No recorded sales on file.</p></section>`;
+    const summary = salesSummary(sales);
+    return `<section class="card wide"><h3>Sales history</h3>
+      ${summary.length ? `<ul class="summary">${summary.map(([t, flag]) => `<li class="${flag ? "flag" : ""}">${esc(t)}</li>`).join("")}</ul>` : ""}
+      <ul class="sales">${sales.map((s) => {
+        const [label, why] = docLabel(s.docType);
+        const price = s.amount > 0 ? money(s.amount) : null;
+        return `<li>
+          <span class="when">${s.date ? esc(date(isoToDate(s.date))) : "Date unknown"}</span>
+          <span class="what">${esc(label)}${why ? `<span class="why">${esc(why)}</span>` : ""}</span>
+          <span class="price ${price ? "" : "zero"}">${price ? esc(price) : "No sale price"}</span>
+        </li>`;
+      }).join("")}</ul>
+    </section>`;
+  }
+
+  function valueChange(history) {
+    const v = (history && history.values) || [];
+    if (v.length < 2 || !v[0].total || !v[1].total) return null;
+    const ch = pct(v[1].total, v[0].total);
+    return `${ch >= 0 ? "+" : "−"}${Math.abs(ch)}% vs ${v[1].valueYear}`;
   }
 
   // ---------- search / autocomplete ----------
@@ -186,13 +282,13 @@
       const res = await fetch(`${API}?id=${encodeURIComponent(id)}`);
       const data = await res.json();
       if (data.error) { showStatus(data.error, true); return; }
-      showStatus(""); renderReport(data.parcel);
+      showStatus(""); renderReport(data.parcel, data.history);
     } catch {
       showStatus("Couldn't load that record. Try again in a moment.", true);
     }
   }
 
-  function renderReport(p) {
+  function renderReport(p, history) {
     const age = p.BldgYrBlt ? new Date().getFullYear() - p.BldgYrBlt : null;
     const chips = [
       p.BldgYrBlt && `Built ${p.BldgYrBlt}`,
@@ -209,6 +305,8 @@
         <div class="chips">${chips.map((c) => `<span class="chip">${esc(c)}</span>`).join("")}</div>
       </div>
       <div class="grid">
+        ${salesCard(history)}
+
         <section class="card"><h3>The building</h3>${rows([
           ["Type", txt(p.BLDGTYPE) || txt(p.PT1DESC)],
           ["Style", txt(p.BldgStyle)],
@@ -221,18 +319,13 @@
           ["Housing units", num(p.UNITS)],
         ])}</section>
 
-        <section class="card"><h3>Last sale</h3>${rows([
-          ["Sale date", date(p.SaleDate)],
-          ["Sale price", money(p.SaleAmount)],
-          ["Excise record", p.SaleExcise || null],
-        ])}</section>
-
         <section class="card"><h3>Assessed value${p.AvYear ? " (" + esc(p.AvYear) + ")" : ""}</h3>${rows([
           ["Land", money(p.MktLandVal)],
           ["Building", money(p.MktBldgVal)],
           ["Total market value", money(p.MktTotVal)],
           ["Taxable value", money(p.TAXTOTVAL)],
           ["New construction added", money(p.NewCon)],
+          ["Change from last year", valueChange(history)],
         ])}</section>
 
         <section class="card"><h3>Taxes</h3>${rows([
@@ -268,6 +361,7 @@
       <p class="note">
         Source: Clark County GIS and Assessor public records${p.PublishDt ? ", updated " + esc(date(p.PublishDt)) : ""}.
         The county does not guarantee this data is current or accurate. Assessed value is not the same as market price.
+        Document descriptions are general guides; the recorded document is the official word.
         For the official record, see the <a href="https://gis.clark.wa.gov/gishome/property/" target="_blank" rel="noopener">Clark County Property Information Center</a>.
       </p>`;
     $report.hidden = false;
