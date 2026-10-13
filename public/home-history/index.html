@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Home History – Clark County, WA | NDMLABS</title>
-<meta name="description" content="Look up the public record for any house in Clark County, WA: sales history, year built, size, condition, values, taxes, zoning and schools.">
+<meta name="description" content="Look up the public record for any house in Clark County, WA: sales history, flood and earthquake hazards, septic records, easements, year built, size, condition, values, taxes, zoning and schools.">
 <style>
   :root {
     --bg: #f6f4ef; --card: #ffffff; --ink: #1d2320; --muted: #66706b;
@@ -84,6 +84,18 @@
     .sales li { grid-template-columns: 1fr auto; }
     .sales .when { grid-column: 1 / -1; font-size: 14px; }
   }
+  .facts { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+  .facts li { display: grid; grid-template-columns: 12px 1fr; gap: 0 10px; }
+  .facts .dot { width: 8px; height: 8px; border-radius: 50%; margin-top: .55em; background: var(--accent); }
+  .facts .dot.warn { background: var(--warn); }
+  .facts .dot.muted { background: var(--line); }
+  .facts .k { display: block; color: var(--muted); font-size: 14px; }
+  .facts .v { display: block; font-weight: 600; }
+  .facts .why { display: block; color: var(--muted); font-size: 14px; }
+  .card-note { margin: 14px 0 0; font-size: 13px; color: var(--muted); }
+  .records { list-style: none; margin: 0; padding: 0; }
+  .records > li { padding: 10px 0; border-top: 1px solid var(--line); }
+  .records > li:first-child { border-top: 0; padding-top: 0; }
   [hidden] { display: none !important; }
 </style>
 </head>
@@ -91,7 +103,7 @@
 <div class="wrap">
   <header>
     <h1>Home History</h1>
-    <p>The public record for any house in Clark County, WA: every recorded sale, when it was built, what it's worth on paper, and more.</p>
+    <p>The public record for any house in Clark County, WA: every recorded sale, natural hazards, things to check, and what it's worth on paper.</p>
   </header>
 
   <div class="search">
@@ -168,7 +180,7 @@
     const market = dated.filter((s) => s.amount > 1000); // real sale prices
     if (market.length) {
       const oldest = market[market.length - 1].date.slice(0, 4);
-      lines.push([`Sold for a price ${market.length} time${market.length > 1 ? "s" : ""} since ${oldest}.`]);
+      lines.push([market.length === 1 ? `Sold for a price once, in ${oldest}.` : `Sold for a price ${market.length} times since ${oldest}.`]);
     }
     if (dated.length) {
       const years = Math.floor((Date.now() - isoToDate(dated[0].date)) / 3.15576e10);
@@ -193,7 +205,8 @@
 
   function salesCard(history) {
     if (!history) return `<section class="card wide"><h3>Sales history</h3><p class="hint">Sales history couldn't be loaded right now.</p></section>`;
-    const sales = history.sales || [];
+    // Skip empty placeholder rows (no date, type or price)
+    const sales = (history.sales || []).filter((s) => s.date || s.docType || s.amount > 0);
     if (!sales.length) return `<section class="card wide"><h3>Sales history</h3><p class="hint">No recorded sales on file.</p></section>`;
     const summary = salesSummary(sales);
     return `<section class="card wide"><h3>Sales history</h3>
@@ -215,6 +228,112 @@
     if (v.length < 2 || !v[0].total || !v[1].total) return null;
     const ch = pct(v[1].total, v[0].total);
     return `${ch >= 0 ? "+" : "−"}${Math.abs(ch)}% vs ${v[1].valueYear}`;
+  }
+
+
+  // ---------- "things to check" from the year built ----------
+  // Possibilities only, never findings; each says to confirm with an inspection.
+  function ageFlags(p) {
+    const y = p.BldgYrBlt;
+    if (!y || y < 1700) return null;
+    const flags = [];
+    if (y < 1978) flags.push(["Possible lead paint", "Homes built before 1978 may have lead-based paint. Sellers must disclose any lead paint they know about."]);
+    if (y < 1981) flags.push(["Possible asbestos", "Common in this era in popcorn ceilings, insulation, flooring and siding."]);
+    if (y >= 1965 && y <= 1973) flags.push(["Possible aluminum wiring", "Used in some homes built 1965 to 1973. Connections can overheat if not updated."]);
+    if (y >= 1978 && y <= 1995) flags.push(["Possible polybutylene pipes", "Gray plastic water pipes used about 1978 to 1995. Known to leak with age."]);
+    return flags;
+  }
+
+  function factList(items) {
+    return `<ul class="facts">${items.map(([tone, k, v, why]) => `<li>
+      <span class="dot ${tone}"></span>
+      <span>${k ? `<span class="k">${esc(k)}</span>` : ""}<span class="v">${esc(v)}</span>${why ? `<span class="why">${esc(why)}</span>` : ""}</span>
+    </li>`).join("")}</ul>`;
+  }
+
+  function ageCard(p) {
+    const flags = ageFlags(p);
+    if (!flags) return "";
+    const eff = p.BldgEffYrBlt && p.BldgEffYrBlt > p.BldgYrBlt + 4
+      ? `The county's "effective year built" is ${p.BldgEffYrBlt}, which suggests the home has been updated since.` : "";
+    const body = flags.length
+      ? factList(flags.map(([v, why]) => ["warn", "", v, why]))
+      : factList([["", "", `No age-based items for a home built in ${p.BldgYrBlt}.`, ""]]);
+    return `<section class="card"><h3>Things to check</h3>${body}
+      <p class="card-note">Based only on the year built (${esc(p.BldgYrBlt)}). These are possibilities, not findings. A home inspection can confirm. ${esc(eff)}</p></section>`;
+  }
+
+  // ---------- hazards ----------
+  const FLOOD_TEXT = {
+    "5": ["warn", "Floodway", "Highest flood risk. Building here is restricted."],
+    "2": ["warn", "100-year flood zone", "Flood insurance is usually required with a mortgage."],
+    "8": ["", "500-year flood area", "Moderate flood risk."],
+    "7": ["muted", "Not studied", "This area wasn't included in the flood study."],
+    "0": ["", "Outside mapped flood areas", ""],
+  };
+  const QUAKE_WARN = new Set(["E", "D-E", "PEAT"]);
+
+  function hazardsCard(h) {
+    if (!h) return `<section class="card"><h3>Natural hazards</h3><p class="hint">Hazard maps couldn't be loaded right now.</p></section>`;
+    const rows = [];
+    // Flood: worst zone that touches the lot
+    if (h.flood == null) rows.push(["muted", "Flood zone", "Couldn't load", ""]);
+    else if (!h.flood.length) rows.push(["muted", "Flood zone", "No flood data", ""]);
+    else {
+      const worst = h.flood[0];
+      const [tone, label, why] = FLOOD_TEXT[worst.code] || ["muted", worst.label || "Unknown", ""];
+      const partial = h.flood.length > 1 && worst.code !== "0" ? "Part of the lot. " : "";
+      const zone = worst.zone && worst.code === "2" ? ` (zone ${worst.zone})` : "";
+      rows.push([tone, "Flood zone", label + zone, partial + why]);
+    }
+    // Earthquake: highest-hazard soil class under the lot
+    if (h.quake == null) rows.push(["muted", "Earthquake soil", "Couldn't load", ""]);
+    else if (!h.quake.length) rows.push(["muted", "Earthquake soil", "Not mapped", ""]);
+    else {
+      const c = h.quake[0];
+      const name = c === "PEAT" ? "Peat (very soft ground)" : c === "WATER" ? "Water" : `Site class ${c}`;
+      rows.push([QUAKE_WARN.has(c) ? "warn" : "", "Earthquake soil", name, "Scale runs from B (least shaking) to E (most). Softer soil shakes more."]);
+    }
+    // Landslide
+    if (h.landslide == null) rows.push(["muted", "Landslide and steep slopes", "Couldn't load", ""]);
+    else if (!h.landslide.length) rows.push(["", "Landslide and steep slopes", "None mapped", ""]);
+    else {
+      const serious = h.landslide.some((l) => ["2", "3", "4"].includes(l.code));
+      rows.push([serious ? "warn" : "", "Landslide and steep slopes", h.landslide.map((l) => l.label).join("; "), "Mapped on or touching part of the lot."]);
+    }
+    // Wildfire (from the county property page)
+    const wf = (h.wildfireArea || "").toLowerCase();
+    if (wf === "yes") rows.push(["warn", "Wildfire", "In an increased wildfire danger area", "Extra building rules can apply."]);
+    else if (wf === "no") rows.push(["", "Wildfire", "Not in an increased wildfire danger area", ""]);
+    else rows.push(["muted", "Wildfire", "Couldn't load", ""]);
+    return `<section class="card"><h3>Natural hazards</h3>${factList(rows)}
+      <p class="card-note">From Clark County hazard maps. Map lines are approximate.</p></section>`;
+  }
+
+  // ---------- septic (only shown when a record exists) ----------
+  function septicCard(septic) {
+    if (!septic || !septic.length) return "";
+    return `<section class="card"><h3>Septic system</h3><ul class="records">${septic.map((s) => `<li>${rows([
+      ["Status", s.status],
+      ["Installed", date(s.installed)],
+      ["Last inspection", date(s.lastInspection)],
+      ["Next inspection due", date(s.nextInspection)],
+      ["Designed for", s.bedrooms ? `${s.bedrooms} bedrooms` : null],
+      ["Permit applied", date(s.applied)],
+      ["County record", s.record],
+    ])}</li>`).join("")}</ul>
+      <p class="card-note">From Clark County Public Health. Septic systems need regular inspection; ask for the latest report.</p></section>`;
+  }
+
+  // ---------- easements and other recorded rights (only when present) ----------
+  function easementsCard(list) {
+    if (!list || !list.length) return "";
+    return `<section class="card"><h3>Easements &amp; recorded rights</h3><ul class="records">${list.map((e) => `<li>${rows([
+      [e.type, e.use || "General"],
+      ["Recorded", date(e.recDate)],
+      ["Recording number", e.recNumber],
+    ])}</li>`).join("")}</ul>
+      <p class="card-note">Rights others hold on part of this lot, like utility lines or shared access. The recorded document has the details.</p></section>`;
   }
 
   // ---------- search / autocomplete ----------
@@ -282,13 +401,14 @@
       const res = await fetch(`${API}?id=${encodeURIComponent(id)}`);
       const data = await res.json();
       if (data.error) { showStatus(data.error, true); return; }
-      showStatus(""); renderReport(data.parcel, data.history);
+      showStatus(""); renderReport(data);
     } catch {
       showStatus("Couldn't load that record. Try again in a moment.", true);
     }
   }
 
-  function renderReport(p, history) {
+  function renderReport(data) {
+    const p = data.parcel, history = data.history;
     const age = p.BldgYrBlt ? new Date().getFullYear() - p.BldgYrBlt : null;
     const chips = [
       p.BldgYrBlt && `Built ${p.BldgYrBlt}`,
@@ -306,6 +426,10 @@
       </div>
       <div class="grid">
         ${salesCard(history)}
+        ${hazardsCard(data.hazards)}
+        ${ageCard(p)}
+        ${septicCard(data.septic)}
+        ${easementsCard(data.easements)}
 
         <section class="card"><h3>The building</h3>${rows([
           ["Type", txt(p.BLDGTYPE) || txt(p.PT1DESC)],
@@ -360,7 +484,7 @@
 
       <p class="note">
         Source: Clark County GIS and Assessor public records${p.PublishDt ? ", updated " + esc(date(p.PublishDt)) : ""}.
-        The county does not guarantee this data is current or accurate. Assessed value is not the same as market price.
+        Public records can be incomplete, and the county does not guarantee this data is current or accurate. Assessed value is not the same as market price.
         Document descriptions are general guides; the recorded document is the official word.
         For the official record, see the <a href="https://gis.clark.wa.gov/gishome/property/" target="_blank" rel="noopener">Clark County Property Information Center</a>.
       </p>`;

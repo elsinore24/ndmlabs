@@ -8,8 +8,18 @@
 
 const PIC = "https://gis.clark.wa.gov/gishome/property/index.cfm?fuseaction=report&account=";
 
-const LAYER =
-  "https://gis.clark.wa.gov/arcgisfed/rest/services/ClarkView_Public/TaxlotsPublic/MapServer/0/query";
+const REST = "https://gis.clark.wa.gov/arcgisfed/rest/services";
+const LAYER = `${REST}/ClarkView_Public/TaxlotsPublic/MapServer/0/query`;
+
+// Other county layers used in the report (all public, same server)
+const LAYERS = {
+  flood:      `${REST}/Flood_Zone_Designation/MapServer/0/query`,
+  quake:      `${REST}/ClarkView_Public/EarthquakeHazardNEHRP/MapServer/0/query`,
+  landslide:  `${REST}/Steep_Slopes_and_Landslide_Hazard_Areas/MapServer/1/query`,
+  easements:  `${REST}/ClarkView_Public/Encumbrances/MapServer/0/query`,
+  septic:     `${REST}/ClarkView_Public/SepticSystemStatus/MapServer/0/query`,
+};
+const UA = { "User-Agent": "ndmlabs-home-history/1.0" };
 
 // Fields used for the search list
 const LIST_FIELDS = ["Prop_id", "SitusAddrsFull", "SitusAddrs", "SitusCity", "BldgYrBlt"];
@@ -74,14 +84,121 @@ export function normalize(attrs, fields) {
   return out;
 }
 
-async function queryCounty(params) {
-  const url = `${LAYER}?${new URLSearchParams({ f: "json", returnGeometry: "false", ...params })}`;
-  const res = await fetch(url, { headers: { "User-Agent": "ndmlabs-home-history/1.0" } });
+async function queryCounty(params, { withGeometry = false } = {}) {
+  const url = `${LAYER}?${new URLSearchParams({ f: "json", returnGeometry: String(withGeometry), ...params })}`;
+  const res = await fetch(url, { headers: UA });
   if (!res.ok) throw new Error(`County server responded ${res.status}`);
   const data = await res.json();
   if (data.error) throw new Error(data.error.message || "County query error");
   const fields = String(params.outFields).split(",");
-  return (data.features || []).map((f) => normalize(f.attributes, fields));
+  return (data.features || []).map((f) => {
+    const row = normalize(f.attributes, fields);
+    if (withGeometry) Object.defineProperty(row, "_geometry", { value: f.geometry, enumerable: false });
+    return row;
+  });
+}
+
+// ---------- Hazards, septic and easements (other county layers) ----------
+
+// Ask a county layer which of its features touch this lot. The lot outline is
+// pulled ~2 ft inward first, so features that only touch a neighbor along the
+// shared property line don't count.
+export function shrinkRings(geometry, feet = 2) {
+  if (!geometry || !geometry.rings) return null;
+  const pts = geometry.rings.flat();
+  const cx = pts.reduce((a, p) => a + p[0], 0) / pts.length;
+  const cy = pts.reduce((a, p) => a + p[1], 0) / pts.length;
+  const rings = geometry.rings.map((ring) => ring.map(([x, y]) => {
+    const dx = cx - x, dy = cy - y, d = Math.hypot(dx, dy);
+    const step = Math.min(feet, d * 0.1);
+    return d ? [x + (dx / d) * step, y + (dy / d) * step] : [x, y];
+  }));
+  return { rings, spatialReference: geometry.spatialReference || { wkid: 2286 } };
+}
+
+async function layerQuery(url, params) {
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { ...UA, "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ f: "json", returnGeometry: "false", ...params }),
+    signal: AbortSignal.timeout(8000),
+  });
+  if (!res.ok) throw new Error(`County server responded ${res.status}`);
+  const data = await res.json();
+  if (data.error) throw new Error(data.error.message || "County query error");
+  return (data.features || []).map((f) => f.attributes);
+}
+
+const touching = (url, geometry, outFields) =>
+  layerQuery(url, {
+    geometry: JSON.stringify(geometry),
+    geometryType: "esriGeometryPolygon",
+    spatialRel: "esriSpatialRelIntersects",
+    outFields,
+  });
+
+// Each lookup returns null if that layer fails, so one slow layer can't sink the report
+const safe = (p) => p.catch(() => null);
+const uniq = (arr, key) => [...new Map(arr.map((x) => [key(x), x])).values()];
+
+// Labels below come from the county's own map legends and field definitions
+const FLOOD_RANK = { "5": 5, "2": 4, "8": 2, "7": 1, "0": 0 }; // floodway, 100-yr, 500-yr, not studied, outside
+const QUAKE_ORDER = ["E", "PEAT", "D-E", "D", "C-D", "C", "B-C", "B"];
+const SLIDE_LABELS = {
+  "3": "Area of historic or active landslides",
+  "4": "Area of older landslide debris",
+  "2": "Area of potential instability",
+  "1": "Slopes over 25%",
+  "5": "Slopes over 15%",
+};
+const ENCUMBRANCE = { AGR: "Agreement", COV: "Covenant", LIC: "License", MOU: "Memorandum of understanding", REL: "Release", DT: "Deed of trust", EAS: "Easement", TCE: "Temporary construction easement" };
+const RIGHT_OF_USE = { CONS: "Conservation", DRN: "Drainage", GR: "Guardrail", IE: "Ingress and egress (access)", OTHER: "Other", RD: "Roadway", RR: "Railroad", SD: "Sight distance", TS: "Traffic signal", UNK: "Unknown", UTIL: "Utility", WALK: "Walkway", WALL: "Wall", DIKE: "Dike", SLOPE: "Slope", PA: "Public access" };
+const SEPTIC_STATUS = { "0": "Operational", A: "Approved, reports to state", B: "Approved, Yacolt inspection program" };
+
+export async function fetchSpatial(geometry) {
+  const g = shrinkRings(geometry);
+  if (!g) return { flood: null, quake: null, landslide: null, easements: null };
+  const [flood, quake, landslide, easements] = await Promise.all([
+    safe(touching(LAYERS.flood, g, "FLOOD,FLDZONE,DESC_")),
+    safe(touching(LAYERS.quake, g, "NEHRP")),
+    safe(touching(LAYERS.landslide, g, "LndSlp")),
+    // Grantor and grantee are deliberately NOT requested (often private people)
+    safe(touching(LAYERS.easements, g, "Encumbrance,RightOfUse,RecNumber,RecDate")),
+  ]);
+  return {
+    flood: flood && uniq(flood, (f) => `${f.FLOOD}|${f.FLDZONE}`)
+      .map((f) => ({ code: String(f.FLOOD), zone: (f.FLDZONE || "").trim(), label: (f.DESC_ || "").trim() }))
+      .sort((a, b) => (FLOOD_RANK[b.code] ?? 0) - (FLOOD_RANK[a.code] ?? 0)),
+    quake: quake && uniq(quake.map((q) => String(q.NEHRP || "").trim()).filter(Boolean), (x) => x)
+      .sort((a, b) => QUAKE_ORDER.indexOf(a) - QUAKE_ORDER.indexOf(b)),
+    landslide: landslide && uniq(landslide.map((l) => String(l.LndSlp)), (x) => x)
+      .map((c) => ({ code: c, label: SLIDE_LABELS[c] || `Category ${c}` })),
+    easements: easements && uniq(easements, (e) => `${e.Encumbrance}|${e.RightOfUse}|${e.RecNumber}`)
+      .map((e) => ({
+        type: ENCUMBRANCE[(e.Encumbrance || "").trim()] || (e.Encumbrance || "").trim() || "Recorded encumbrance",
+        use: RIGHT_OF_USE[(e.RightOfUse || "").trim()] || null,
+        recNumber: e.RecNumber ? String(e.RecNumber).trim() : null,
+        recDate: e.RecDate ?? null,
+      }))
+      .sort((a, b) => (b.recDate || 0) - (a.recDate || 0)),
+  };
+}
+
+export async function fetchSeptic(id) {
+  const rows = await layerQuery(LAYERS.septic, {
+    where: `GisPropId = ${Number(id)}`,
+    outFields: "RecordID,Status,InstallDt,ApprovDt,ApplicDt,UdfLastIns,ReinspDt,BEDROOMS",
+  });
+  return rows.map((r) => ({
+    record: r.RecordID || null,
+    status: SEPTIC_STATUS[String(r.Status)] || (r.Status != null ? String(r.Status) : null),
+    installed: r.InstallDt ?? null,
+    approved: r.ApprovDt ?? null,
+    applied: r.ApplicDt ?? null,
+    lastInspection: r.UdfLastIns ?? null,
+    nextInspection: r.ReinspDt ?? null,
+    bedrooms: r.BEDROOMS || null,
+  }));
 }
 
 // ---------- Sales history + past values (from the county's property page) ----------
@@ -154,14 +271,27 @@ export function parseValues(html) {
   return years;
 }
 
+// A single "Label | Value" row from the PIC page, e.g. "Increased Wildfire Danger Area"
+export function picField(html, label) {
+  const i = html.indexOf(label);
+  if (i < 0) return null;
+  const c = cells(html, i - 200, i + 600);
+  const k = c.findIndex((t) => t === label);
+  return k >= 0 && c[k + 1] != null ? c[k + 1] : null;
+}
+
 function parsePic(html) {
-  return { sales: parseSales(html), values: parseValues(html) };
+  return {
+    sales: parseSales(html),
+    values: parseValues(html),
+    wildfireArea: picField(html, "Increased Wildfire Danger Area"),
+  };
 }
 
 async function fetchHistory(id) {
   try {
     const res = await fetch(PIC + id, {
-      headers: { "User-Agent": "ndmlabs-home-history/1.0" },
+      headers: UA,
       signal: AbortSignal.timeout(8000),
     });
     if (!res.ok) return null;
@@ -179,12 +309,32 @@ export default async (req) => {
   try {
     if (id) {
       if (!/^\d{1,12}$/.test(id)) return json({ error: "Bad parcel id" }, 400);
-      const [rows, history] = await Promise.all([
-        queryCounty({ where: `Prop_id = ${Number(id)}`, outFields: REPORT_FIELDS.join(",") }),
+      const parcelP = queryCounty(
+        { where: `Prop_id = ${Number(id)}`, outFields: REPORT_FIELDS.join(",") },
+        { withGeometry: true },
+      );
+      // Everything runs at the same time; map-shape lookups start as soon as the lot outline arrives
+      const [rows, history, septic, spatial] = await Promise.all([
+        parcelP,
         fetchHistory(Number(id)),
+        safe(fetchSeptic(Number(id))),
+        parcelP.then((r) => (r.length ? fetchSpatial(r[0]._geometry) : null)).catch(() => null),
       ]);
       if (!rows.length) return json({ error: "Parcel not found" }, 404);
-      return json({ parcel: rows[0], history, source: "Clark County GIS / Assessor" }, 200, 86400);
+      const hazards = spatial && {
+        flood: spatial.flood,
+        quake: spatial.quake,
+        landslide: spatial.landslide,
+        wildfireArea: history ? history.wildfireArea : null,
+      };
+      return json({
+        parcel: rows[0],
+        history,
+        hazards,
+        septic,
+        easements: spatial ? spatial.easements : null,
+        source: "Clark County GIS / Assessor",
+      }, 200, 86400);
     }
 
     if (q.length < 3) return json({ results: [] });
