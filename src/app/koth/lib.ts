@@ -569,16 +569,38 @@ export function allTimeCoaches(totals: CoachTotals[]): CoachRating[] {
   return rateTotals(totals.filter((t) => t.games >= CAREER_MIN_GAMES));
 }
 
-/** One series that took a throne, as `challenges` returns it. */
-export type ThroneWin = { challenger_uid: string; throne_id: ThroneId };
+/** One reign on a hill: an ended one from `throne_lineage`, or the King
+ *  holding it now from `thrones`. */
+export type ThroneReign = { throne_id: ThroneId; version: number; holder_uid: string | null };
 
 /** uid → thrones taken, both hills together (Dan, 2026-10-01: a count
  *  beside the coach's name, kept out of the rating — a throne series is so
  *  much harder than a regular game that its W-L would only punish trying).
- *  Defences are not counted: the holder does not play them. */
-export function thronesTaken(wins: ThroneWin[]): Record<string, number> {
+ *  Defences are not counted: the holder does not play them.
+ *
+ *  **Only thrones taken from someone else** (Dan, 2026-10-15): a crown is a
+ *  reign that began by beating a different coach or the house. Beating your
+ *  own King is not a take — it showed Dan ♛9 when he had taken two. Counted
+ *  off the reigns rather than the challenges, because the Legends hill
+ *  opened with a take that has no challenge row. The house's opening reign
+ *  on ALL-STARS never entered the lineage, so a reign with no row before it
+ *  was taken from the house; the first reign on a hill (version 1) was
+ *  seated, not taken. */
+export function thronesTaken(reigns: ThroneReign[]): Record<string, number> {
+  const byThrone = new Map<ThroneId, Map<number, ThroneReign>>();
+  for (const r of reigns) {
+    if (!byThrone.has(r.throne_id)) byThrone.set(r.throne_id, new Map());
+    byThrone.get(r.throne_id)!.set(r.version, r);
+  }
   const out: Record<string, number> = {};
-  for (const w of wins) if (w.challenger_uid) out[w.challenger_uid] = (out[w.challenger_uid] ?? 0) + 1;
+  for (const reignsOnHill of byThrone.values()) {
+    for (const r of reignsOnHill.values()) {
+      if (!r.holder_uid || r.holder_uid === HOUSE_UID) continue;
+      const before = reignsOnHill.get(r.version - 1);
+      const taken = before ? before.holder_uid !== r.holder_uid : r.version > 1;
+      if (taken) out[r.holder_uid] = (out[r.holder_uid] ?? 0) + 1;
+    }
+  }
   return out;
 }
 

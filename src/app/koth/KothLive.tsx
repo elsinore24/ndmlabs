@@ -12,7 +12,7 @@ import AllTimeFiveMark from "@/components/AllTimeFiveMark";
 import {
   APP_STORE_URL, DAILY_OPPONENTS, HOUSE_UID, RETIRED_HANDLE,
   type Challenge, type CoachRating, type DailyRaw, type LineageEntry,
-  type CareerRow, careerTotals, type Profile, type SeasonPlayerLine, type StatKey, type ThroneWin, type Standing, conferenceTable, gamesBack, type SeasonGameRow, type Throne, type ThroneId, type Venue, type WeekDayRow,
+  type CareerRow, careerTotals, type Profile, type SeasonPlayerLine, type StatKey, type ThroneReign, type Standing, conferenceTable, gamesBack, type SeasonGameRow, type Throne, type ThroneId, type Venue, type WeekDayRow,
   CAREER_MIN_GAMES, marginLabel,
   allTimeCoaches, coachOfTheWeek, leadPlayer, leagueLeaders, ratingLabel, statLeaders, teamPlayers, thronesTaken, minutesAgo, mondayUTC, profileMap, resetsIn, rest, scoreline,
   shortDate, signed, todayUTC, venueCity, venueDecade, venueFallback, venueKnown,
@@ -92,7 +92,7 @@ export default function KothLive() {
       const today = todayUTC();
       const monday = mondayUTC();
       const [throne1, lineage1, challenges1, throne2, lineage2, challenges2,
-             dailyRaw, venues, winsRaw, weekDays, standings, seasonGames, careerRaw, throneWins, playerLines, boxGamesRaw] =
+             dailyRaw, venues, winsRaw, weekDays, standings, seasonGames, careerRaw, throneReigns, playerLines, boxGamesRaw] =
         await Promise.all([
           ...hillReads(1),
           ...hillReads(2),
@@ -122,9 +122,10 @@ export default function KothLive() {
           // of every game ever cannot be read raw past PostgREST's cap. The
           // view returns margins only; lib.ts scores them.
           rest<CareerRow[]>("coach_career?select=uid,games,wins,margin,first_at,margins"),
-          // Every series that took a throne. A few a week at most, so a raw
-          // read stays far under PostgREST's 1,000-row cap for years.
-          rest<ThroneWin[]>("challenges?result=eq.dethroned&applied=is.true&select=challenger_uid,throne_id&limit=1000"),
+          // Every ended reign on both hills, for the crowns: who took each
+          // one from whom. A few a week at most, so a raw read stays far
+          // under PostgREST's 1,000-row cap for years.
+          rest<ThroneReign[]>("throne_lineage?select=throne_id,version,holder_uid&limit=1000"),
           // A team's players, for the standings' drop-downs: one row per
           // player per team, so a few hundred at most.
           rest<SeasonPlayerLine[]>(`season_player_lines?season=eq.${SEASON}&select=*&limit=1000`),
@@ -166,7 +167,12 @@ export default function KothLive() {
         bestMargin: best ? { uid: best.uid, scoreline: scoreline(best.score, best.score_opp), margin: best.margin, day: best.day } : null,
         mostWins: most ? { uid: most[0], wins: most[1] } : null,
         profiles,
-        thrones: thronesTaken(throneWins),
+        // The ended reigns plus the two Kings holding the hills now.
+        thrones: thronesTaken([
+          ...throneReigns,
+          ...(throne1[0] ? [{ throne_id: 1 as ThroneId, version: throne1[0].version, holder_uid: throne1[0].holder_uid }] : []),
+          ...(throne2[0] ? [{ throne_id: 2 as ThroneId, version: throne2[0].version, holder_uid: throne2[0].holder_uid }] : []),
+        ]),
         playerLines,
         boxGames: Object.fromEntries(boxGamesRaw.map((r) => [r.team_abbr, r.games])),
         fetchedAt: Date.now(),

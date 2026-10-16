@@ -149,11 +149,26 @@ test("the all-time board scores careers from their margins, the rule only here",
   assert.ok(close(vet.rating, (20 * 1.15 + 10 * 1.25 - 8 * 0.075 - 2 * 0.25 + 5.6) / 54));
 });
 
-test("thrones taken count every series that took a throne, both hills, per coach", () => {
-  const taken = thronesTaken([
-    { challenger_uid: "a", throne_id: 1 }, { challenger_uid: "a", throne_id: 2 },
-    { challenger_uid: "b", throne_id: 1 }, { challenger_uid: "", throne_id: 1 },
-  ]);
-  assert.deepEqual(taken, { a: 2, b: 1 });
+test("thrones taken count only reigns won from someone else or the house", () => {
+  const H = "00000000-0000-0000-0000-000000000000";
+  // Dan's real history: ALL-STARS opened under the house (not in lineage),
+  // he took it (v2), then beat his own Kings five times; LEGENDS opened with
+  // the house's GATEKEEPERS (v1), he took it (v2), then beat himself four
+  // more times. Two crowns, not nine.
+  const reigns = [
+    ...[2, 3, 4, 5, 6, 7].map((v) => ({ throne_id: 1, version: v, holder_uid: "dan" })),
+    { throne_id: 2, version: 1, holder_uid: H },
+    ...[2, 3, 4, 5, 6].map((v) => ({ throne_id: 2, version: v, holder_uid: "dan" })),
+  ];
+  assert.deepEqual(thronesTaken(reigns), { dan: 2 });
+  // Taking it back from someone else counts again; the seated first King
+  // and the house never do.
+  const traded = [
+    { throne_id: 1, version: 1, holder_uid: "a" },
+    { throne_id: 1, version: 2, holder_uid: "b" },
+    { throne_id: 1, version: 3, holder_uid: "a" },
+    { throne_id: 1, version: 4, holder_uid: H },
+  ];
+  assert.deepEqual(thronesTaken(traded), { a: 1, b: 1 });
   assert.deepEqual(thronesTaken([]), {});
 });
