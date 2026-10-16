@@ -1,7 +1,7 @@
 "use client";
 
 // The marketing asset: the live Kings, one line each, inside the homepage's
-// Coach of the Year card. `CURRENT KING: BELIEVE IN MIKE · 2 DEFENSES` over
+// All-Time 5 card. `CURRENT KING: BELIEVE IN MIKE · 2 DEFENSES` over
 // `LEGENDS CHAMPION: '07 SPURS · 0 DEFENSES`. Two thrones since 2026-09-16
 // (the app's migration 0013): row 1 is the fives coaches build, row 2 the
 // real champions, and the champion gets the same billing as the King.

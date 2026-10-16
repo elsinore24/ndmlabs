@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import KothLive from "./KothLive";
 
 export const metadata: Metadata = {
-  title: "Coach of the Year — The Board | NDMLABS",
+  title: "All-Time 5 — The Board | NDMLABS",
   description:
-    "The daily board, the week, the records and the King of the Hill for Coach of the Year.",
+    "The daily board, the week, the records and the King of the Hill for All-Time 5.",
 };
 
 export default function KothPage() {

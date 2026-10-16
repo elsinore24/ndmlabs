@@ -24,11 +24,11 @@ const games: Game[] = [
     cta: "Download on the App Store",
   },
   {
-    // The Coach of the Year card carries the live King as its subtitle —
+    // The All-Time 5 card carries the live King as its subtitle —
     // the homepage's marketing asset — and links to the board.
     id: 4,
-    title: "Coach of the Year",
-    description: "Draft eleven across the eras and outcoach history. One throne for the whole world.",
+    title: "All-Time 5",
+    description: "Draft eight across the eras and outcoach history. Two thrones for the whole world.",
     icon: null,
     status: "In Development",
     url: "/koth",

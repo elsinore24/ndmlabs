@@ -25,7 +25,7 @@ import Link from "next/link";
 // lockup on /koth (Dan, 2026-09-17: the board is the app's page, and the
 // app is All-Time Five). It links to `markHref`, the board itself.
 // `brand` replaces the NDMLABS wordmark. The GOAT board uses it to point back
-// at Coach of the Year, which is the page a reader arrived from and the one
+// at All-Time 5, which is the page a reader arrived from and the one
 // they want to return to — NDMLABS is not that destination. Both boards are
 // expected to move to their own site eventually; this keeps them navigable to
 // each other until they do.
