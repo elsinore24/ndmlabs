@@ -343,6 +343,32 @@ export function teamPlayers(lines: SeasonPlayerLine[], abbr: string): TeamPlayer
     }));
 }
 
+/** One All-Star card's ALL-TIME 5 record across everyone's games, either
+ *  side (app migration 0027, view `alltime5_board`). */
+export type AllTimeFiveRow = {
+  player_id: string; player_name: string; player_season: string;
+  games: number; wins: number; losses: number; pct: number | string;
+};
+export type AllTimeFiveLeader = { id: string; name: string; season: string; wins: number; losses: number; pct: string };
+
+/** ALL-TIME 5 · MOST WINS (Dan, 2026-10-27: "which all star is involved in
+ *  the most wins, no matter what team he is put on"). Most wins, then the
+ *  better percentage, then more games, then the name. */
+export function allTimeFiveLeaders(rows: AllTimeFiveRow[], count = 10): AllTimeFiveLeader[] {
+  const rate = (r: AllTimeFiveRow) => (r.games ? r.wins / r.games : 0);
+  return [...rows]
+    .filter((r) => r.games > 0)
+    .sort((a, b) => b.wins - a.wins || rate(b) - rate(a) || b.games - a.games
+      || a.player_name.localeCompare(b.player_name))
+    .slice(0, count)
+    .map((r) => ({
+      id: r.player_id, name: r.player_name,
+      season: r.player_season ? `'${String(Number(r.player_season) % 100).padStart(2, "0")}` : "",
+      wins: r.wins, losses: r.losses,
+      pct: rate(r).toFixed(3).replace(/^0/, ""),
+    }));
+}
+
 /** STAT LEADERS (Dan, 2026-10-03): individual players, per game. */
 export type StatKey = "pts" | "reb" | "ast";
 export type StatLeader = { id: string; name: string; team: string; games: number; value: number };

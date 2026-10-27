@@ -261,7 +261,7 @@
    font, colors are too hard to read"): 14px chalk rows, white numbers, the
    code in amber, a darker panel so the arena bleeds through less here. */
 .koth-season { margin: 22px 0 6px; }
-.koth-season .koth-card { background: rgba(8, 9, 12, 0.82); }
+.koth-season .koth-card, .koth-alltime5 .koth-card { background: rgba(8, 9, 12, 0.82); }
 .koth-season-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 @media (max-width: 720px) { .koth-season-grid { grid-template-columns: 1fr; } }
 .koth-season-div { margin-top: 14px; }
@@ -523,6 +523,12 @@
 @media (max-width: 720px) {
   .koth-season-top { align-items: center; }
   .koth-stat-cols, .koth-stat-row { grid-template-columns: 22px 1fr 40px 28px 46px; gap: 5px; }
+}
+/* ALL-TIME 5 · MOST WINS (2026-10-27): a W-L record needs more room than a GP. */
+.koth-alltime5 { margin-top: 28px; }
+.koth-stat-cols.is-a5, .koth-stat-row.is-a5 { grid-template-columns: 30px 1fr 56px 72px 56px; }
+@media (max-width: 720px) {
+  .koth-stat-cols.is-a5, .koth-stat-row.is-a5 { grid-template-columns: 22px 1fr 40px 60px 46px; gap: 5px; }
 }
 
 /* IQ mode (2026-10-10): drafted with no stats. Marked, ranked with everyone. */

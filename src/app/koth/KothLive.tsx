@@ -14,6 +14,7 @@ import {
   type Challenge, type CoachRating, type DailyRaw, type LineageEntry,
   type CareerRow, careerTotals, type Profile, type SeasonPlayerLine, type StatKey, type ThroneReign, type Standing, conferenceTable, gamesBack, type SeasonGameRow, type Throne, type ThroneId, type Venue, type WeekDayRow,
   CAREER_MIN_GAMES, marginLabel,
+  type AllTimeFiveRow, allTimeFiveLeaders,
   allTimeCoaches, coachOfTheWeek, leadPlayer, leagueLeaders, ratingLabel, statLeaders, teamPlayers, thronesTaken, minutesAgo, mondayUTC, profileMap, resetsIn, rest, scoreline,
   shortDate, signed, todayUTC, venueCity, venueDecade, venueFallback, venueKnown,
   weekRange } from "./lib";
@@ -64,6 +65,8 @@ type Board = {
   /** team → games its player lines cover; short of its games played while
    *  games from before both sides were saved still count. */
   boxGames: Record<string, number>;
+  /** Every All-Star card's ALL-TIME 5 record (app migration 0027). */
+  allTimeFive: AllTimeFiveRow[];
   fetchedAt: number;
 };
 
@@ -92,7 +95,8 @@ export default function KothLive() {
       const today = todayUTC();
       const monday = mondayUTC();
       const [throne1, lineage1, challenges1, throne2, lineage2, challenges2,
-             dailyRaw, venues, winsRaw, weekDays, standings, seasonGames, careerRaw, throneReigns, playerLines, boxGamesRaw] =
+             dailyRaw, venues, winsRaw, weekDays, standings, seasonGames, careerRaw, throneReigns, playerLines, boxGamesRaw,
+             allTimeFiveRaw] =
         await Promise.all([
           ...hillReads(1),
           ...hillReads(2),
@@ -130,6 +134,11 @@ export default function KothLive() {
           // player per team, so a few hundred at most.
           rest<SeasonPlayerLine[]>(`season_player_lines?season=eq.${SEASON}&select=*&limit=1000`),
           rest<{ team_abbr: string; games: number }[]>(`season_team_box_games?season=eq.${SEASON}&select=team_abbr,games`),
+          // ALL-TIME 5's board (app migration 0027). Optional: a page served
+          // before the view exists, or while it errors, shows the rest.
+          rest<AllTimeFiveRow[]>(
+            "alltime5_board?select=player_id,player_name,player_season,games,wins,losses,pct&order=wins.desc,pct.desc,games.desc&limit=100"
+          ).catch(() => [] as AllTimeFiveRow[]),
         ]);
 
       const winCounts = new Map<string, number>();
@@ -175,6 +184,7 @@ export default function KothLive() {
         ]),
         playerLines,
         boxGames: Object.fromEntries(boxGamesRaw.map((r) => [r.team_abbr, r.games])),
+        allTimeFive: allTimeFiveRaw,
         fetchedAt: Date.now(),
       });
       setFailed(false);
@@ -234,6 +244,8 @@ export default function KothLive() {
         )}
 
         {board && board.standings.length > 0 && <SeasonSection board={board} coachName={coachName} />}
+
+        {board && <AllTimeFiveSection rows={board.allTimeFive} />}
 
         {board && <RecordsStrip board={board} coachName={coachName} />}
 
@@ -625,6 +637,43 @@ function TeamPlayers({ board, team }: { board: Board; team: Standing }) {
         {covered < team.games && `Stats from ${covered} of ${team.games} games: earlier games saved only the coached team's players.`}
       </p>
     </div>
+  );
+}
+
+/** ALL-TIME 5 · MOST WINS: every great's record in everyone's ALL-TIME 5
+ *  games, whichever five he was picked for. Top ten, then twenty-five. */
+function AllTimeFiveSection({ rows }: { rows: AllTimeFiveRow[] }) {
+  const [more, setMore] = useState(false);
+  const leaders = allTimeFiveLeaders(rows, more ? 25 : 10);
+  const total = rows.filter((r) => r.games > 0).length;
+  return (
+    <section className="koth-alltime5" id="alltime5" aria-label="All-Time 5: most wins">
+      <div className="koth-kicker mono">ALL-TIME 5 · MOST WINS</div>
+      <div className="koth-card">
+        {leaders.length === 0 ? (
+          <p className="koth-empty mono">No ALL-TIME 5 games yet. Pick your five in the app.</p>
+        ) : (
+          <>
+            <div className="koth-stat-cols is-a5 mono faint"><span>#</span><span>PLAYER</span><span>SEASON</span><span>W-L</span><span>PCT</span></div>
+            {leaders.map((p, i) => (
+              <div key={p.id} className="koth-stat-row is-a5 mono">
+                <span className={`rk ${i < 3 ? "top" : ""}`}>{i + 1}</span>
+                <span className="who">{p.name}</span>
+                <span className="abbr">{p.season}</span>
+                <span>{p.wins}-{p.losses}</span>
+                <span className="val">{p.pct}</span>
+              </div>
+            ))}
+            {total > 10 && (
+              <button className="koth-linkish mono" onClick={() => setMore(!more)}>
+                {more ? "TOP TEN ↑" : "TOP 25 ↓"}
+              </button>
+            )}
+          </>
+        )}
+        <p className="koth-rule mono">Every great&apos;s record in everyone&apos;s ALL-TIME 5 games, whichever five he was picked for.</p>
+      </div>
+    </section>
   );
 }
 
