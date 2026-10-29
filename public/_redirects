@@ -9,3 +9,8 @@
 
 # Bare /genome has no splat to match; send it to the mounted root.
 /genome  /genome/  301
+
+# CORNER test builds: same pattern. Its own repo (elsinore24/Corner) and Netlify
+# site, built by Vite with base '/corner/'.
+/corner/*  https://ndmlabs-corner.netlify.app/corner/:splat  200
+/corner  /corner/  301
