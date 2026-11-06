@@ -1,4 +1,5 @@
 import CurrentKing from "./CurrentKing";
+import { APP_STORE_URL as ALL_TIME_5_STORE_URL } from "../app/koth/lib";
 
 type Game = {
   id: number;
@@ -10,6 +11,8 @@ type Game = {
   external: boolean;
   live?: boolean;
   cta?: string;
+  /** A game with its own page and a store listing shows both as buttons. */
+  storeUrl?: string;
 };
 
 const games: Game[] = [
@@ -25,16 +28,17 @@ const games: Game[] = [
   },
   {
     // The All-Time 5 card carries the live King as its subtitle —
-    // the homepage's marketing asset — and links to the board.
+    // the homepage's marketing asset — and offers the store and the board.
     id: 4,
     title: "All-Time 5",
     description: "Draft eight across the eras and outcoach history. Two thrones for the whole world.",
-    icon: null,
-    status: "In Development",
+    icon: "/alltime5-icon.png",
+    status: "Available",
     url: "/koth",
     external: false,
     live: true,
     cta: "See the Board",
+    storeUrl: ALL_TIME_5_STORE_URL,
   },
   {
     id: 3,
@@ -64,8 +68,10 @@ export default function FeaturedGames() {
         {/* Games Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {games.map((game) => {
-            const CardWrapper = game.url ? "a" : "div";
-            const wrapperProps = game.url
+            // Two buttons can't live inside one link, so a card with a store
+            // listing is a plain box and its buttons are the links.
+            const CardWrapper = game.url && !game.storeUrl ? "a" : "div";
+            const wrapperProps = game.url && !game.storeUrl
               ? game.external
                 ? { href: game.url, target: "_blank" as const, rel: "noopener noreferrer" }
                 : { href: game.url }
@@ -106,10 +112,30 @@ export default function FeaturedGames() {
                     <p className="mb-2"><CurrentKing fallback={game.description} /></p>
                   ) : null}
                   <p className="text-gray-400">{game.description}</p>
+                  {game.storeUrl ? (
+                    <div className="mt-5 flex flex-col gap-3">
+                      <a
+                        href={game.storeUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-1 py-3 bg-[#00ff88] text-black font-semibold rounded-lg text-center hover:bg-[#00e67a] transition-colors"
+                      >
+                        Download on the App Store
+                      </a>
+                      {game.url ? (
+                        <a
+                          href={game.url}
+                          className="flex-1 py-3 border border-[#00ff88]/60 text-[#00ff88] font-semibold rounded-lg text-center hover:bg-[#00ff88]/10 transition-colors"
+                        >
+                          {game.cta}
+                        </a>
+                      ) : null}
+                    </div>
+                  ) : null}
                 </div>
 
                 {/* Hover Overlay */}
-                {game.url && (
+                {game.url && !game.storeUrl && (
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-6">
                     <span className="w-full py-3 bg-[#00ff88] text-black font-semibold rounded-lg text-center block">
                       {game.cta}

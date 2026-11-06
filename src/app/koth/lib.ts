@@ -7,10 +7,10 @@ export const SUPABASE_URL = "https://lopawitfeyhtzppfchik.supabase.co";
 export const SUPABASE_KEY = "sb_publishable_Jy4XRKu11PdztPoCSZfduw_kHed6SyY";
 
 // CHALLENGE THE KING links straight to the App Store (Dan, 2026-09-02: the
-// site is display only). The listing does not exist yet — swap this for the
-// real apps.apple.com URL when it does; until then it lands on the homepage's
-// games section rather than a dead store link.
-export const APP_STORE_URL = "/#games";
+// site is display only). Live since 2026-11-05. The id is required: without
+// it apps.apple.com answers 404.
+export const APP_STORE_ID = "6808837783";
+export const APP_STORE_URL = `https://apps.apple.com/us/app/all-time-5/id${APP_STORE_ID}`;
 
 // A friend's challenge link, ndmlabs.net/c?code=K7M2-9QXF-3B8T (2026-10-10).
 // With the app installed the link opens the app (the AASA file in
