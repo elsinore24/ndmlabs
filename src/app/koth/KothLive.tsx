@@ -13,7 +13,7 @@ import AllTimeFiveMark from "@/components/AllTimeFiveMark";
 import {
   APP_STORE_URL, DAILY_OPPONENTS, HOUSE_UID, RETIRED_HANDLE,
   type Challenge, type CoachRating, type DailyRaw, type LineageEntry,
-  type CareerRow, careerTotals, type Profile, type SeasonPlayerLine, type StatKey, type ThroneReign, type Standing, conferenceTable, gamesBack, type SeasonGameRow, type Throne, type ThroneId, type Venue, type WeekDayRow,
+  type CareerRow, careerTotals, oneLinePerMan, type Profile, type SeasonPlayerLine, type StatKey, type ThroneReign, type Standing, conferenceTable, gamesBack, type SeasonGameRow, type Throne, type ThroneId, type Venue, type WeekDayRow,
   CAREER_MIN_GAMES, marginLabel,
   type AllTimeFiveRow, allTimeFiveLeaders,
   allTimeCoaches, coachOfTheWeek, leadPlayer, leagueLeaders, ratingLabel, statLeaders, teamPlayers, thronesTaken, minutesAgo, mondayUTC, profileMap, resetsIn, rest, scoreline,
@@ -183,7 +183,7 @@ export default function KothLive() {
           ...(throne1[0] ? [{ throne_id: 1 as ThroneId, version: throne1[0].version, holder_uid: throne1[0].holder_uid }] : []),
           ...(throne2[0] ? [{ throne_id: 2 as ThroneId, version: throne2[0].version, holder_uid: throne2[0].holder_uid }] : []),
         ]),
-        playerLines,
+        playerLines: oneLinePerMan(playerLines),
         boxGames: Object.fromEntries(boxGamesRaw.map((r) => [r.team_abbr, r.games])),
         allTimeFive: allTimeFiveRaw,
         fetchedAt: Date.now(),

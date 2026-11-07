@@ -319,6 +319,29 @@ export type SeasonPlayerLine = {
   pts: number; reb: number; ast: number; stl: number; blk: number; tov: number; fg_m: number; fg_a: number;
 };
 
+/** **One line per man per team.** The app re-rates the 2026-27 cards as
+ *  the season goes (blended ratings, 2026-11-07), and a re-rated card is a
+ *  new player-season id: `doncilu01:2026` before, `doncilu01:2027` after,
+ *  with players on both builds for a while. Both are the same man, so his
+ *  lines are summed under the newest id. A game holds one card per man, so
+ *  the games add up too. */
+export function oneLinePerMan(lines: SeasonPlayerLine[]): SeasonPlayerLine[] {
+  const by = new Map<string, SeasonPlayerLine>();
+  for (const l of lines) {
+    const key = `${l.team_abbr}|${l.player_id.split(":")[0]}`;
+    const had = by.get(key);
+    if (!had) { by.set(key, { ...l }); continue; }
+    const newer = l.player_id > had.player_id ? l : had;
+    by.set(key, {
+      ...had, player_id: newer.player_id, player_name: newer.player_name,
+      games: had.games + l.games, pts: had.pts + l.pts, reb: had.reb + l.reb, ast: had.ast + l.ast,
+      stl: had.stl + l.stl, blk: had.blk + l.blk, tov: had.tov + l.tov,
+      fg_m: had.fg_m + l.fg_m, fg_a: had.fg_a + l.fg_a,
+    });
+  }
+  return [...by.values()];
+}
+
 /** A row of a team's drop-down: per-game averages. With one game played
  *  they are that game's line — one game is the whole season so far. */
 export type TeamPlayerRow = { id: string; name: string; gp: number; ppg: string; rpg: string; apg: string; fg: string };

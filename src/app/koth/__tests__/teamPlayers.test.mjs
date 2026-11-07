@@ -1,7 +1,7 @@
 // A team's drop-down on the season standings (2026-10-02). Run with `npm test`.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { fgPct, teamPlayers } from "../lib.ts";
+import { fgPct, oneLinePerMan, teamPlayers } from "../lib.ts";
 
 const line = (team, id, name, games, pts, reb, ast, fg_m, fg_a) =>
   ({ season: 2027, team_abbr: team, player_id: id, player_name: name, games, pts, reb, ast, stl: 0, blk: 0, tov: 0, fg_m, fg_a });
@@ -65,4 +65,20 @@ test("stat leaders: per game, one man across two teams, half the games to qualif
   assert.equal(pts.find((x) => x.name === "Traded").team, "IND");
   assert.equal(statLeaders(lines, "ast")[0].name, "Harden");
   assert.deepEqual(statLeaders([], "pts"), []);
+});
+
+test("a re-rated card is the same man: his lines are summed under the newer id", () => {
+  const merged = oneLinePerMan([
+    line("LAL", "doncilu01:2026", "Luka Dončić", 4, 120, 30, 36, 40, 80),
+    line("LAL", "doncilu01:2027", "Luka Dončić", 2, 64, 14, 18, 22, 40),
+    line("DAL", "doncilu01:2026", "Luka Dončić", 1, 30, 8, 9, 10, 20),
+    line("LAL", "reaveau01:2026", "Austin Reaves", 3, 60, 12, 15, 21, 45),
+  ]);
+  assert.equal(merged.length, 3, "one line per man per team");
+  const luka = merged.find((l) => l.team_abbr === "LAL" && l.player_id.startsWith("doncilu01"));
+  assert.equal(luka.player_id, "doncilu01:2027");
+  assert.equal(luka.games, 6);
+  assert.equal(luka.pts, 184);
+  assert.equal(luka.fg_a, 120);
+  assert.equal(teamPlayers(merged, "LAL")[0].ppg, "30.7");
 });
