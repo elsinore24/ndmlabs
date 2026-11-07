@@ -1,4 +1,5 @@
 import { APP_STORE_URL as ALL_TIME_5_STORE_URL } from "../app/koth/lib";
+import StoreLink from "./StoreLink";
 
 type Game = {
   id: number;
@@ -78,14 +79,13 @@ export default function FeaturedGames() {
 
                 {/* Buttons sit at the bottom so both cards line up. */}
                 <div className="mt-auto pt-5 flex flex-col gap-3">
-                  <a
+                  <StoreLink
                     href={game.storeUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                    newTab
                     className="py-3 bg-[#00ff88] text-black font-semibold rounded-lg text-center hover:bg-[#00e67a] transition-colors"
                   >
                     Download on the App Store
-                  </a>
+                  </StoreLink>
                   {game.page ? (
                     <a
                       href={game.page.url}

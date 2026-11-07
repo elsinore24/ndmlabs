@@ -1,5 +1,6 @@
 "use client";
 
+import StoreLink from "@/components/StoreLink";
 // ndmlabs.net/koth, refocused on what the app leads with (Dan's mockup,
 // 2026-10-01): today's challenge, who's on top, the 2026-27 season, a strip
 // of records, and the app. The Board's tabs, feed and ticker are gone. One
@@ -255,7 +256,7 @@ export default function KothLive() {
             <b>All-Time 5</b>
             <span>Today&apos;s challenge, two thrones, and the whole league — on your phone.</span>
           </div>
-          <a className="koth-cta mono" href={APP_STORE_URL}>GET THE APP</a>
+          <StoreLink className="koth-cta mono" href={APP_STORE_URL}>GET THE APP</StoreLink>
         </section>
 
         <div className="koth-foot mono">
@@ -303,7 +304,7 @@ function TodayCard({ board, coachTag }: { board: Board | null; coachTag: (uid: s
           <span>~4 MIN</span>
         </div>
         <div className="go">
-          <a className="koth-cta mono" href={APP_STORE_URL}>PLAY IN THE APP</a>
+          <StoreLink className="koth-cta mono" href={APP_STORE_URL}>PLAY IN THE APP</StoreLink>
           <span className="mono resets">RESETS IN {resetsIn()}</span>
         </div>
       </div>
@@ -371,7 +372,7 @@ function ThroneCard({ hill, label, kind }: { hill: Hill; label: string; kind: "i
       </div>
       <div className="hero mono">{throne.defenses}</div>
       <div className="hero-l mono">DEFENSES</div>
-      <a className="koth-cta mono" href={APP_STORE_URL}>CHALLENGE →</a>
+      <StoreLink className="koth-cta mono" href={APP_STORE_URL}>CHALLENGE →</StoreLink>
     </div>
   );
 }

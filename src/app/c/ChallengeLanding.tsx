@@ -1,5 +1,6 @@
 "use client";
 
+import StoreLink from "@/components/StoreLink";
 // ndmlabs.net/c?code=… (2026-10-10): where a friend's challenge link lands
 // when the app is not installed, or when the link was opened in a browser.
 // The code is read after load because the site is a static export.
@@ -32,7 +33,7 @@ export default function ChallengeLanding() {
           <h1 className="c-title">{hill === "allstars" ? "Draft five and take it." : "Send a champion and take it."}</h1>
           <div className="c-actions">
             <a className="koth-cta mono c-btn" href={hillAppLink(hill)}>OPEN IN ALL-TIME 5</a>
-            <a className="koth-cta outline mono c-btn" href={APP_STORE_URL}>GET ALL-TIME 5</a>
+            <StoreLink className="koth-cta outline mono c-btn" href={APP_STORE_URL}>GET ALL-TIME 5</StoreLink>
           </div>
         </section>
       </div>
@@ -49,7 +50,7 @@ export default function ChallengeLanding() {
         {read && !code && <p className="c-none">This link has no challenge code in it.</p>}
         <div className="c-actions">
           {code && <a className="koth-cta mono c-btn" href={challengeAppLink(code)}>OPEN IN ALL-TIME 5</a>}
-          <a className="koth-cta outline mono c-btn" href={APP_STORE_URL}>GET ALL-TIME 5</a>
+          <StoreLink className="koth-cta outline mono c-btn" href={APP_STORE_URL}>GET ALL-TIME 5</StoreLink>
         </div>
       </section>
     </div>
