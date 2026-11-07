@@ -3,6 +3,7 @@
 import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import NdmLabsMark from "./NdmLabsMark";
 
 // `fixed` is the homepage's floating bar; /koth stacks the nav under its
 // ticker, so it flows in the document instead.
@@ -44,7 +45,7 @@ export default function Header({
   markHref?: string;
 }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  // Every page but the homepage gets a Home link (Dan, 2026-11-06): on /koth
+  // Every page but the homepage gets the NDMLABS logo as its Home link (Dan, 2026-11-06): on /koth
   // and /goat the logo goes elsewhere, so it can't be the way back.
   const onHome = usePathname() === "/";
 
@@ -84,8 +85,8 @@ export default function Header({
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-8">
             {onHome ? null : (
-              <Link href="/" className="text-gray-300 hover:text-white transition-colors">
-                Home
+              <Link href="/" aria-label="NDMLABS home" className="hover:opacity-80 transition-opacity">
+                <NdmLabsMark className="text-lg" />
               </Link>
             )}
             <Link href="/goat" className="text-gray-300 hover:text-white transition-colors">
@@ -102,11 +103,11 @@ export default function Header({
             </Link>
           </div>
 
-          {/* Mobile: Home stays in sight beside the menu button off the homepage */}
+          {/* Mobile: the NDMLABS logo (home) stays in sight beside the menu button off the homepage */}
           <div className="md:hidden flex items-center gap-5">
           {onHome ? null : (
-            <Link href="/" className="text-gray-300 hover:text-white transition-colors">
-              Home
+            <Link href="/" aria-label="NDMLABS home" className="hover:opacity-80 transition-opacity">
+              <NdmLabsMark className="text-lg" />
             </Link>
           )}
           <button

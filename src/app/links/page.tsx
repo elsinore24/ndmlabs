@@ -40,11 +40,13 @@ export default function LinksPage() {
       <div className="links-container">
         {/* ── PROFILE ── */}
         <div className="profile">
-          <img
-            src="/logo-dark.png"
-            alt="NDMLABS"
-            className="profile-logo"
-          />
+          <a href="/" aria-label="NDMLABS home">
+            <img
+              src="/logo-dark.png"
+              alt="NDMLABS"
+              className="profile-logo"
+            />
+          </a>
         </div>
 
         {/* ── APPS & GAMES ── */}

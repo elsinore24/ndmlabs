@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import NdmLabsMark from "@/components/NdmLabsMark";
 
 export const metadata: Metadata = {
   title: "Privacy Policy | NDMLABS",
@@ -17,7 +18,9 @@ export default function PrivacyPage() {
   return (
     <main className="min-h-screen bg-[#0b0c0f] text-[#e8e6e1]">
       <div className="mx-auto max-w-2xl px-6 py-16">
-        <Link href="/" className="text-sm text-[#9aa6b8] hover:text-[#e8e6e1] transition-colors">&larr; NDMLABS home</Link>
+        <Link href="/" aria-label="NDMLABS home" className="inline-block hover:opacity-80 transition-opacity">
+          <NdmLabsMark className="text-2xl" />
+        </Link>
         <p className="mt-8 text-xs tracking-[0.3em] text-[#9aa6b8] uppercase">NDMLABS</p>
         <h1 className="mt-2 text-4xl font-black">Privacy Policy</h1>
         <p className="mt-2 text-sm text-[#9aa6b8]">Effective October 12, 2026 · applies to All-Time 5 and other NDMLABS apps</p>
