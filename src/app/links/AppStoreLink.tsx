@@ -1,9 +1,9 @@
 "use client";
 
 const APP_STORE_URL =
-  "https://apps.apple.com/us/app/starscapes-visual-riddles/id6756834182";
+  "https://apps.apple.com/us/app/starscapes-rebus-puzzles/id6756834182";
 const ITMS_URL =
-  "itms-apps://apps.apple.com/us/app/starscapes-visual-riddles/id6756834182";
+  "itms-apps://apps.apple.com/us/app/starscapes-rebus-puzzles/id6756834182";
 
 export default function AppStoreLink() {
   const handleClick = (e: React.MouseEvent) => {

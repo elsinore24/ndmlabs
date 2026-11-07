@@ -2,6 +2,7 @@
 
 import { useState, type ReactNode } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 // `fixed` is the homepage's floating bar; /koth stacks the nav under its
 // ticker, so it flows in the document instead.
@@ -43,6 +44,9 @@ export default function Header({
   markHref?: string;
 }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  // Every page but the homepage gets a Home link (Dan, 2026-11-06): on /koth
+  // and /goat the logo goes elsewhere, so it can't be the way back.
+  const onHome = usePathname() === "/";
 
   return (
     <header
@@ -79,16 +83,21 @@ export default function Header({
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-8">
+            {onHome ? null : (
+              <Link href="/" className="text-gray-300 hover:text-white transition-colors">
+                Home
+              </Link>
+            )}
             <Link href="/goat" className="text-gray-300 hover:text-white transition-colors">
               GOAT
             </Link>
             <a href="/genome/proto/profile/" className="text-gray-300 hover:text-white transition-colors">
               Genome
             </a>
-            <Link href="#about" className="text-gray-300 hover:text-white transition-colors">
+            <Link href="/#about" className="text-gray-300 hover:text-white transition-colors">
               About
             </Link>
-            <Link href="#contact" className="text-gray-300 hover:text-white transition-colors">
+            <Link href="/#contact" className="text-gray-300 hover:text-white transition-colors">
               Contact
             </Link>
           </div>
@@ -118,16 +127,21 @@ export default function Header({
             }`}
           >
             <div className="flex flex-col space-y-4">
+              {onHome ? null : (
+                <Link href="/" className="text-gray-300 hover:text-white transition-colors">
+                  Home
+                </Link>
+              )}
               <Link href="/goat" className="text-gray-300 hover:text-white transition-colors">
                 GOAT
               </Link>
               <a href="/genome/proto/profile/" className="text-gray-300 hover:text-white transition-colors">
                 Genome
               </a>
-              <Link href="#about" className="text-gray-300 hover:text-white transition-colors">
+              <Link href="/#about" className="text-gray-300 hover:text-white transition-colors">
                 About
               </Link>
-              <Link href="#contact" className="text-gray-300 hover:text-white transition-colors">
+              <Link href="/#contact" className="text-gray-300 hover:text-white transition-colors">
                 Contact
               </Link>
             </div>

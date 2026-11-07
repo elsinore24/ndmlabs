@@ -14,7 +14,8 @@ export default function SupportPage() {
   return (
     <main className="min-h-screen bg-[#0b0c0f] text-[#e8e6e1]">
       <div className="mx-auto max-w-2xl px-6 py-16">
-        <p className="text-xs tracking-[0.3em] text-[#9aa6b8] uppercase">ALL-TIME 5</p>
+        <Link href="/" className="text-sm text-[#9aa6b8] hover:text-[#e8e6e1] transition-colors">&larr; NDMLABS home</Link>
+        <p className="mt-8 text-xs tracking-[0.3em] text-[#9aa6b8] uppercase">ALL-TIME 5</p>
         <h1 className="mt-2 text-4xl font-black">Support</h1>
 
         <Section title="Contact">
@@ -52,7 +53,7 @@ export default function SupportPage() {
         </Section>
 
         <p className="mt-12 text-sm text-[#9aa6b8]">
-          <Link href="/koth" className="underline">The boards</Link> · <Link href="/privacy" className="underline">Privacy</Link> · NDM LABS LLC
+          <Link href="/" className="underline">ndmlabs.net</Link> · <Link href="/koth" className="underline">The boards</Link> · <Link href="/privacy" className="underline">Privacy</Link> · NDM LABS LLC
         </p>
       </div>
     </main>
