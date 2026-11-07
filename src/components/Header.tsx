@@ -102,9 +102,15 @@ export default function Header({
             </Link>
           </div>
 
-          {/* Mobile menu button */}
+          {/* Mobile: Home stays in sight beside the menu button off the homepage */}
+          <div className="md:hidden flex items-center gap-5">
+          {onHome ? null : (
+            <Link href="/" className="text-gray-300 hover:text-white transition-colors">
+              Home
+            </Link>
+          )}
           <button
-            className="md:hidden text-white"
+            className="text-white"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             aria-label="Toggle menu"
           >
@@ -116,6 +122,7 @@ export default function Header({
               )}
             </svg>
           </button>
+          </div>
         </div>
 
         {/* Mobile Navigation. The open panel keeps a ground even when the bar
@@ -127,11 +134,6 @@ export default function Header({
             }`}
           >
             <div className="flex flex-col space-y-4">
-              {onHome ? null : (
-                <Link href="/" className="text-gray-300 hover:text-white transition-colors">
-                  Home
-                </Link>
-              )}
               <Link href="/goat" className="text-gray-300 hover:text-white transition-colors">
                 GOAT
               </Link>

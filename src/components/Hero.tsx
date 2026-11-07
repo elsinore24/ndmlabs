@@ -1,8 +1,11 @@
 export default function Hero() {
   return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
+    <section className="relative overflow-hidden pt-36 pb-16 sm:pt-44 sm:pb-20">
       {/* Background gradient */}
       <div className="absolute inset-0 bg-gradient-to-br from-black via-gray-900 to-black" />
+
+      {/* Fades into the games section's black so the two read as one page */}
+      <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-b from-transparent to-black" />
 
       {/* Animated background elements */}
       <div className="absolute inset-0">
@@ -39,12 +42,6 @@ export default function Hero() {
         </div>
       </div>
 
-      {/* Scroll indicator */}
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce">
-        <svg className="w-6 h-6 text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-        </svg>
-      </div>
     </section>
   );
 }

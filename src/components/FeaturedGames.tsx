@@ -34,10 +34,10 @@ const games: Game[] = [
 
 export default function FeaturedGames() {
   return (
-    <section id="games" className="py-24 bg-black">
+    <section id="games" className="pt-8 pb-24 bg-black scroll-mt-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
-        <div className="text-center mb-16">
+        <div className="text-center mb-10">
           <h2 className="text-4xl sm:text-5xl font-bold text-white mb-4">
             Our <span className="text-[#00ff88]">Games</span>
           </h2>
