@@ -17,8 +17,7 @@ import NdmLabsMark from "./NdmLabsMark";
 // Genome is a plain <a>, not <Link>: Link would soft-navigate to a route this
 // app does not have and show Next's 404 instead of letting the request reach
 // the proxy, and it strips the trailing slash the Astro site treats as
-// canonical. AlibiGrid is the same: its own repo and Netlify site, proxied in
-// under /alibigrid, and its page needs the trailing slash for its file links.
+// canonical. AlibiGrid lives on its own domain, alibigrid.com.
 //
 // `transparent` drops the bar's own ground entirely, so a page that draws its
 // own backdrop shows through from the ticker down rather than being cut by a
@@ -96,7 +95,7 @@ export default function Header({
             <a href="/genome/proto/profile/" className="text-gray-300 hover:text-white transition-colors">
               Genome
             </a>
-            <a href="/alibigrid/" className="text-gray-300 hover:text-white transition-colors">
+            <a href="https://alibigrid.com/" className="text-gray-300 hover:text-white transition-colors">
               AlibiGrid
             </a>
             <Link href="/#about" className="text-gray-300 hover:text-white transition-colors">
@@ -145,7 +144,7 @@ export default function Header({
               <a href="/genome/proto/profile/" className="text-gray-300 hover:text-white transition-colors">
                 Genome
               </a>
-              <a href="/alibigrid/" className="text-gray-300 hover:text-white transition-colors">
+              <a href="https://alibigrid.com/" className="text-gray-300 hover:text-white transition-colors">
                 AlibiGrid
               </a>
               <Link href="/#about" className="text-gray-300 hover:text-white transition-colors">

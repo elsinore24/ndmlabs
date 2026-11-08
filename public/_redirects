@@ -15,9 +15,8 @@
 /corner/*  https://ndmlabs-corner.netlify.app/corner/:splat  200
 /corner  /corner/  301
 
-# AlibiGrid: same idea, own repo (elsinore24/alibigrid-) and Netlify site.
-# It's plain static files with relative links, so it's served from the site
-# root rather than a base path. The page adds the trailing slash itself,
-# because Netlify serves bare /alibigrid without one.
-/alibigrid/*  https://ndmlabs-alibigrid.netlify.app/:splat  200
-/alibigrid  /alibigrid/  301
+# AlibiGrid moved to its own domain, alibigrid.com (repo elsinore24/alibigrid-,
+# Netlify site ndmlabs-alibigrid). Old links still land on the game: query
+# strings carry over, and browsers keep the #grid-N part across the redirect.
+/alibigrid/*  https://alibigrid.com/:splat  301
+/alibigrid  https://alibigrid.com/  301
