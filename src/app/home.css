@@ -1,0 +1,251 @@
+/* The homepage (design A, "Showtime", 2026-11-08): deep navy, one bright
+   cyan for NDM Labs itself, and each game shown in its own world. Classes
+   are prefixed home- so nothing here reaches the other pages. */
+
+.home {
+  background: #060a14;
+  color: #eef2fb;
+  font-family: var(--font-archivo), system-ui, sans-serif;
+}
+.home a:focus-visible,
+.home button:focus-visible {
+  outline: 3px solid #7fe3f7;
+  outline-offset: 3px;
+}
+
+.home-wrap {
+  max-width: 1320px;
+  margin: 0 auto;
+  padding-left: max(20px, env(safe-area-inset-left));
+  padding-right: max(20px, env(safe-area-inset-right));
+  box-sizing: border-box;
+}
+@media (min-width: 961px) {
+  .home-wrap {
+    padding-left: 40px;
+    padding-right: 40px;
+  }
+}
+
+/* Archivo's width axis: expanded for headings, normal for body text. */
+.home-display {
+  font-weight: 800;
+  font-stretch: 118%;
+  letter-spacing: -0.015em;
+}
+.home-h1 {
+  font-size: clamp(40px, 6.6vw, 98px);
+  line-height: 0.94;
+  font-weight: 800;
+  font-stretch: 112%;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+@media (min-width: 640px) {
+  .home-h1 {
+    font-stretch: 125%;
+  }
+}
+.home-brand {
+  font-family: var(--font-caprasimo), Georgia, serif;
+  font-weight: 400;
+}
+
+.home-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 0 24px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 16px;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: transform 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+.home-btn:hover {
+  transform: translateY(-1px);
+}
+/* This file is unlayered, so it outranks Tailwind's utilities: size
+   variants live here rather than as utility classes on the element. */
+.home-btn-sm {
+  min-height: 44px;
+  padding: 0 20px;
+  font-size: 15px;
+}
+.home-btn-accent {
+  background: #3dd6f5;
+  color: #04121a;
+}
+.home-btn-accent:hover {
+  background: #7fe3f7;
+}
+.home-btn-ghost {
+  color: #eef2fb;
+  border: 1px solid rgba(201, 211, 232, 0.35);
+}
+.home-btn-ghost:hover {
+  color: #ffffff;
+  border-color: #ffffff;
+}
+.home-btn-gold {
+  background: #f4c542;
+  color: #1c1307;
+}
+.home-btn-gold:hover {
+  background: #ffd666;
+}
+
+/* The App Store badge. Its image has light corners; the radius hides them. */
+.home-badge {
+  display: inline-block;
+  line-height: 0;
+  border-radius: 10px;
+}
+.home-badge img {
+  height: 48px;
+  width: auto;
+  border-radius: 10px;
+  display: block;
+}
+
+/* The three games side by side. AlibiGrid starts a little wider (it plays
+   right here); on a pointer device the panel under it widens. */
+.home-trip {
+  display: flex;
+  gap: 14px;
+  height: 600px;
+}
+.home-panel {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  border-radius: 26px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  transition: flex-grow 0.55s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.home-panel.is-lead {
+  flex-grow: 1.55;
+}
+.home-art {
+  position: absolute;
+  inset: 0;
+  transition: transform 0.55s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+@media (hover: hover) {
+  .home-trip:hover .home-panel {
+    flex-grow: 1;
+  }
+  .home-trip .home-panel:hover {
+    flex-grow: 1.9;
+  }
+  .home-panel:hover .home-art {
+    transform: scale(1.04);
+  }
+}
+.home-panel-body {
+  position: relative;
+  padding: 30px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: flex-start;
+}
+@media (max-width: 960px) {
+  .home-trip {
+    flex-direction: column;
+    height: auto;
+  }
+  .home-panel,
+  .home-panel.is-lead {
+    flex: none;
+    height: 480px;
+  }
+  /* Room for the whole board above AlibiGrid's words. */
+  .home-panel.is-lead {
+    height: 600px;
+  }
+  .home-panel-body {
+    padding: 24px;
+  }
+}
+
+.home-sunburst {
+  background-color: #2a1c12;
+  background-image: repeating-conic-gradient(from 0deg at 50% 38%, #2f2016 0deg 9deg, #24180f 9deg 18deg);
+}
+.home-court {
+  background: #0e0a04 url(/home/court.webp) 50% 40% / cover no-repeat;
+}
+.home-space {
+  background-color: #07061a;
+  background-image:
+    radial-gradient(60% 45% at 30% 30%, rgba(122, 76, 255, 0.55), transparent 70%),
+    radial-gradient(50% 40% at 75% 60%, rgba(40, 120, 255, 0.45), transparent 70%),
+    radial-gradient(40% 30% at 55% 85%, rgba(255, 80, 190, 0.28), transparent 70%);
+}
+.home-shade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(6, 10, 20, 0) 30%, rgba(6, 10, 20, 0.82) 66%, rgba(6, 10, 20, 0.96) 100%);
+}
+.home-shade-gold {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(10, 7, 0, 0) 25%, rgba(14, 10, 2, 0.84) 64%, rgba(12, 9, 2, 0.97) 100%);
+}
+
+/* One section per game: words beside a picture, alternating sides. */
+.home-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 36px;
+  align-items: center;
+}
+@media (min-width: 961px) {
+  .home-row {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 72px;
+  }
+  .home-row.is-flip .home-media {
+    order: -1;
+  }
+}
+
+.home-ticks {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.home-ticks li {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  color: #c9d3e8;
+  font-size: 17px;
+  line-height: 1.5;
+}
+.home-ticks svg {
+  flex: none;
+  margin-top: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-panel,
+  .home-art,
+  .home-btn {
+    transition: none;
+  }
+  .home-panel:hover .home-art,
+  .home-btn:hover {
+    transform: none;
+  }
+}
