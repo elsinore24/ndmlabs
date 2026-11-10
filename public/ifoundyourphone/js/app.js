@@ -20,6 +20,12 @@
   let CASE = firstCase();
   const key = () => PREFIX + "phone-" + CASE.id;
 
+  // Which body and system look to draw. A phone can name its own model in phones.js;
+  // adding ?model=punch (or pill, button) to the address previews another.
+  const MODELS = ["pill", "punch", "button"];
+  const askedModel = new URLSearchParams(location.search).get("model");
+  const model = () => (MODELS.includes(askedModel) ? askedModel : MODELS.includes(CASE.model) ? CASE.model : "pill");
+
   /* ---------- State ---------- */
   // log: what each 1% went on, in order ({k:"app",id} or {k:"miss"}).
   const fresh = () => ({ v: 1, view: "lock", sub: null, battery: MAX, opened: [], names: [], log: [], status: "playing", revived: false, revealed: false, reading: false, fired: [] });
@@ -66,14 +72,18 @@
     missed: line('<path d="M17 7L8 16M8 9.500V16h6.500"/>'),
     out: line('<path d="M7 17l9-9M16 14.500V8H9.500"/>'),
     declined: line('<circle cx="12" cy="12" r="7"/><path d="M7.200 7.200l9.600 9.600"/>'),
+    arrow: line('<path d="M19 12H5.500M11 6l-6 6 6 6"/>'),
+    fwd: line('<path d="M9.500 5.500L16 12l-6.500 6.500"/>'),
+    note: line('<path d="M7 3.500h7.500L18 7v13.500H7z"/><path d="M10 11.500h5M10 15h5"/>'),
+    image: line('<rect x="3.500" y="5" width="17" height="14" rx="2.500"/><circle cx="9" cy="10" r="1.600"/><path d="M4.500 17.500l5-4.500 3.500 3 2.500-2 4 3.500"/>'),
     bolt: '<path fill="currentColor" d="M13 3L6 13.500h5L10 21l8-11h-5.500z"/>',
   };
   const TILE = {
     phone: `<span class="tile t-phone">${svg(G.phone)}</span>`,
     messages: `<span class="tile t-messages">${svg(G.bubble)}</span>`,
     search: `<span class="tile t-search">${svg(G.search)}</span>`,
-    notes: `<span class="tile t-notes"></span>`,
-    photos: `<span class="tile t-photos">${svg(G.photo)}</span>`,
+    get notes() { return model() === "punch" ? `<span class="tile t-notes">${svg(G.note)}</span>` : `<span class="tile t-notes"></span>`; },
+    get photos() { return `<span class="tile t-photos">${svg(model() === "punch" ? G.image : G.photo)}</span>`; },
     get calendar() { return `<span class="tile t-cal"><b>${CASE.cal.dow}</b><em>${CASE.cal.day}</em></span>`; },
     game: `<span class="tile t-game">${svg(G.found)}</span>`,
     clock: `<span class="tile t-clock">${svg(G.clock)}</span>`,
@@ -86,30 +96,57 @@
     return `<svg width="27" height="13" viewBox="0 0 27 13" aria-hidden="true"><rect x="0.500" y="0.500" width="23" height="12" rx="3.600" fill="none" stroke="currentColor" opacity="0.45"/><rect x="25" y="4" width="1.600" height="5" rx="0.800" fill="currentColor" opacity="0.5"/><rect x="2" y="2" width="${w}" height="9" rx="2.200" fill="${col}"/></svg>`;
   }
 
-  /* ---------- Screens ---------- */
-  function statusBar() {
-    const done = over();
-    return `<div class="sb"><span>${CASE.time}</span><span class="sb-right">${SIGNAL}
-      <span class="sb-pct${done ? " ok" : ""}">${done ? "6%" : state.battery + "%"}</span>${battery(done)}</span></div>`;
+  // Status bar parts the other two models use.
+  const WEDGE = '<svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M13 1v12H1z" fill="currentColor" opacity="0.3"/><path d="M9.500 4.500V13H1z" fill="currentColor"/></svg>';
+  const DOTS = '<svg width="34" height="6" viewBox="0 0 34 6" aria-hidden="true"><g fill="currentColor"><circle cx="3" cy="3" r="2.600"/><circle cx="10" cy="3" r="2.600"/><circle cx="17" cy="3" r="2.600"/><circle cx="24" cy="3" r="2.600"/></g><circle cx="31" cy="3" r="2.100" fill="none" stroke="currentColor" stroke-width="1"/></svg>';
+  const WIFI = '<svg width="15" height="11" viewBox="0 0 15 11" fill="none" stroke="currentColor" stroke-width="1.600" stroke-linecap="round" aria-hidden="true"><path d="M1.200 3.800a9 9 0 0 1 12.600 0M3.500 6.200a5.700 5.700 0 0 1 8 0"/><circle cx="7.500" cy="9" r="1" fill="currentColor" stroke="none"/></svg>';
+  function cell(done) {
+    const h = done ? 3.6 : Math.max(1.2, 1 + state.battery * 0.5);
+    const col = done ? "var(--ok)" : "var(--accent)";
+    return `<svg width="9" height="15" viewBox="0 0 9 15" aria-hidden="true"><rect x="3" y="0" width="3" height="1.600" rx="0.600" fill="currentColor" opacity="0.5"/><rect x="0.600" y="1.800" width="7.800" height="12.600" rx="1.800" fill="none" stroke="currentColor" stroke-width="1.200" opacity="0.5"/><rect x="2" y="${(13 - h).toFixed(1)}" width="5" height="${h.toFixed(1)}" rx="0.800" fill="${col}"/></svg>`;
   }
 
+  /* ---------- Screens ---------- */
+  function statusBar() {
+    const done = over(), m = model();
+    const pct = `<span class="sb-pct${done ? " ok" : ""}">${done ? "6%" : state.battery + "%"}</span>`;
+    if (m === "punch") return `<div class="sb"><span class="sb-time">${CASE.time}</span><span class="sb-right">${WEDGE}${pct}${cell(done)}</span></div>`;
+    if (m === "button") return `<div class="sb"><span class="sb-left">${DOTS}${WIFI}</span><span class="sb-time">${CASE.time}</span><span class="sb-right">${pct}${battery(done)}</span></div>`;
+    return `<div class="sb"><span class="sb-time">${CASE.time}</span><span class="sb-right">${SIGNAL}${pct}${battery(done)}</span></div>`;
+  }
+
+  // The one game control. Each model puts it where its own system would.
+  function actionBtn() {
+    if (playing()) return `<button type="button" class="pill" data-act="name">${svg(G.person, 18)}Name the owner</button>`;
+    if (state.revealed) return `<button type="button" class="pill" data-act="story">Read the story</button>`;
+    return "";
+  }
   function bottomBar() {
     if (playing() && state.view === "lock") return "";
-    if (playing()) return `<div class="bb"><button type="button" class="pill" data-act="name">${svg(G.person, 18)}Name the owner</button></div>`;
-    if (state.revealed) return `<div class="bb"><button type="button" class="pill" data-act="story">Read the story</button></div>`;
-    return `<div class="bb"></div>`;
+    if (model() === "punch" && state.view === "home") return "";
+    return `<div class="bb">${actionBtn()}</div>`;
   }
 
   const issuesHTML = () => CASES.map((c) => `<button type="button" class="issue" data-case="${c.id}"${c === CASE ? ' aria-current="true"' : ""}>${no(c.id)}</button>`).join("");
+
+  function lockTime() {
+    if (model() !== "punch") return `<p class="lock-time">${CASE.time}</p>`;
+    const [h, m] = CASE.time.split(":");
+    return `<p class="lock-time"><span class="sr-only">${CASE.time}</span><span aria-hidden="true">${h.padStart(2, "0")}</span><span aria-hidden="true">${m}</span></p>`;
+  }
+  function lockHint() {
+    if (model() === "button") return `<button type="button" class="swipe" data-act="unlock"><span class="slide">${svg(G.fwd, 20)}slide to open</span></button>`;
+    return `<button type="button" class="swipe" data-act="unlock">${svg(G.up, 22)}Swipe up to open</button>`;
+  }
 
   function lockHTML() {
     const items = CASE.lock.map((n) => `<li class="notif">${TILE[n.tile]}<span class="n-main"><b>${esc(n.title)}</b><span>${esc(n.text)}</span></span><span class="n-when">${n.when}</span></li>`).join("");
     return `<div class="lock" id="lock">
       <div class="issues lock-issues" role="navigation" aria-label="Phones">${issuesHTML()}</div>
       <p class="lock-date">${CASE.dateLine}</p>
-      <p class="lock-time">${CASE.time}</p>
+      ${lockTime()}
       <ul class="notifs">${items}</ul>
-      <button type="button" class="swipe" data-act="unlock">${svg(G.up, 22)}Swipe up to open</button>
+      ${lockHint()}
     </div>`;
   }
 
@@ -122,17 +159,25 @@
       <span class="ico">${TILE[id]}${badge}</span>${labelled ? `<span class="app-name">${APP_LABEL[id]}</span>` : ""}</button>`;
   }
 
+  function searchBar() {
+    const cost = state.opened.includes("search") || over() ? "free to open" : "costs 1 percent to open";
+    return `<button type="button" class="gsearch" data-app="search" aria-label="Search, ${cost}">${svg(G.search, 20)}<span>Search</span></button>`;
+  }
   function homeHTML() {
     const w = CASE.widget;
-    return `<div class="home">
-      <div class="widget"><div class="w-date"><span>${w.dow}</span><b>${w.day}</b></div>
-        <div class="w-ev"><b>${w.title}</b><span>${w.time}</span><span>${w.where}</span><span>${w.note}</span></div></div>
+    const widget = `<div class="widget"><div class="w-date"><span>${w.dow}</span><b>${w.day}</b></div>
+        <div class="w-ev"><b>${w.title}</b><span>${w.time}</span><span>${w.where}</span><span>${w.note}</span></div></div>`;
+    if (model() === "punch") return `<div class="home">${widget}
+      <div class="grid">${appButton("phone", true)}${appButton("messages", true)}${appButton("notes", true)}${appButton("photos", true)}</div>
+      <div class="home-row">${searchBar()}${actionBtn()}</div>
+    </div>`;
+    return `<div class="home">${widget}
       <div class="grid">${appButton("notes", true)}${appButton("photos", true)}</div>
       <div class="dock">${appButton("phone")}${appButton("messages")}${appButton("search")}</div>
     </div>`;
   }
 
-  const nav = (title, back, act) => `<div class="nav"><button type="button" class="nav-back" data-act="${act}">${svg(G.back, 22)}<span>${back}</span></button><h2 id="app-title" tabindex="-1">${title}</h2></div>`;
+  const nav = (title, back, act) => `<div class="nav"><button type="button" class="nav-back" data-act="${act}">${svg(model() === "punch" ? G.arrow : G.back, 22)}<span>${back}</span></button><h2 id="app-title" tabindex="-1">${title}</h2></div>`;
   const bodyWrap = (inner) => `<div class="body" id="app-body">${inner}</div>`;
 
   function messagesHTML() {
@@ -196,6 +241,7 @@
     const os = $("#os");
     if (state.status === "dead" && !state.revived) {
       os.className = "os dead";
+      os.dataset.view = "dead";
       os.innerHTML = `<div class="shut${flags.died ? " just" : ""}"><span class="spinner" aria-hidden="true"></span>
         <div class="shut-after"><svg width="58" height="30" viewBox="0 0 58 30" fill="none" aria-hidden="true"><rect x="1.500" y="1.500" width="49" height="27" rx="7" stroke="currentColor" stroke-width="2.500"/><rect x="53.500" y="10" width="3.500" height="10" rx="1.750" fill="currentColor"/><rect x="6" y="6" width="4" height="18" rx="2" fill="#ff453a"/></svg>
         <p>No battery</p><button type="button" class="charge" data-act="charge">Charge it</button></div></div>`;
@@ -207,6 +253,7 @@
     const light = state.view !== "lock" && state.view !== "home";
     const dim = playing() && state.battery === 0;
     const banner = flags.banner ? `<div class="banner" role="status">${TILE.game}<span class="n-main"><b>That’s right.</b><span>This is ${esc(CASE.owner)}’s phone.</span></span></div>` : "";
+    os.dataset.view = state.view;
     os.className = "os" + (light ? " light" : "") + (dim ? " dim" : "") + (flags.wake ? " wake" : "");
     os.innerHTML = statusBar() + `<div class="view${flags.enter ? " enter" : ""}">${VIEWS[state.view]()}</div>` + bottomBar() + banner;
     if (keep && $("#app-body")) $("#app-body").scrollTop = keep;
@@ -286,6 +333,7 @@
   }
 
   function render() {
+    $("#device").dataset.model = model();
     renderOS();
     renderStory();
     $("#issues").innerHTML = issuesHTML();
@@ -513,11 +561,22 @@
   });
 
   // A real swipe up on the lock screen opens it too.
-  let swipeY = null;
-  screen.addEventListener("pointerdown", (e) => { swipeY = e.target.closest("#lock") ? e.clientY : null; });
+  let swipeY = null, swipeX = 0;
+  screen.addEventListener("pointerdown", (e) => { swipeY = e.target.closest("#lock") ? e.clientY : null; swipeX = e.clientX; });
   screen.addEventListener("pointerup", (e) => {
-    if (swipeY != null && swipeY - e.clientY > 40 && state.view === "lock") go("home");
+    const up = swipeY != null && swipeY - e.clientY > 40;
+    const across = swipeY != null && model() === "button" && e.clientX - swipeX > 40;
+    if ((up || across) && state.view === "lock") go("home");
     swipeY = null;
+  });
+
+  // The old model has a real home button under the screen.
+  $("#home-btn").addEventListener("click", () => {
+    if (!$("#call").hidden) { endCall(); return; }
+    if (!$("#alert").hidden) { hideAlert(); return; }
+    if (!$("#sheet").hidden) { closeSheet(); return; }
+    if (state.status === "dead" && !state.revived) return;
+    if (state.view !== "home") go("home");
   });
 
   document.addEventListener("keydown", (e) => {
