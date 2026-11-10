@@ -1,7 +1,6 @@
 import type { ReactNode } from "react";
 import StoreLink from "../StoreLink";
 import LiveKings from "./LiveKings";
-import Sky from "./Sky";
 import { ALIBIGRID_URL, ALL_TIME_5_URL, STARSCAPES_URL } from "./games";
 
 /** One section per game: what it is, why it's fun, and the way in. */
@@ -106,15 +105,14 @@ export default function GameSections() {
               <img src="/appstore_button.png" alt="Download Starscapes on the App Store" width={163} height={48} />
             </StoreLink>
           </Copy>
-          <div className="home-media home-space relative flex min-h-[420px] sm:min-h-[500px] items-center justify-center overflow-hidden rounded-[22px] border border-[#9682ff]/20 shadow-[0_40px_100px_rgba(0,0,0,0.5)]">
-            <Sky className="absolute inset-0 h-full w-full" />
+          <div className="home-media home-space relative aspect-square overflow-hidden rounded-[22px] border border-[#9682ff]/20 shadow-[0_40px_100px_rgba(0,0,0,0.5)]">
             <img
-              src="/home/starscapes-icon.webp"
+              src="/home/starscapes-art.jpg"
               alt="The Starscapes app icon"
-              width={512}
-              height={512}
+              width={872}
+              height={872}
               loading="lazy"
-              className="relative h-[200px] w-[200px] sm:h-[240px] sm:w-[240px] rounded-[46px] sm:rounded-[54px] shadow-[0_40px_110px_rgba(110,80,255,0.6)]"
+              className="absolute inset-0 h-full w-full object-cover"
             />
           </div>
         </div>
