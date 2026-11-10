@@ -189,6 +189,35 @@
     radial-gradient(50% 40% at 75% 60%, rgba(40, 120, 255, 0.45), transparent 70%),
     radial-gradient(40% 30% at 55% 85%, rgba(255, 80, 190, 0.28), transparent 70%);
 }
+/* Starscapes' panel: the app's artwork runs edge to edge across the top and stops short of
+   the words, so the four letters stay clear of them. A narrow panel shows the whole picture;
+   a wider one crops it top and bottom. It fades into the sky below. */
+.home-starart {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+  max-height: calc(100% - 200px);
+  object-fit: cover;
+  object-position: 50% 55%;
+  -webkit-mask-image: linear-gradient(#000 90%, transparent);
+  mask-image: linear-gradient(#000 90%, transparent);
+}
+/* On a phone the words sit higher, so the picture is cropped from the top instead. */
+@media (max-width: 480px) {
+  .home-starart {
+    object-position: 50% 80%;
+  }
+}
+/* Stacked and wide (a tablet): the picture fills the whole panel behind the words. */
+@media (min-width: 481px) and (max-width: 960px) {
+  .home-starart {
+    max-height: 100%;
+    object-position: 50% 30%;
+  }
+}
 .home-shade {
   position: absolute;
   inset: 0;

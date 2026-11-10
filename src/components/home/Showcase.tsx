@@ -1,6 +1,5 @@
 import StoreLink from "../StoreLink";
 import AllTimeLockup from "./AllTimeLockup";
-import Sky from "./Sky";
 import { ALIBIGRID_URL, ALL_TIME_5_URL, STARSCAPES_URL } from "./games";
 
 /** The headline, then the three games side by side, each in its own world. */
@@ -74,15 +73,8 @@ export default function Showcase() {
           </article>
 
           <article className="home-panel border border-[#9682ff]/20">
-            <div className="home-art home-space flex justify-center pt-12 sm:pt-[70px]" aria-hidden="true">
-              <Sky className="absolute inset-0 h-full w-full" />
-              <img
-                src="/home/starscapes-icon.webp"
-                alt=""
-                width={512}
-                height={512}
-                className="relative w-[160px] h-[160px] sm:w-[190px] sm:h-[190px] rounded-[38px] sm:rounded-[44px] shadow-[0_30px_90px_rgba(110,80,255,0.55)]"
-              />
+            <div className="home-art home-space" aria-hidden="true">
+              <img src="/home/starscapes-art.jpg" alt="" width={872} height={872} className="home-starart" />
             </div>
             <div className="home-shade" aria-hidden="true" />
             <div className="home-panel-body">
