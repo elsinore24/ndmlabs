@@ -239,6 +239,8 @@ p { margin: 0; }
 .t-cal b { font-size: calc(var(--s) * 0.2); font-weight: 700; color: var(--missed); }
 .t-cal em { font-style: normal; font-size: calc(var(--s) * 0.5); font-weight: 300; }
 .t-game { background: #000; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.28); }
+.t-clock { background: #1c1c1e; }
+.t-cup { background: linear-gradient(#f08a3c, #dd5f1c); }
 
 /* Apps */
 .nav { flex: none; position: relative; display: flex; align-items: center; justify-content: center; height: 44px; border-bottom: 1px solid var(--app-line); }
@@ -274,6 +276,15 @@ button.row:hover { background: var(--app-fill); }
 .bub.them { align-self: flex-start; background: var(--them); }
 .bub.me { align-self: flex-end; background: var(--me); color: #fff; }
 .receipt { align-self: flex-end; padding: 2px 4px 0; font-size: 12px; color: var(--app-soft); }
+
+/* An unsent draft, and the three words the keyboard thinks come next */
+.composer { margin: 16px var(--gr) 0 var(--gl); }
+.draft { min-height: 38px; padding: 8px 14px; border: 1px solid var(--app-line); border-radius: 19px; font-size: 16px; line-height: 1.3; }
+.caret { display: inline-block; width: 2px; height: 1.1em; margin-left: 1px; vertical-align: -0.18em; background: var(--link); animation: blink 1.1s steps(1) infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+.kb-sugg { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 8px; border-radius: 10px; background: var(--app-fill); font-size: 15px; text-align: center; }
+.kb-sugg span:not(.sr-only) { padding: 9px 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kb-sugg span:not(.sr-only) + span:not(.sr-only) { box-shadow: -1px 0 0 var(--app-line); }
 
 .note-date { padding: 12px var(--gr) 0 var(--gl); text-align: center; font-size: 13px; color: var(--app-soft); }
 .note { padding: 8px var(--gr) 0 var(--gl); }
@@ -323,6 +334,35 @@ button.row:hover { background: var(--app-fill); }
   pointer-events: none;
 }
 .banner .tile { --s: 38px; }
+
+/* A message arriving while you snoop */
+.buzz {
+  position: absolute; left: 8px; right: 8px; top: 54px; z-index: 9;
+  display: grid; grid-template-columns: 38px minmax(0, 1fr) auto; column-gap: 11px; align-items: center;
+  padding: 11px 14px 11px 12px;
+  border-radius: 22px;
+  background: rgba(30, 30, 33, 0.94); color: #fff;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+  animation: drop 0.32s ease-out both;
+}
+.buzz .tile { --s: 38px; }
+@keyframes drop { from { opacity: 0; transform: translateY(-24px); } to { opacity: 1; transform: none; } }
+
+/* An incoming call. Both buttons decline: it is not your phone. */
+.call {
+  position: absolute; inset: 0; z-index: 11;
+  display: flex; flex-direction: column; align-items: center;
+  padding: 104px 24px 60px;
+  background: linear-gradient(#2a3a36, #0c1110); color: #fff; text-align: center;
+  animation: fadein 0.25s ease both;
+}
+.call h2 { margin: 0; font-size: 34px; font-weight: 400; line-height: 1.15; text-wrap: balance; }
+.call-sub { margin-top: 6px; font-size: 17px; opacity: 0.7; }
+.call-btns { margin-top: auto; width: 100%; display: flex; justify-content: space-around; }
+.call-btns button { display: grid; justify-items: center; gap: 8px; padding: 0; border: 0; background: transparent; color: #fff; font-size: 14px; cursor: pointer; }
+.call-btns i { display: grid; place-items: center; width: 68px; height: 68px; border-radius: 50%; background: #eb4e3d; }
+.call-btns svg { width: 32px; height: 32px; transform: rotate(135deg); }
 @keyframes banner { 0% { opacity: 0; transform: translateY(-24px); } 9%, 86% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translateY(-12px); } }
 
 .alert { position: absolute; inset: 0; z-index: 12; display: grid; place-items: center; padding: 0 44px; background: rgba(0, 0, 0, 0.42); }
@@ -388,6 +428,22 @@ button.row:hover { background: var(--app-fill); }
 .story:focus { outline: none; }
 .kicker { font-size: 13px; font-weight: 700; }
 .result { font-size: 14px; font-weight: 600; color: #c1271b; }
+
+/* The owner's reply, at the top of the reveal */
+.reply { display: flex; flex-direction: column; gap: 3px; margin: 16px 0 6px; padding: 14px 14px 16px; border: 1px solid var(--paper-rule); border-radius: 18px; background: #fff; }
+.reply-head { display: flex; flex-direction: column; align-items: center; gap: 4px; margin-bottom: 8px; padding-bottom: 10px; border-bottom: 1px solid var(--paper-rule); font-size: 12px; }
+.reply-head .avatar { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(#b3b7c2, #868b98); color: #fff; font-size: 18px; font-weight: 600; }
+.reply .bub { max-width: 82%; }
+.reply .bub.you { align-self: flex-end; background: #0a84ff; color: #fff; }
+.reply .bub.them { align-self: flex-start; background: #e9e9ec; color: #111114; }
+.reply .receipt { color: var(--paper-soft); }
+.undelivered { align-self: flex-end; padding: 2px 4px 0; font-size: 12px; font-weight: 600; color: #d93025; }
+.reply-note { align-self: center; margin-top: 10px; font-size: 13px; color: var(--paper-soft); }
+.reply.fresh .bub.them { animation: bubin 0.35s ease-out both; animation-delay: calc(0.7s + var(--i) * 0.9s); }
+@keyframes bubin { from { opacity: 0; transform: translateY(8px) scale(0.96); } to { opacity: 1; transform: none; } }
+.parody { margin-top: 10px; padding: 10px 12px; border-radius: 8px; background: var(--paper-fill); font-size: 13.5px; line-height: 1.45; }
+.credits { margin-top: 10px; font-size: 12.5px; line-height: 1.5; color: var(--paper-soft); }
+.credits a { color: inherit; text-underline-offset: 2px; }
 .story h1 { margin: 16px 0 10px; font-family: var(--serif); font-weight: 500; font-size: 40px; line-height: 1.05; letter-spacing: -0.012em; text-wrap: balance; }
 .dateline { padding-bottom: 18px; border-bottom: 1px solid var(--paper-rule); font-size: 14px; color: var(--paper-soft); }
 .story figure { margin: 22px 0; }
@@ -421,7 +477,7 @@ button.row:hover { background: var(--app-fill); }
   .device { width: 100%; height: 100%; aspect-ratio: auto; padding: 0; border-radius: 0; background: #000; box-shadow: none; }
   .screen { border-radius: 0; }
   .sb { height: 42px; padding-top: 6px; }
-  .banner { top: 44px; }
+  .banner, .buzz { top: 44px; }
   .sheet-card { margin-top: 38px; }
   .story { display: none; max-width: none; min-height: 100%; padding: 26px var(--gr) 36px var(--gl); border-radius: 0; box-shadow: none; }
   .stage.reading { height: auto; min-height: 100%; background: var(--paper); }
@@ -436,5 +492,5 @@ button.row:hover { background: var(--app-fill); }
   .os, .os.wake, .view.enter, .swipe svg, .alert-card, .sheet-card, .shut.just .shut-after { animation: none; transition: none; }
   .shut.just .spinner { display: none; }
   .toast.show { animation: none; opacity: 1; transform: translate(-50%, 0); }
-  .banner { animation: none; }
+  .banner, .buzz, .call, .caret, .reply.fresh .bub.them { animation: none; }
 }

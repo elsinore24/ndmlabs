@@ -22,17 +22,18 @@
 
   /* ---------- State ---------- */
   // log: what each 1% went on, in order ({k:"app",id} or {k:"miss"}).
-  const fresh = () => ({ v: 1, view: "lock", sub: null, battery: MAX, opened: [], names: [], log: [], status: "playing", revived: false, revealed: false, reading: false });
+  const fresh = () => ({ v: 1, view: "lock", sub: null, battery: MAX, opened: [], names: [], log: [], status: "playing", revived: false, revealed: false, reading: false, fired: [] });
   let state = load();
-  let flags = { enter: false, banner: false, died: false, wake: true };
+  let flags = { enter: false, banner: false, died: false, wake: true, fresh: false };
   let lastKey = "";
   let chosen = null;
-  let revealTimer = 0, alertTimer = 0, toastTimer = 0;
+  let revealTimer = 0, alertTimer = 0, toastTimer = 0, liveTimer = 0, buzzTimer = 0, callTimer = 0;
 
   function load() {
     let s = null;
     try { const j = JSON.parse(localStorage.getItem(key())); if (j && j.v === 1) s = j; } catch (_) {}
     if (!s) return fresh();
+    if (!s.fired) s.fired = [];
     if (s.status !== "playing" && !s.revealed) { s.revealed = true; s.reading = true; }
     return s;
   }
@@ -56,6 +57,8 @@
     search: line('<circle cx="11" cy="11" r="6"/><path d="M15.6 15.6l4.4 4.4"/>'),
     photo: '<circle cx="8.3" cy="8.8" r="2.3" fill="#f0b23e"/><path d="M2.5 19l6-6.5 3.6 3.6 3.6-4.6L21.5 19z" fill="#5d9bd6"/>',
     found: '<g fill="none" stroke-width="1.7" stroke-linecap="round"><rect x="7.5" y="3.500" width="9" height="17" rx="2.300" stroke="#fff"/><path d="M10.800 17.200h2.400" stroke="#ff453a"/></g>',
+    cup: '<path fill="currentColor" d="M6.500 5h11v1.800h-11z"/><path fill="currentColor" d="M7.300 8.300h9.400l-.900 10.500a1.700 1.700 0 0 1-1.700 1.600h-4.200a1.700 1.700 0 0 1-1.700-1.600z"/>',
+    in: line('<path d="M17 7L8 16M8 9.500V16h6.500"/>'),
     back: '<g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 5.500L8 12l6.500 6.500"/></g>',
     up: line('<path d="M6 14.500l6-6 6 6"/>'),
     person: line('<circle cx="12" cy="8.800" r="3.300"/><path d="M5.500 19c.900-3.300 3.400-5 6.500-5s5.600 1.700 6.500 5"/>'),
@@ -73,6 +76,8 @@
     photos: `<span class="tile t-photos">${svg(G.photo)}</span>`,
     get calendar() { return `<span class="tile t-cal"><b>${CASE.cal.dow}</b><em>${CASE.cal.day}</em></span>`; },
     game: `<span class="tile t-game">${svg(G.found)}</span>`,
+    clock: `<span class="tile t-clock">${svg(G.clock)}</span>`,
+    cup: `<span class="tile t-cup">${svg(G.cup)}</span>`,
   };
   const SIGNAL = '<svg width="18" height="12" viewBox="0 0 18 12" fill="currentColor" aria-hidden="true"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="5.500" width="3" height="6.500" rx="1"/><rect x="10" y="3" width="3" height="9" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1" opacity="0.35"/></svg>';
   function battery(done) {
@@ -136,7 +141,9 @@
       const body = (t.sysnote ? `<p class="sysnote">${esc(t.sysnote)}</p>` : "") +
         t.msgs.map((m) => m.stamp ? `<p class="stamp">${esc(m.stamp)}</p>` : `<p class="bub ${m.me ? "me" : "them"}"><span class="sr-only">${m.me ? "Owner: " : esc(t.name) + ": "}</span>${esc(m.t)}</p>`).join("") +
         (t.receipt ? `<p class="receipt">${esc(t.receipt)}</p>` : "");
-      return nav(esc(t.name), "Back", "up") + bodyWrap(`<div class="thread">${body}</div>`);
+      const draft = t.draft ? `<div class="composer"><p class="draft"><span class="sr-only">Unsent draft: </span>${esc(t.draft.text)}<i class="caret" aria-hidden="true"></i></p>
+        <p class="kb-sugg"><span class="sr-only">The keyboard suggests: </span>${t.draft.sugg.map((w) => `<span>${esc(w)}</span>`).join("")}</p></div>` : "";
+      return nav(esc(t.name), "Back", "up") + bodyWrap(`<div class="thread">${body}</div>${draft}`);
     }
     const rows = CASE.threads.map((t, i) => {
       const last = t.msgs[t.msgs.length - 1];
@@ -208,6 +215,35 @@
   }
 
   /* ---------- The reveal ---------- */
+  // What the owner texts back when you return the phone. It depends on how the game went:
+  // battery left, any wrong names, and which apps were opened.
+  function ownerReply() {
+    const r = CASE.reply, b = state.battery;
+    if (!r) return null;
+    if (state.status !== "won") return { dead: true, lines: [], quote: "Not delivered." };
+    const lines = [r.open[b] || r.open[3]];
+    const wrong = state.names.find((n) => r.guessed && r.guessed[n]);
+    const special = wrong ? r.guessed[wrong] : state.names.length ? r.misses[Math.min(state.names.length, 3)] : null;
+    if (special) lines.push(special);
+    const apps = state.opened;
+    const saw = apps.length ? r.saw[apps[apps.length - 1]] : null;
+    if (saw) lines.push(saw);
+    if (apps.length >= 3 && lines.length < 3) lines.push(r.saw[apps[0]]);
+    lines.push(r.close[(b + state.names.length * 2 + apps.length) % r.close.length]);
+    return { dead: false, lines, quote: special || saw || lines[0] };
+  }
+
+  function replyHTML() {
+    const rep = ownerReply();
+    if (!rep) return "";
+    const first = CASE.owner.split(" ")[0];
+    const head = `<div class="reply-head"><span class="avatar" aria-hidden="true">${esc(CASE.owner[0])}</span><b>${esc(CASE.owner)}</b></div>`;
+    const you = `<p class="bub you"><span class="sr-only">You: </span>${esc(CASE.reply.you)}</p>`;
+    const cls = "reply" + (flags.fresh ? " fresh" : "");
+    if (rep.dead) return `<div class="${cls}">${head}${you}<p class="undelivered">Not Delivered</p><p class="reply-note">The phone died before it could ring.</p></div>`;
+    return `<div class="${cls}">${head}${you}<p class="receipt">Delivered</p>${rep.lines.map((t, i) => `<p class="bub them" style="--i:${i}"><span class="sr-only">${esc(first)}: </span>${esc(t)}</p>`).join("")}</div>`;
+  }
+
   function shareText() {
     const b = state.battery;
     const bar = "■".repeat(b) + "□".repeat(MAX - b);
@@ -215,25 +251,35 @@
     const miss = state.log.filter((e) => e.k === "miss").length;
     const spent = `${apps} app${apps === 1 ? "" : "s"} opened, ${miss} wrong name${miss === 1 ? "" : "s"}`;
     const head = `I Found Your Phone ${no(CASE.id)}`;
-    if (state.status === "won") return [head, `${bar} ${b}% left`, spent, SITE].join("\n");
-    return [head, `${bar} the phone died`, spent, SITE].join("\n");
+    const rep = ownerReply();
+    const quote = rep ? (rep.dead ? "Not delivered." : `They texted back: “${rep.quote}”`) : null;
+    const score = state.status === "won" ? `${bar} ${b}% left` : `${bar} the phone died`;
+    return [head, score, spent, quote, SITE].filter(Boolean).join("\n");
   }
 
   function renderStory() {
     const el = $("#story");
     el.hidden = !state.revealed;
-    if (!state.revealed) { el.innerHTML = ""; return; }
+    if (!state.revealed) { el.innerHTML = ""; el.dataset.k = ""; return; }
+    // Leave the page alone unless the result changed, so the reply does not replay.
+    const k = [CASE.id, state.status, state.battery, state.names.length, state.opened.length].join(":");
+    if (el.dataset.k === k) return;
+    el.dataset.k = k;
     const s = CASE.story, b = state.battery;
     const result = state.status === "won" ? (b > 0 ? `You named the owner with ${b}% battery left.` : "You named the owner at 0%, just before it died.") : "The phone died before you named the owner.";
     const others = CASES.filter((c) => c !== CASE).map((c) => `<button type="button" class="sbtn ghost" data-case="${c.id}">Play ${no(c.id)}</button>`).join("");
     const fig = (f, cls) => `<figure${cls ? ` class="${cls}"` : ""}><img src="${f.src}" width="${f.w}" height="${f.h}" alt="${esc(f.alt)}"><figcaption>${esc(f.cap)}</figcaption></figure>`;
+    const credits = s.credits ? `<p class="credits">Photographs: ${s.credits.map((c) => `<a href="${esc(c.url)}" rel="noopener">${esc(c.what)}</a> by ${esc(c.by)} (${esc(c.lic)})`).join("; ")}. ${esc(s.creditNote || "")}</p>` : "";
     el.innerHTML = `<p class="kicker">I Found Your Phone ${no(CASE.id)}</p>
       <p class="result">${result}</p>
+      ${replyHTML()}
+      ${s.parody ? `<p class="parody">${esc(s.parody)}</p>` : ""}
       <h1>${esc(s.headline)}</h1>
       <p class="dateline">${esc(s.dateline)}</p>
       ${fig(s.lead)}
       <div class="prose"><p>${esc(s.paras[0])}</p><p>${esc(s.paras[1])}</p>${fig(s.side, s.side.wide ? "" : "fig-side")}${s.paras.slice(2).map((p) => `<p>${esc(p)}</p>`).join("")}</div>
       <p class="invented">${esc(s.invented)}</p>
+      ${credits}
       <pre class="share" id="share-text">${esc(shareText())}</pre>
       <div class="story-btns"><button type="button" class="sbtn" id="copy">Copy result</button><button type="button" class="sbtn ghost to-phone" id="to-phone">Back to the phone</button><button type="button" class="sbtn ghost" id="again">Start over</button>${others}<span class="copied" id="copied" aria-live="polite"></span></div>
       <p class="story-credit">A game from <a href="https://ndmlabs.net/">NDMLABS</a></p>`;
@@ -246,7 +292,7 @@
     const st = $("#stage");
     st.classList.toggle("revealed", state.revealed);
     st.classList.toggle("reading", state.revealed && state.reading);
-    flags = { enter: false, banner: false, died: false, wake: false };
+    flags = { enter: false, banner: false, died: false, wake: false, fresh: false };
     save();
   }
 
@@ -296,13 +342,65 @@
       }
     }
     go(id);
+    if (!free) queueLive();
+  }
+
+  /* ---------- The phone keeps getting messages ---------- */
+  // A phone may list `live` events: { at: apps opened so far, kind: "text" | "call", from, text }.
+  // Each fires once, a few seconds after that many apps have been opened.
+  const busy = () => !$("#sheet").hidden || !$("#alert").hidden || !$("#call").hidden || state.view === "lock";
+  function hideLive() {
+    clearTimeout(liveTimer); clearTimeout(buzzTimer); clearTimeout(callTimer);
+    $("#buzz").hidden = true;
+    if (!$("#call").hidden) { $("#call").hidden = true; $("#os").inert = !$("#sheet").hidden || !$("#alert").hidden; }
+  }
+  function queueLive() {
+    clearTimeout(liveTimer);
+    if (!playing() || !CASE.live) return;
+    const i = CASE.live.findIndex((e, k) => e.at <= state.opened.length && !state.fired.includes(k));
+    if (i < 0) return;
+    liveTimer = setTimeout(() => {
+      if (!playing()) return;
+      if (busy()) { queueLive(); return; }
+      const e = CASE.live[i];
+      state.fired.push(i);
+      save();
+      if (e.kind === "call") showCall(e); else showBuzz(e);
+    }, 2600);
+  }
+  function showBuzz(e) {
+    const el = $("#buzz");
+    el.innerHTML = `${TILE.messages}<span class="n-main"><b>${esc(e.from)}</b><span>${esc(e.text)}</span></span><span class="n-when">now</span>`;
+    el.hidden = false;
+    announce(`New message from ${e.from}: ${e.text}`);
+    clearTimeout(buzzTimer);
+    buzzTimer = setTimeout(() => { el.hidden = true; queueLive(); }, 5200);
+  }
+  function showCall(e) {
+    $("#call-name").textContent = e.from;
+    $("#call-sub").textContent = e.sub || "mobile";
+    $("#call").hidden = false;
+    $("#os").inert = true;
+    $("#call").querySelector("button").focus({ preventScroll: true });
+    clearTimeout(callTimer);
+    callTimer = setTimeout(endCall, 14000);
+  }
+  function endCall() {
+    clearTimeout(callTimer);
+    if ($("#call").hidden) return;
+    $("#call").hidden = true;
+    $("#os").inert = !$("#sheet").hidden || !$("#alert").hidden;
+    toast("Call declined");
+    queueLive();
   }
 
   function reveal(ms) {
+    hideLive();
     clearTimeout(revealTimer);
     revealTimer = setTimeout(() => {
       state.revealed = true;
       state.reading = true;
+      flags.fresh = true;
       render();
       const story = $("#story");
       if (narrow()) window.scrollTo(0, 0);
@@ -365,7 +463,7 @@
     shown = chosen || !q ? [] : matches(q);
     if (active >= shown.length) active = -1;
     if (chosen) box.innerHTML = "";
-    else if (!q) box.innerHTML = "<p>Start typing. It could be anyone from history.</p>";
+    else if (!q) box.innerHTML = "<p>Start typing. It could be anyone, living or dead.</p>";
     else if (!shown.length) box.innerHTML = "<p>No one by that name on the list.</p>";
     else box.innerHTML = shown.map(([n, what], k) => `<button type="button" role="option" id="opt-${k}" aria-selected="${k === active}" data-pick="${esc(n)}">${esc(n)}<span>${esc(what)}</span></button>`).join("");
     $("#guess").setAttribute("aria-expanded", String(shown.length > 0));
@@ -424,6 +522,7 @@
 
   document.addEventListener("keydown", (e) => {
     if (e.key !== "Escape") return;
+    if (!$("#call").hidden) { endCall(); return; }
     if (!$("#alert").hidden) { hideAlert(); return; }
     if (!$("#sheet").hidden) { closeSheet(); return; }
     if (state.sub != null) go(state.view);
@@ -431,6 +530,8 @@
   });
 
   $("#sheet-x").addEventListener("click", closeSheet);
+  $("#call").addEventListener("click", (e) => { if (e.target.closest("[data-act=decline]")) endCall(); });
+  $("#buzz").addEventListener("click", () => { $("#buzz").hidden = true; });
   $("#alert-keep").addEventListener("click", hideAlert);
   $("#alert-name").addEventListener("click", openSheet);
 
@@ -472,6 +573,7 @@
 
   function reset() {
     clearTimeout(revealTimer); clearTimeout(alertTimer);
+    hideLive();
     state = fresh();
     flags.wake = true;
     lastKey = "";
@@ -484,6 +586,7 @@
     const next = byId(id);
     if (!next || next === CASE) return;
     clearTimeout(revealTimer); clearTimeout(alertTimer); clearTimeout(toastTimer);
+    hideLive();
     CASE = next;
     state = load();
     flags.wake = true;
@@ -516,4 +619,5 @@
   });
 
   render();
+  queueLive();
 })();
