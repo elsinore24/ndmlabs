@@ -567,7 +567,7 @@ button.row:hover { background: var(--app-fill); }
     radial-gradient(80% 30% at 62% 80%, rgba(255, 172, 112, 0.6), transparent 70%),
     linear-gradient(180deg, #131a3c 0%, #2a2456 36%, #683566 60%, #c6646a 77%, #efa072 92%);
 }
-.device[data-model="punch"] .os::after { content: ""; position: absolute; left: 50%; bottom: 9px; width: 112px; height: 4px; margin-left: -56px; border-radius: 2px; background: currentColor; opacity: 0.45; pointer-events: none; }
+.device[data-model="punch"] .os::after { content: ""; position: absolute; left: 50%; bottom: 9px; width: 112px; height: 4px; margin-left: -56px; border-radius: 2px; background: currentColor; opacity: 0.45; pointer-events: none; z-index: 6; }
 .device[data-model="punch"] .os.light { color-scheme: dark; }
 .device[data-model="punch"] .sb { font-size: 14.500px; font-weight: 500; }
 .device[data-model="punch"] .sb-right { gap: 5px; }
@@ -616,7 +616,10 @@ button.row:hover { background: var(--app-fill); }
 .device[data-model="punch"] .pill, .device[data-model="punch"] .os.light .pill { flex: none; height: 54px; padding: 0 18px 0 15px; border-radius: 17px; background: var(--pop); color: var(--pop-ink); white-space: nowrap; -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: 0 6px 16px rgba(0, 0, 0, 0.38); }
 .device[data-model="punch"] .pill:hover, .device[data-model="punch"] .os.light .pill:hover { background: #ffcba8; }
 .device[data-model="punch"] .bb, .device[data-model="punch"] .os.light .bb { position: absolute; right: var(--gr); bottom: 30px; z-index: 5; height: auto; padding: 0; border: 0; background: none; }
-.device[data-model="punch"] .body { padding-bottom: 104px; }
+/* Screens fade out under the button, so it never sits half across a line of text */
+.device[data-model="punch"] .os.light .bb::before { content: ""; position: absolute; z-index: -1; right: calc(var(--gr) * -1); bottom: -30px; width: 100cqw; height: 128px; background: linear-gradient(rgba(22, 19, 28, 0), var(--app-bg) 58%); pointer-events: none; }
+.device[data-model="punch"] .os.light .bb:empty::before { display: none; }
+.device[data-model="punch"] .body { padding-bottom: 118px; }
 .device[data-model="punch"] .toast { bottom: 100px; }
 
 /* punch: apps */

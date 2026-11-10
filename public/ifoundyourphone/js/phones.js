@@ -10,6 +10,7 @@
   const HENRY = {
     id: 1,
     owner: "Henry VIII",
+    model: "button", // which phone body and system look: pill, punch or button (has not upgraded since 1540)
     time: "6:41",
     dateLine: "Tuesday, 6 January",
     cal: { dow: "TUE", day: "6" },
@@ -194,6 +195,7 @@
   const HOUDINI = {
     id: 2,
     owner: "Harry Houdini",
+    model: "punch", // which phone body and system look: pill, punch or button (the dark one with the moon)
     time: "8:07",
     dateLine: "Sunday, 24 October",
     cal: { dow: "SUN", day: "24" },
@@ -397,6 +399,7 @@
   const BEN = {
     id: 3,
     owner: "Ben Affleck",
+    model: "pill", // which phone body and system look: pill, punch or button (the new one)
     time: "9:41",
     dateLine: "Sunday, 11 February",
     cal: { dow: "SUN", day: "11" },
