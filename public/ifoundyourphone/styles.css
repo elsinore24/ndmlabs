@@ -808,8 +808,8 @@ button.row:hover { background: var(--app-fill); }
 
 
 /* =====================================================================================
-   Mockup: the phone on the floor. On a phone, with ?ground in the address, the found phone
-   first lies where it was lost. "Pick it up" lifts it until it fills the screen, and
+   The phone on the floor. On a phone the found phone first lies where it was lost
+   (?ground=0 in the address turns this off). "Pick it up" lifts it until it fills the screen, and
    "Put it down" drops it back. The stage carries .grounded, and .lifting or .dropping
    while the phone moves. The floor is drawn here, so nothing extra downloads.
    ===================================================================================== */

@@ -26,9 +26,9 @@
   const askedModel = new URLSearchParams(location.search).get("model");
   const model = () => (MODELS.includes(askedModel) ? askedModel : MODELS.includes(CASE.model) ? CASE.model : "pill");
 
-  // Mockup: on a phone, the found phone first lies on the floor where it was lost, and the
-  // player picks it up. Only with ?ground in the address for now.
-  const GROUND = new URLSearchParams(location.search).has("ground");
+  // On a phone, the found phone first lies on the floor where it was lost, and the player
+  // picks it up. ?ground=0 in the address turns this off, to compare with the old start.
+  const GROUND = new URLSearchParams(location.search).get("ground") !== "0";
   let held = false;
   const grounded = () => GROUND && narrow() && !held && !(state.revealed && state.reading);
 
@@ -124,7 +124,7 @@
   }
 
   // The one game control. Each model puts it where its own system would.
-  // The way back to the floor. Only on a phone, and only in the mockup.
+  // The way back to the floor. Only on a phone.
   const putDownBtn = () => (GROUND ? `<button type="button" class="putdown" data-act="putdown">${svg(G.down, 17)}Put it down</button>` : "");
   function actionBtn() {
     if (playing()) return `<button type="button" class="pill" data-act="name">${svg(G.person, 18)}Name the owner</button>`;
