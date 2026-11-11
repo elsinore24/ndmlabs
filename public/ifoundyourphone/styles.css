@@ -893,14 +893,15 @@ button.row:hover { background: var(--app-fill); }
   }
   .ground-top .wordmark { font-size: 15px; white-space: nowrap; text-shadow: 0 1px 10px rgba(0, 0, 0, .7); }
   .ground-issues { gap: 4px; }
-  .ground-issues .issue { min-height: 30px; padding: 4px 9px; font-size: 13px; white-space: nowrap; color: rgba(255, 255, 255, .78); background: rgba(10, 10, 12, .42); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
+  .ground-issues .issue { min-height: 30px; padding: 4px 9px; font-size: 13px; white-space: nowrap; color: rgba(255, 255, 255, .78); background: rgba(12, 12, 14, .66); }
   .ground-issues .issue[aria-current="true"] { background: rgba(255, 255, 255, .92); color: #111114; }
   .ground-card {
     position: absolute; left: 12px; right: 12px; bottom: max(12px, env(safe-area-inset-bottom, 0px));
     padding: 22px 20px 20px;
     border-radius: 30px;
-    background: rgba(14, 14, 16, .7);
-    -webkit-backdrop-filter: blur(22px) saturate(1.4); backdrop-filter: blur(22px) saturate(1.4);
+    /* Solid, not frosted: a live blur here smears over the phone while it moves, and costs a
+       phone's graphics chip the most of anything on this screen. */
+    background: rgba(17, 17, 20, .94);
     box-shadow: 0 24px 60px rgba(0, 0, 0, .5), inset 0 0 0 1px rgba(255, 255, 255, .09);
   }
   .ground-title { margin: 0; font-size: 42px; font-weight: 800; line-height: 1; letter-spacing: -.035em; text-wrap: balance; }
@@ -950,6 +951,48 @@ button.row:hover { background: var(--app-fill); }
   .device[data-model="punch"] .lock-top .putdown { height: 34px; border-radius: 17px; background: rgba(33, 28, 43, .92); box-shadow: none; font-size: 14px; }
 }
 
+/* ---------- The move as a view transition (see move() in app.js) ----------
+   The browser pictures the phone on the floor and the phone in the hand, and glides one into
+   the other. Only pictures move and fade, so it stays smooth however busy the phone's screen is. */
+@media (max-width: 640px) {
+  .ground-on .device { view-transition-name: phone; }
+  .ground-on .ground-card { view-transition-name: ground-card; }
+  .ground-on .ground-top { view-transition-name: ground-top; }
+}
+/* While it runs, the page's own fades and the buzz are off: the transition does the fading */
+html[data-vt] .floor, html[data-vt] .floor-tex, html[data-vt] .ground-card, html[data-vt] .ground-top, html[data-vt] .putdown { transition: none !important; }
+html[data-vt] .stage.grounded .device, html[data-vt] .stage.grounded .screen, html[data-vt] .floor::before { animation: none !important; }
+
+/* The phone: up fast and easing in to land; down with a gentle start and stop */
+html[data-vt="up"]::view-transition-group(phone) { animation-duration: .56s; animation-timing-function: cubic-bezier(.3, .72, .1, 1); }
+html[data-vt="down"]::view-transition-group(phone) { animation-duration: .5s; animation-timing-function: cubic-bezier(.5, 0, .14, 1); }
+/* The picture of the phone on the floor gives way to the live phone early, while it is still
+   small and moving, so what arrives full size is the sharp, live one. */
+html[data-vt="up"]::view-transition-old(phone) { animation: ifyp-out .16s linear .03s both; }
+html[data-vt="up"]::view-transition-new(phone) { animation: ifyp-in .16s linear .03s both; }
+html[data-vt="down"]::view-transition-old(phone) { animation: ifyp-out .12s linear both; }
+html[data-vt="down"]::view-transition-new(phone) { animation: ifyp-in .12s linear both; }
+/* The floor falls away as the phone comes up, and comes back into view as it goes down */
+html[data-vt="up"]::view-transition-old(root) { animation: ifyp-floor-out .4s cubic-bezier(.3, .6, .2, 1) both; }
+html[data-vt="up"]::view-transition-new(root) { animation: ifyp-in .4s linear both; }
+html[data-vt="down"]::view-transition-old(root) { animation: ifyp-out .3s linear both; }
+html[data-vt="down"]::view-transition-new(root) { animation: ifyp-floor-in .5s cubic-bezier(.2, .7, .2, 1) both; }
+/* The panel and the top row slide away and back */
+html[data-vt]::view-transition-group(ground-card), html[data-vt]::view-transition-group(ground-top) { animation-duration: .3s; }
+html[data-vt="up"]::view-transition-old(ground-card) { animation: ifyp-card-out .15s ease both; }
+html[data-vt="down"]::view-transition-new(ground-card) { animation: ifyp-card-in .32s cubic-bezier(.2, .8, .2, 1) .26s both; }
+html[data-vt="up"]::view-transition-old(ground-top) { animation: ifyp-top-out .14s ease both; }
+html[data-vt="down"]::view-transition-new(ground-top) { animation: ifyp-top-in .28s ease .3s both; }
+@keyframes ifyp-out { to { opacity: 0; } }
+@keyframes ifyp-in { from { opacity: 0; } }
+@keyframes ifyp-floor-out { to { opacity: 0; transform: scale(1.14); } }
+@keyframes ifyp-floor-in { from { opacity: 0; transform: scale(1.14); } }
+@keyframes ifyp-card-out { to { opacity: 0; transform: translateY(40px); } }
+@keyframes ifyp-card-in { from { opacity: 0; transform: translateY(40px); } }
+@keyframes ifyp-top-out { to { opacity: 0; transform: translateY(-16px); } }
+@keyframes ifyp-top-in { from { opacity: 0; transform: translateY(-16px); } }
+
+/* ---------- The move for browsers without view transitions ---------- */
 @keyframes lift {
   from { height: var(--g-h); translate: 0 var(--g-ty); rotate: var(--g-rot); scale: var(--g-s); --r: var(--gr-r); box-shadow: var(--sh-ground); }
   34% { height: var(--g-h); translate: 0 calc(var(--g-ty) - 2%); rotate: calc(var(--g-rot) * .55); scale: calc(var(--g-s) * 1.14); --r: var(--gr-r); box-shadow: var(--sh-air); }

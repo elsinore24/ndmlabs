@@ -684,20 +684,32 @@
     };
     dev.addEventListener("animationend", done);
   }
+  // Lifting and setting down. Where the browser can, the move is a view transition: it takes
+  // a picture of the phone before and after and glides one into the other, so the phone's own
+  // page does no work while it moves. Elsewhere the phone itself is animated (animateStage).
+  // ?glide=0 in the address forces that older move, to compare the two on one phone.
+  let moving = false;
+  const noGlide = new URLSearchParams(location.search).get("glide") === "0";
+  const glides = () => !noGlide && typeof document.startViewTransition === "function" && !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  function move(dir, change) {
+    if (!glides()) { animateStage(dir === "up" ? "lifting" : "dropping"); change(); return; }
+    const page = document.documentElement;
+    const end = () => { moving = false; delete page.dataset.vt; };
+    moving = true;
+    page.dataset.vt = dir;
+    try { document.startViewTransition(change).finished.then(end, end); }
+    catch (_) { end(); change(); }
+  }
   function pickUp() {
-    if (held || !grounded()) return;
-    held = true;
-    animateStage("lifting");
-    render();
+    if (held || moving || !grounded()) return;
+    move("up", () => { held = true; render(); });
     announce("You picked up the phone.");
     queueLive();
     setTimeout(() => { const t = $("#os [data-act=unlock]") || $("#app-title") || $("#os button"); if (t) t.focus({ preventScroll: true }); }, 850);
   }
   function putDown() {
-    if (!held) return;
-    held = false;
-    animateStage("dropping");
-    render();
+    if (!held || moving) return;
+    move("down", () => { held = false; render(); });
     announce("You put the phone down.");
     setTimeout(() => $("#pickup").focus({ preventScroll: true }), 750);
   }
