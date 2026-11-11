@@ -354,7 +354,7 @@
     st.classList.toggle("grounded", down);
     $("#device").inert = down;
     $("#ground").inert = !down;
-    if (GROUND) renderGround();
+    if (GROUND) { renderGround(); placeOnFloor(); }
     flags = { enter: false, banner: false, died: false, wake: false, fresh: false };
     save();
   }
@@ -647,6 +647,20 @@
   });
 
   /* ---------- On the floor ---------- */
+  // Lying on the floor the phone has a real phone's proportions, not the shape of the
+  // browser's page area. This works out its height, size and position from the room
+  // between the top row and the panel; its bottom corner just tucks under the panel.
+  function placeOnFloor() {
+    if (!GROUND || !narrow()) return;
+    const dev = $("#device"), W = document.body.clientWidth, H = document.body.clientHeight;
+    const tall = W * (model() === "button" ? 2.02 : 2.164);
+    const card = $(".ground-card").offsetHeight || 250;
+    const top = 58, room = Math.max(160, H - card - 14 - top);
+    const s = Math.min(0.6, (room * 0.965) / tall);
+    dev.style.setProperty("--g-h", tall.toFixed(1) + "px");
+    dev.style.setProperty("--g-s", s.toFixed(4));
+    dev.style.setProperty("--g-ty", (top + room * 0.52 - tall / 2).toFixed(1) + "px");
+  }
   function renderGround() {
     $("#floor").dataset.floor = CASE.ground || "boards";
     $("#ground-issues").innerHTML = issuesHTML();
@@ -744,6 +758,7 @@
   $("#floor").addEventListener("click", pickUp);
   $("#ground-issues").addEventListener("click", (e) => { const b = e.target.closest("[data-case]"); if (b) switchCase(+b.dataset.case); });
   window.matchMedia("(max-width: 640px)").addEventListener("change", () => render());
+  window.addEventListener("resize", placeOnFloor);
 
   render();
   queueLive();

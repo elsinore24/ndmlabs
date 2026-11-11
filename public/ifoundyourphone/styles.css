@@ -819,19 +819,24 @@ button.row:hover { background: var(--app-fill); }
 @media (max-width: 640px) {
   .device {
     /* How it lies on the floor, and the body you see around the screen down there */
-    --g-ty: -13%; --g-rot: -13deg; --g-s: .5;
-    --bezel: #1b1b1e; --rim: #8c8c94; --gr-r: 58px; --bz: 16px;
+    /* --g-h (its height down there, a real phone's shape), --g-s and --g-ty are set by the
+       script from the space above the panel; these are the fallbacks. */
+    --g-h: 100%; --g-ty: -13%; --g-rot: -13deg; --g-s: .5;
+    --bezel: #1b1b1e; --rim: #8c8c94; --gr-r: 58px; --bz: 9px;
     --sh-ground: 0 0 0 var(--bz) var(--bezel), 0 0 0 calc(var(--bz) + 3px) var(--rim), 6px 10px 8px calc(var(--bz) + 3px) rgba(0, 0, 0, .62), 30px 54px 70px var(--bz) rgba(0, 0, 0, .55);
     --sh-air: 0 0 0 var(--bz) var(--bezel), 0 0 0 calc(var(--bz) + 3px) var(--rim), 40px 90px 50px calc(var(--bz) + 3px) rgba(0, 0, 0, .3), 90px 190px 150px var(--bz) rgba(0, 0, 0, .28);
     --sh-none: 0 0 0 0 transparent, 0 0 0 0 transparent, 0 0 0 0 transparent, 0 0 0 0 transparent;
     z-index: 1;
     border-radius: var(--r);
   }
-  .device[data-model="punch"] { --bezel: #08080a; --rim: #c2b6a5; --gr-r: 46px; --bz: 11px; }
+  .device[data-model="punch"] { --bezel: #08080a; --rim: #c2b6a5; --gr-r: 46px; --bz: 7px; }
   .device[data-model="button"] { --bezel: #f3f3f5; --rim: #d6cbc1; --gr-r: 66px; --bz: 13px; }
   .device:not([data-model="button"]) .screen { border-radius: var(--r); }
 
+  /* The phone is taller than the page while it lies there or moves, so nothing may scroll */
+  .stage.grounded, .stage.lifting, .stage.dropping { overflow: hidden; }
   .stage.grounded .device {
+    height: var(--g-h);
     translate: 0 var(--g-ty); rotate: var(--g-rot); scale: var(--g-s);
     --r: var(--gr-r);
     box-shadow: var(--sh-ground);
@@ -946,15 +951,15 @@ button.row:hover { background: var(--app-fill); }
 }
 
 @keyframes lift {
-  from { translate: 0 var(--g-ty); rotate: var(--g-rot); scale: var(--g-s); --r: var(--gr-r); box-shadow: var(--sh-ground); }
-  34% { translate: 0 calc(var(--g-ty) - 2%); rotate: calc(var(--g-rot) * .55); scale: calc(var(--g-s) * 1.14); --r: var(--gr-r); box-shadow: var(--sh-air); }
-  to { translate: 0 0; rotate: 0deg; scale: 1; --r: 0px; box-shadow: var(--sh-none); }
+  from { height: var(--g-h); translate: 0 var(--g-ty); rotate: var(--g-rot); scale: var(--g-s); --r: var(--gr-r); box-shadow: var(--sh-ground); }
+  34% { height: var(--g-h); translate: 0 calc(var(--g-ty) - 2%); rotate: calc(var(--g-rot) * .55); scale: calc(var(--g-s) * 1.14); --r: var(--gr-r); box-shadow: var(--sh-air); }
+  to { height: 100%; translate: 0 0; rotate: 0deg; scale: 1; --r: 0px; box-shadow: var(--sh-none); }
 }
 @keyframes setdown {
-  from { translate: 0 0; rotate: 0deg; scale: 1; --r: 0px; box-shadow: var(--sh-none); }
-  56% { translate: 0 calc(var(--g-ty) - 2%); rotate: calc(var(--g-rot) * .7); scale: calc(var(--g-s) * 1.14); --r: var(--gr-r); box-shadow: var(--sh-air); }
-  86% { translate: 0 var(--g-ty); rotate: var(--g-rot); scale: calc(var(--g-s) * .985); --r: var(--gr-r); box-shadow: var(--sh-ground); }
-  to { translate: 0 var(--g-ty); rotate: var(--g-rot); scale: var(--g-s); --r: var(--gr-r); box-shadow: var(--sh-ground); }
+  from { height: 100%; translate: 0 0; rotate: 0deg; scale: 1; --r: 0px; box-shadow: var(--sh-none); }
+  56% { height: var(--g-h); translate: 0 calc(var(--g-ty) - 2%); rotate: calc(var(--g-rot) * .7); scale: calc(var(--g-s) * 1.14); --r: var(--gr-r); box-shadow: var(--sh-air); }
+  86% { height: var(--g-h); translate: 0 var(--g-ty); rotate: var(--g-rot); scale: calc(var(--g-s) * .985); --r: var(--gr-r); box-shadow: var(--sh-ground); }
+  to { height: var(--g-h); translate: 0 var(--g-ty); rotate: var(--g-rot); scale: var(--g-s); --r: var(--gr-r); box-shadow: var(--sh-ground); }
 }
 /* Every few seconds it buzzes on the floor, and the screen lights the floor around it */
 @keyframes buzz {
