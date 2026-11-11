@@ -11,6 +11,7 @@
     id: 1,
     owner: "Henry VIII",
     model: "button", // which phone body and system look: pill, punch or button (has not upgraded since 1540)
+    ground: "mat", // where it lies before you pick it up: mat, boards or carpet (the floor of a cab)
     time: "6:41",
     dateLine: "Tuesday, 6 January",
     cal: { dow: "TUE", day: "6" },
@@ -196,6 +197,7 @@
     id: 2,
     owner: "Harry Houdini",
     model: "punch", // which phone body and system look: pill, punch or button (the dark one with the moon)
+    ground: "boards", // where it lies before you pick it up: mat, boards or carpet (a dressing-room floor)
     time: "8:07",
     dateLine: "Sunday, 24 October",
     cal: { dow: "SUN", day: "24" },
@@ -400,6 +402,7 @@
     id: 3,
     owner: "Ben Affleck",
     model: "pill", // which phone body and system look: pill, punch or button (the new one)
+    ground: "carpet", // where it lies before you pick it up: mat, boards or carpet (a studio floor)
     time: "9:41",
     dateLine: "Sunday, 11 February",
     cal: { dow: "SUN", day: "11" },

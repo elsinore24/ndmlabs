@@ -26,6 +26,12 @@
   const askedModel = new URLSearchParams(location.search).get("model");
   const model = () => (MODELS.includes(askedModel) ? askedModel : MODELS.includes(CASE.model) ? CASE.model : "pill");
 
+  // Mockup: on a phone, the found phone first lies on the floor where it was lost, and the
+  // player picks it up. Only with ?ground in the address for now.
+  const GROUND = new URLSearchParams(location.search).has("ground");
+  let held = false;
+  const grounded = () => GROUND && narrow() && !held && !(state.revealed && state.reading);
+
   /* ---------- State ---------- */
   // log: what each 1% went on, in order ({k:"app",id} or {k:"miss"}).
   const fresh = () => ({ v: 1, view: "lock", sub: null, battery: MAX, opened: [], names: [], log: [], status: "playing", revived: false, revealed: false, reading: false, fired: [] });
@@ -76,6 +82,8 @@
     fwd: line('<path d="M9.500 5.500L16 12l-6.500 6.500"/>'),
     note: line('<path d="M7 3.500h7.500L18 7v13.500H7z"/><path d="M10 11.500h5M10 15h5"/>'),
     image: line('<rect x="3.500" y="5" width="17" height="14" rx="2.500"/><circle cx="9" cy="10" r="1.600"/><path d="M4.500 17.500l5-4.500 3.500 3 2.500-2 4 3.500"/>'),
+    down: line('<path d="M12 4v10.500M7.500 10l4.500 4.500 4.500-4.500M5 19.500h14"/>'),
+    lift: line('<path d="M12 19.500V9M7.500 13.500 12 9l4.500 4.500M5 4.500h14"/>'),
     bolt: '<path fill="currentColor" d="M13 3L6 13.500h5L10 21l8-11h-5.500z"/>',
   };
   const TILE = {
@@ -116,6 +124,8 @@
   }
 
   // The one game control. Each model puts it where its own system would.
+  // The way back to the floor. Only on a phone, and only in the mockup.
+  const putDownBtn = () => (GROUND ? `<button type="button" class="putdown" data-act="putdown">${svg(G.down, 17)}Put it down</button>` : "");
   function actionBtn() {
     if (playing()) return `<button type="button" class="pill" data-act="name">${svg(G.person, 18)}Name the owner</button>`;
     if (state.revealed) return `<button type="button" class="pill" data-act="story">Read the story</button>`;
@@ -124,7 +134,7 @@
   function bottomBar() {
     if (playing() && state.view === "lock") return "";
     if (model() === "punch" && state.view === "home") return "";
-    return `<div class="bb">${actionBtn()}</div>`;
+    return `<div class="bb">${putDownBtn()}${actionBtn()}</div>`;
   }
 
   const issuesHTML = () => CASES.map((c) => `<button type="button" class="issue" data-case="${c.id}"${c === CASE ? ' aria-current="true"' : ""}>${no(c.id)}</button>`).join("");
@@ -142,7 +152,7 @@
   function lockHTML() {
     const items = CASE.lock.map((n) => `<li class="notif">${TILE[n.tile]}<span class="n-main"><b>${esc(n.title)}</b><span>${esc(n.text)}</span></span><span class="n-when">${n.when}</span></li>`).join("");
     return `<div class="lock" id="lock">
-      <div class="issues lock-issues" role="navigation" aria-label="Phones">${issuesHTML()}</div>
+      ${GROUND ? `<div class="lock-top">${putDownBtn()}</div>` : `<div class="issues lock-issues" role="navigation" aria-label="Phones">${issuesHTML()}</div>`}
       <p class="lock-date">${CASE.dateLine}</p>
       ${lockTime()}
       <ul class="notifs">${items}</ul>
@@ -169,7 +179,7 @@
         <div class="w-ev"><b>${w.title}</b><span>${w.time}</span><span>${w.where}</span><span>${w.note}</span></div></div>`;
     if (model() === "punch") return `<div class="home">${widget}
       <div class="grid">${appButton("phone", true)}${appButton("messages", true)}${appButton("notes", true)}${appButton("photos", true)}</div>
-      <div class="home-row">${searchBar()}${actionBtn()}</div>
+      <div class="home-row">${searchBar()}${putDownBtn()}${actionBtn()}</div>
     </div>`;
     return `<div class="home">${widget}
       <div class="grid">${appButton("notes", true)}${appButton("photos", true)}</div>
@@ -244,7 +254,7 @@
       os.dataset.view = "dead";
       os.innerHTML = `<div class="shut${flags.died ? " just" : ""}"><span class="spinner" aria-hidden="true"></span>
         <div class="shut-after"><svg width="58" height="30" viewBox="0 0 58 30" fill="none" aria-hidden="true"><rect x="1.500" y="1.500" width="49" height="27" rx="7" stroke="currentColor" stroke-width="2.500"/><rect x="53.500" y="10" width="3.500" height="10" rx="1.750" fill="currentColor"/><rect x="6" y="6" width="4" height="18" rx="2" fill="#ff453a"/></svg>
-        <p>No battery</p><button type="button" class="charge" data-act="charge">Charge it</button></div></div>`;
+        <p>No battery</p><button type="button" class="charge" data-act="charge">Charge it</button>${putDownBtn()}</div></div>`;
       lastKey = "dead";
       return;
     }
@@ -340,6 +350,11 @@
     const st = $("#stage");
     st.classList.toggle("revealed", state.revealed);
     st.classList.toggle("reading", state.revealed && state.reading);
+    const down = grounded();
+    st.classList.toggle("grounded", down);
+    $("#device").inert = down;
+    $("#ground").inert = !down;
+    if (GROUND) renderGround();
     flags = { enter: false, banner: false, died: false, wake: false, fresh: false };
     save();
   }
@@ -396,7 +411,7 @@
   /* ---------- The phone keeps getting messages ---------- */
   // A phone may list `live` events: { at: apps opened so far, kind: "text" | "call", from, text }.
   // Each fires once, a few seconds after that many apps have been opened.
-  const busy = () => !$("#sheet").hidden || !$("#alert").hidden || !$("#call").hidden || state.view === "lock";
+  const busy = () => !$("#sheet").hidden || !$("#alert").hidden || !$("#call").hidden || state.view === "lock" || grounded();
   function hideLive() {
     clearTimeout(liveTimer); clearTimeout(buzzTimer); clearTimeout(callTimer);
     $("#buzz").hidden = true;
@@ -549,6 +564,7 @@
     const act = e.target.closest("[data-act]");
     if (!act) return;
     const a = act.dataset.act;
+    if (a === "putdown") { putDown(); return; }
     if (a === "unlock" || a === "home") go("home");
     else if (a === "up") go(state.view);
     else if (a === "name") openSheet();
@@ -630,10 +646,54 @@
     }
   });
 
+  /* ---------- On the floor ---------- */
+  function renderGround() {
+    $("#floor").dataset.floor = CASE.ground || "boards";
+    $("#ground-issues").innerHTML = issuesHTML();
+    const where = (CASE.lock.find((n) => n.tile === "game") || {}).title || "";
+    let title = "Lost phone.", sub = where;
+    if (state.status === "won") { title = `${CASE.owner}’s phone.`; sub = "You named the owner. It’s back where you found it."; }
+    else if (state.status === "dead") sub = "The battery died before you named the owner.";
+    else if (state.opened.length || state.names.length) sub = `You put it down with ${state.battery}% left.`;
+    $("#ground-title").textContent = title;
+    $("#ground-sub").textContent = sub;
+  }
+  // Plays the lift or the drop once. The stage keeps the class until the phone lands.
+  function animateStage(cls) {
+    const st = $("#stage"), dev = $("#device");
+    st.classList.remove("lifting", "dropping");
+    void dev.offsetWidth;
+    st.classList.add(cls);
+    const done = (e) => {
+      if (e.target !== dev) return;
+      st.classList.remove(cls);
+      dev.removeEventListener("animationend", done);
+    };
+    dev.addEventListener("animationend", done);
+  }
+  function pickUp() {
+    if (held || !grounded()) return;
+    held = true;
+    animateStage("lifting");
+    render();
+    announce("You picked up the phone.");
+    queueLive();
+    setTimeout(() => { const t = $("#os [data-act=unlock]") || $("#app-title") || $("#os button"); if (t) t.focus({ preventScroll: true }); }, 850);
+  }
+  function putDown() {
+    if (!held) return;
+    held = false;
+    animateStage("dropping");
+    render();
+    announce("You put the phone down.");
+    setTimeout(() => $("#pickup").focus({ preventScroll: true }), 750);
+  }
+
   function reset() {
     clearTimeout(revealTimer); clearTimeout(alertTimer);
     hideLive();
     state = fresh();
+    held = false;
     flags.wake = true;
     lastKey = "";
     $("#sheet").hidden = true; $("#alert").hidden = true; $("#os").inert = false;
@@ -648,6 +708,7 @@
     hideLive();
     CASE = next;
     state = load();
+    held = false;
     flags.wake = true;
     lastKey = "";
     chosen = null;
@@ -665,7 +726,7 @@
     if (e.target.closest("#again")) { reset(); return; }
     const other = e.target.closest("[data-case]");
     if (other) { switchCase(+other.dataset.case); return; }
-    if (e.target.closest("#to-phone")) { state.reading = false; render(); window.scrollTo(0, 0); return; }
+    if (e.target.closest("#to-phone")) { state.reading = false; held = true; render(); window.scrollTo(0, 0); return; }
     if (!e.target.closest("#copy")) return;
     const text = shareText();
     track("share", { phone: CASE.id });
@@ -676,6 +737,14 @@
       $("#copied").textContent = "Selected. Copy it with your device’s copy command.";
     }
   });
+
+  document.documentElement.classList.toggle("ground-on", GROUND);
+  $("#floor").hidden = !GROUND;
+  $("#ground").hidden = !GROUND;
+  $("#pickup").addEventListener("click", pickUp);
+  $("#floor").addEventListener("click", pickUp);
+  $("#ground-issues").addEventListener("click", (e) => { const b = e.target.closest("[data-case]"); if (b) switchCase(+b.dataset.case); });
+  window.matchMedia("(max-width: 640px)").addEventListener("change", () => render());
 
   render();
   queueLive();

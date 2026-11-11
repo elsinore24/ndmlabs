@@ -21,6 +21,7 @@
 <div class="stage" id="stage">
   <header class="mast"><span class="wordmark">I Found Your Phone</span><nav class="issues" id="issues" aria-label="Phones"></nav></header>
 
+  <div class="floor" id="floor" aria-hidden="true" hidden><i class="floor-tex"></i></div>
   <div class="device" id="device">
     <div class="brow" aria-hidden="true"><i></i></div>
     <div class="island" aria-hidden="true"></div>
@@ -67,6 +68,15 @@
       </div>
     </div>
     <div class="chin"><button type="button" class="home-btn" id="home-btn" aria-label="Home button"></button></div>
+  </div>
+
+  <div class="ground" id="ground" role="region" aria-label="The phone on the floor" hidden>
+    <div class="ground-top"><span class="wordmark">I Found Your Phone</span><nav class="issues ground-issues" id="ground-issues" aria-label="Phones"></nav></div>
+    <div class="ground-card">
+      <h1 class="ground-title" id="ground-title">Lost phone.</h1>
+      <p class="ground-sub" id="ground-sub"></p>
+      <button type="button" class="pickup" id="pickup"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.200" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19.500V9M7.500 13.500 12 9l4.500 4.500M5 4.500h14"/></svg>Pick it up</button>
+    </div>
   </div>
 
   <p class="caption">Work out whose phone this is before the battery dies. <button class="link" id="reset" type="button">Start over</button><span class="credit">A game from <a class="link" href="https://ndmlabs.net/">NDMLABS</a></span></p>
