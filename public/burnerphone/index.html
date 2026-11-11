@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Burner Phone</title>
+<meta name="description" content="You found a second phone under the passenger seat. Read the drafts, the payments and the deleted voicemails, and work out whose it is before the battery dies.">
+<!-- Test location: keep search engines away. Remove this line when the game moves to its own domain. -->
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#0a0a0c">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Burner Phone">
+<meta property="og:description" content="You found a second phone under the passenger seat. Read the drafts, the payments and the deleted voicemails, and work out whose it is before the battery dies.">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="styles.css">
+<!-- Umami visitor counts, same site ID as the rest of ndmlabs.net, and it counts only there.
+     The game gets its own ID when it moves to its own domain. -->
+<script defer src="https://cloud.umami.is/script.js" data-website-id="11a46734-7fd3-4e06-97dd-0910aaed9e38" data-domains="ndmlabs.net"></script>
+</head>
+<body>
+<div class="stage" id="stage">
+  <header class="mast"><span class="wordmark">Burner Phone</span><nav class="issues" id="issues" aria-label="Phones"></nav></header>
+
+  <div class="floor" id="floor" aria-hidden="true" hidden><i class="floor-tex"></i></div>
+  <div class="device" id="device">
+    <div class="brow" aria-hidden="true"><i></i></div>
+    <div class="island" aria-hidden="true"></div>
+    <div class="screen" id="screen">
+      <div class="os" id="os" aria-label="The phone you found"></div>
+      <!-- The cracked glass. It sits over everything on the screen and takes no taps. -->
+      <svg class="crack" viewBox="0 0 390 844" preserveAspectRatio="xMaxYMin slice" aria-hidden="true">
+        <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+          <path stroke="#000" stroke-width="1.600" opacity=".3" transform="translate(1 1.200)" d="M300 122 352 96 390 84M300 122 286 70 292 0M300 122 250 106 196 114 150 92M300 122 336 186 368 276 380 420 370 560 385 700 377 844M300 122 268 164 256 218 222 262M300 122 348 152 390 160"/>
+          <path stroke="#fff" stroke-width="1" opacity=".7" d="M300 122 352 96 390 84M300 122 286 70 292 0M300 122 250 106 196 114 150 92M300 122 336 186 368 276 380 420 370 560 385 700 377 844M300 122 268 164 256 218 222 262M300 122 348 152 390 160"/>
+          <path stroke="#fff" stroke-width=".700" opacity=".4" d="M286 70 352 96 348 152 336 186 268 164 250 106ZM368 276 390 262M256 218 336 186M380 420 390 430M196 114 222 262"/>
+          <circle cx="300" cy="122" r="4.500" fill="#fff" opacity=".3" stroke="none"/>
+        </g>
+      </svg>
+      <div class="toast" id="toast" aria-hidden="true"></div>
+      <div class="buzz" id="buzz" role="status" hidden></div>
+
+      <div class="call" id="call" role="alertdialog" aria-modal="true" aria-labelledby="call-name" aria-describedby="call-sub" hidden>
+        <h2 id="call-name"></h2>
+        <p class="call-sub" id="call-sub"></p>
+        <div class="call-btns">
+          <button type="button" data-act="decline"><i><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7.6 4.5h2.1l1.2 3.5-1.7 1.4a10 10 0 0 0 5.4 5.4l1.4-1.7 3.5 1.2v2.1a1.8 1.8 0 0 1-1.9 1.8A13.6 13.6 0 0 1 5.8 6.4a1.8 1.8 0 0 1 1.8-1.900z"/></svg></i>Decline</button>
+          <button type="button" data-act="decline"><i><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7.6 4.5h2.1l1.2 3.5-1.7 1.4a10 10 0 0 0 5.4 5.4l1.4-1.7 3.5 1.2v2.1a1.8 1.8 0 0 1-1.9 1.8A13.6 13.6 0 0 1 5.8 6.4a1.8 1.8 0 0 1 1.8-1.900z"/></svg></i>Decline</button>
+        </div>
+      </div>
+
+      <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title" hidden>
+        <div class="sheet-card">
+          <div class="sheet-head">
+            <button type="button" class="sheet-x" id="sheet-x">Cancel</button>
+            <h2 id="sheet-title">Whose phone is this?</h2>
+          </div>
+          <form class="guess" id="guess-form" autocomplete="off" novalidate>
+            <div class="field">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6"/><path d="M15.6 15.6l4.4 4.4"/></svg>
+              <label class="sr-only" for="guess">Name</label>
+              <input id="guess" type="text" placeholder="Name" enterkeyhint="done" autocapitalize="words" spellcheck="false" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="sugg">
+            </div>
+            <button class="commit" id="commit" type="submit" disabled>Choose a name</button>
+            <p class="sheet-note" id="sheet-note"></p>
+            <p class="sheet-fb" id="sheet-fb" aria-live="polite"></p>
+            <div class="sugg" id="sugg" role="listbox" aria-label="Names"></div>
+          </form>
+        </div>
+      </div>
+
+      <div class="alert" id="alert" role="alertdialog" aria-modal="true" aria-labelledby="alert-t" aria-describedby="alert-d" hidden>
+        <div class="alert-card">
+          <h2 id="alert-t"></h2>
+          <p id="alert-d"></p>
+          <div class="alert-btns"><button type="button" id="alert-keep">Not yet</button><button type="button" id="alert-name">Name them</button></div>
+        </div>
+      </div>
+    </div>
+    <div class="chin"><button type="button" class="home-btn" id="home-btn" aria-label="Home button"></button></div>
+  </div>
+
+  <div class="ground" id="ground" role="region" aria-label="The phone on the floor" hidden>
+    <div class="ground-top"><span class="wordmark">Burner Phone</span><nav class="issues ground-issues" id="ground-issues" aria-label="Phones"></nav></div>
+    <div class="ground-card">
+      <h1 class="ground-title" id="ground-title">Whose burner is this?</h1>
+      <p class="ground-sub" id="ground-sub"></p>
+      <button type="button" class="pickup" id="pickup"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.200" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19.500V9M7.500 13.500 12 9l4.500 4.500M5 4.500h14"/></svg>Pick it up</button>
+    </div>
+  </div>
+
+  <p class="caption">Work out whose burner this is before the battery dies. <button class="link" id="reset" type="button">Start over</button><span class="credit">A game from <a class="link" href="https://ndmlabs.net/">NDMLABS</a></span></p>
+
+  <article class="story" id="story" tabindex="-1" hidden></article>
+  <p class="sr-only" id="announce" aria-live="assertive"></p>
+</div>
+<noscript><p class="noscript">Burner Phone needs JavaScript to run. Turn it on in your browser and reload the page.</p></noscript>
+<script src="js/phones.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
