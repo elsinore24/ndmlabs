@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { preload } from "react-dom";
 import Script from "next/script";
 import "./globals.css";
+// Inter is stored in the site (public/fonts); fonts-inter.css declares it and --font-inter.
+import "./fonts-inter.css";
 
-const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-inter",
-});
+// How the fonts are fetched early. Called while a page renders, so a link to that page can
+// warm them up too, as next/font did.
+const FONT = { as: "font", type: "font/woff2", crossOrigin: "anonymous" } as const;
 
 export const metadata: Metadata = {
   title: "NDMLABS INC. | Game & App Development",
@@ -26,9 +27,10 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  preload("/fonts/inter-latin.woff2", FONT);
   return (
     <html lang="en">
-      <body className={`${inter.variable} antialiased`}>
+      <body className="ndm-font-inter antialiased">
         {children}
         {/* Umami visitor counts. Counts only on ndmlabs.net, so local tests and deploy previews
             stay out. It also counts moves between pages. /home-history has its own copy. */}

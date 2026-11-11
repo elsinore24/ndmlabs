@@ -1,0 +1,9 @@
+The fonts in this folder are stored copies of the Google Fonts releases of Inter, Archivo,
+Caprasimo, Outfit and Space Mono. Each is licensed under the SIL Open Font License, Version 1.1
+(https://openfontlicense.org), which allows them to be used and redistributed with a site.
+
+  Inter       https://fonts.google.com/specimen/Inter
+  Archivo     https://fonts.google.com/specimen/Archivo
+  Caprasimo   https://fonts.google.com/specimen/Caprasimo
+  Outfit      https://fonts.google.com/specimen/Outfit
+  Space Mono  https://fonts.google.com/specimen/Space+Mono

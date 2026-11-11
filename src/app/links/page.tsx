@@ -1,19 +1,14 @@
 import type { Metadata } from "next";
-import { Outfit, Space_Mono } from "next/font/google";
+import { preload } from "react-dom";
 import AppStoreLink from "./AppStoreLink";
+// Outfit and Space Mono are stored in the site (public/fonts); fonts-links.css declares them
+// and the --font-outfit and --font-space-mono variables.
+import "./fonts-links.css";
 import "./links.css";
 
-const outfit = Outfit({
-  subsets: ["latin"],
-  variable: "--font-outfit",
-  weight: ["300", "400", "500", "600", "700", "800", "900"],
-});
-
-const spaceMono = Space_Mono({
-  subsets: ["latin"],
-  variable: "--font-space-mono",
-  weight: ["400", "700"],
-});
+// How the fonts are fetched early. Called while a page renders, so a link to that page can
+// warm them up too, as next/font did.
+const FONT = { as: "font", type: "font/woff2", crossOrigin: "anonymous" } as const;
 
 export const metadata: Metadata = {
   title: "NDMLABS INC. | Links",
@@ -32,8 +27,11 @@ export const metadata: Metadata = {
 };
 
 export default function LinksPage() {
+  preload("/fonts/outfit-latin.woff2", FONT);
+  preload("/fonts/space-mono-700-latin.woff2", FONT);
+  preload("/fonts/space-mono-400-latin.woff2", FONT);
   return (
-    <div className={`links-page ${outfit.variable} ${spaceMono.variable}`}>
+    <div className="links-page ndm-font-outfit ndm-font-space-mono">
       <div className="bg-mesh" />
       <div className="bg-noise" />
 

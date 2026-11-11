@@ -1,3 +1,7 @@
 # Apple fetches this to know which links open All-Time 5 (2026-10-10).
 /.well-known/apple-app-site-association
   Content-Type: application/json
+
+# The site's own font files (2026-11-11). Cached for a year, so a changed font needs a new file name.
+/fonts/*
+  Cache-Control: public, max-age=31536000, immutable
