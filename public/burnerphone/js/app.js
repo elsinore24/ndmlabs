@@ -40,13 +40,17 @@
   let flags = { enter: false, banner: false, died: false, wake: true, fresh: false };
   let lastKey = "";
   let chosen = null;
-  let revealTimer = 0, alertTimer = 0, toastTimer = 0, liveTimer = 0, buzzTimer = 0, callTimer = 0;
+    let revealTimer = 0, alertTimer = 0, toastTimer = 0, liveTimer = 0, buzzTimer = 0, callTimer = 0;
+  let sheetReturn = null, alertReturn = null, callReturn = null;
 
   function load() {
     let s = null;
     try { const j = JSON.parse(localStorage.getItem(key())); if (j && j.v === 1) s = j; } catch (_) {}
-    if (!s) return fresh();
-    if (!s.fired) s.fired = [];
+    if (!s || typeof s !== "object") return fresh();
+    s.battery = Math.max(0, Math.min(MAX, Number.isFinite(+s.battery) ? Math.round(+s.battery) : MAX));
+    for (const k of ["opened", "names", "log", "fired"]) if (!Array.isArray(s[k])) s[k] = [];
+    if (typeof s.view !== "string") s.view = "lock";
+    if (s.sub != null && typeof s.sub !== "string") s.sub = null;
     if (s.status !== "playing" && !s.revealed) { s.revealed = true; s.reading = true; }
     return s;
   }
@@ -106,9 +110,9 @@
     clock: `<span class="tile t-clock">${svg(G.clock)}</span>`,
   };
   const SIGNAL = '<svg width="18" height="12" viewBox="0 0 18 12" fill="currentColor" aria-hidden="true"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="5.500" width="3" height="6.500" rx="1"/><rect x="10" y="3" width="3" height="9" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1" opacity="0.35"/></svg>';
-  function battery(done) {
-    const w = done ? 7 : Math.max(1.6, 1.4 + state.battery * 0.9);
-    const col = done ? "var(--ok)" : "var(--accent)";
+  function battery(charged) {
+    const w = charged ? 7 : Math.max(1.6, 1.4 + state.battery * 0.9);
+    const col = charged ? "var(--ok)" : "var(--accent)";
     return `<svg width="27" height="13" viewBox="0 0 27 13" aria-hidden="true"><rect x="0.500" y="0.500" width="23" height="12" rx="3.600" fill="none" stroke="currentColor" opacity="0.45"/><rect x="25" y="4" width="1.600" height="5" rx="0.800" fill="currentColor" opacity="0.5"/><rect x="2" y="2" width="${w}" height="9" rx="2.200" fill="${col}"/></svg>`;
   }
 
@@ -116,26 +120,29 @@
   const WEDGE = '<svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M13 1v12H1z" fill="currentColor" opacity="0.3"/><path d="M9.500 4.500V13H1z" fill="currentColor"/></svg>';
   const DOTS = '<svg width="34" height="6" viewBox="0 0 34 6" aria-hidden="true"><g fill="currentColor"><circle cx="3" cy="3" r="2.600"/><circle cx="10" cy="3" r="2.600"/><circle cx="17" cy="3" r="2.600"/><circle cx="24" cy="3" r="2.600"/></g><circle cx="31" cy="3" r="2.100" fill="none" stroke="currentColor" stroke-width="1"/></svg>';
   const WIFI = '<svg width="15" height="11" viewBox="0 0 15 11" fill="none" stroke="currentColor" stroke-width="1.600" stroke-linecap="round" aria-hidden="true"><path d="M1.200 3.800a9 9 0 0 1 12.600 0M3.500 6.200a5.700 5.700 0 0 1 8 0"/><circle cx="7.500" cy="9" r="1" fill="currentColor" stroke="none"/></svg>';
-  function cell(done) {
-    const h = done ? 3.6 : Math.max(1.2, 1 + state.battery * 0.5);
-    const col = done ? "var(--ok)" : "var(--accent)";
+  function cell(charged) {
+    const h = charged ? 3.6 : Math.max(1.2, 1 + state.battery * 0.5);
+    const col = charged ? "var(--ok)" : "var(--accent)";
     return `<svg width="9" height="15" viewBox="0 0 9 15" aria-hidden="true"><rect x="3" y="0" width="3" height="1.600" rx="0.600" fill="currentColor" opacity="0.5"/><rect x="0.600" y="1.800" width="7.800" height="12.600" rx="1.800" fill="none" stroke="currentColor" stroke-width="1.200" opacity="0.5"/><rect x="2" y="${(13 - h).toFixed(1)}" width="5" height="${h.toFixed(1)}" rx="0.800" fill="${col}"/></svg>`;
   }
 
   /* ---------- Screens ---------- */
   function statusBar() {
-    const done = over(), m = model();
-    const pct = `<span class="sb-pct${done ? " ok" : ""}">${done ? "6%" : state.battery + "%"}</span>`;
-    if (m === "punch") return `<div class="sb"><span class="sb-time">${CASE.time}</span><span class="sb-right">${WEDGE}${pct}${cell(done)}</span></div>`;
-    if (m === "button") return `<div class="sb"><span class="sb-left">${DOTS}${WIFI}</span><span class="sb-time">${CASE.time}</span><span class="sb-right">${pct}${battery(done)}</span></div>`;
-    return `<div class="sb"><span class="sb-time">${CASE.time}</span><span class="sb-right">${SIGNAL}${pct}${battery(done)}</span></div>`;
+    const charged = over() && state.revived, m = model();
+    const pct = `<span class="sb-pct${charged ? " ok" : ""}">${charged ? "6%" : state.battery + "%"}</span>`;
+    if (m === "punch") return `<div class="sb"><span class="sb-time">${CASE.time}</span><span class="sb-right">${WEDGE}${pct}${cell(charged)}</span></div>`;
+    if (m === "button") return `<div class="sb"><span class="sb-left">${DOTS}${WIFI}</span><span class="sb-time">${CASE.time}</span><span class="sb-right">${pct}${battery(charged)}</span></div>`;
+    return `<div class="sb"><span class="sb-time">${CASE.time}</span><span class="sb-right">${SIGNAL}${pct}${battery(charged)}</span></div>`;
   }
 
   // The one game control. Each model puts it where its own system would.
   // The way back to the floor. Only on a phone.
   const putDownBtn = () => (GROUND ? `<button type="button" class="putdown" data-act="putdown">${svg(G.down, 17)}Put it down</button>` : "");
   function actionBtn() {
-    if (playing()) return `<button type="button" class="pill" data-act="name">${svg(G.person, 18)}Name the owner</button>`;
+    if (playing()) {
+      const locked = state.opened.length === 0;
+      return `<button type="button" class="pill${locked ? " is-locked" : ""}" data-act="name"${locked ? ' aria-label="Name the owner. Open at least one app first." title="Open at least one app first"' : ""}>${svg(G.person, 18)}Name the owner</button>`;
+    }
     if (state.revealed) return `<button type="button" class="pill" data-act="story">Read the story</button>`;
     return "";
   }
@@ -315,7 +322,7 @@
     const you = `<p class="bub you"><span class="sr-only">You: </span>${esc(CASE.reply.you)}</p>`;
     const cls = "reply" + (flags.fresh ? " fresh" : "");
     if (rep.dead) return `<div class="${cls}">${head}${you}<p class="undelivered">Not Delivered</p><p class="reply-note">The phone died before it could ring.</p></div>`;
-    return `<div class="${cls}">${head}${you}<p class="receipt">Delivered</p>${rep.lines.map((t, i) => `<p class="bub them" style="--i:${i}"><span class="sr-only">${esc(first)}: </span>${esc(t)}</p>`).join("")}</div>`;
+    return `<div class="${cls}">${head}${you}<p class="receipt">Delivered</p>${rep.lines.map((t) => `<p class="bub them"><span class="sr-only">${esc(first)}: </span>${esc(t)}</p>`).join("")}</div>`;
   }
 
   function shareText() {
@@ -392,14 +399,27 @@
     toastTimer = setTimeout(() => t.classList.remove("show"), 1900);
   }
   function showAlert(title, text) {
-    if (!playing()) return;
+    if (!playing() || !$("#sheet").hidden || !$("#call").hidden) return;
+    alertReturn = document.activeElement;
     $("#alert-t").textContent = title;
     $("#alert-d").textContent = text;
     $("#alert").hidden = false;
     $("#os").inert = true;
+    syncChrome();
     $("#alert-name").focus({ preventScroll: true });
   }
-  function hideAlert() { $("#alert").hidden = true; $("#os").inert = !$("#sheet").hidden; }
+  function hideAlert() {
+    if ($("#alert").hidden) return;
+    const back = alertReturn;
+    $("#alert").hidden = true;
+    $("#os").inert = !$("#sheet").hidden;
+    syncChrome();
+    const target = back && back.isConnected && back !== document.body && back.offsetParent !== null
+      ? back
+      : (document.querySelector("#app-title") || document.querySelector('[data-act="name"]'));
+    if (target) target.focus({ preventScroll: true });
+    alertReturn = null;
+  }
 
   function go(view, sub) {
     state.view = view;
@@ -436,7 +456,7 @@
   function hideLive() {
     clearTimeout(liveTimer); clearTimeout(buzzTimer); clearTimeout(callTimer);
     $("#buzz").hidden = true;
-    if (!$("#call").hidden) { $("#call").hidden = true; $("#os").inert = !$("#sheet").hidden || !$("#alert").hidden; }
+    if (!$("#call").hidden) { $("#call").hidden = true; $("#os").inert = !$("#sheet").hidden || !$("#alert").hidden; syncChrome(); callReturn = null; }
   }
   function queueLive() {
     clearTimeout(liveTimer);
@@ -461,10 +481,13 @@
     buzzTimer = setTimeout(() => { el.hidden = true; queueLive(); }, 5200);
   }
   function showCall(e) {
+    if (!$("#sheet").hidden || !$("#alert").hidden) return;
+    callReturn = document.activeElement;
     $("#call-name").textContent = e.from;
     $("#call-sub").textContent = e.sub || "mobile";
     $("#call").hidden = false;
     $("#os").inert = true;
+    syncChrome();
     $("#call").querySelector("button").focus({ preventScroll: true });
     clearTimeout(callTimer);
     callTimer = setTimeout(endCall, 14000);
@@ -472,9 +495,16 @@
   function endCall() {
     clearTimeout(callTimer);
     if ($("#call").hidden) return;
+    const back = callReturn;
     $("#call").hidden = true;
     $("#os").inert = !$("#sheet").hidden || !$("#alert").hidden;
+    syncChrome();
     toast("Call declined");
+    const target = back && back.isConnected && back !== document.body && back.offsetParent !== null
+      ? back
+      : (document.querySelector("#app-title") || document.querySelector('[data-act="name"]'));
+    if (target) target.focus({ preventScroll: true });
+    callReturn = null;
     queueLive();
   }
 
@@ -557,24 +587,64 @@
   }
   function openSheet() {
     if (!playing()) return;
+    if (!state.opened.length) {
+      toast("Open at least one app first.");
+      announce("Open at least one app first.");
+      return;
+    }
+    clearTimeout(alertTimer);
     hideAlert();
+    sheetReturn = document.activeElement;
     chosen = null; active = -1;
     $("#guess").value = "";
     $("#sheet-fb").textContent = "";
     renderSheet();
     $("#sheet").hidden = false;
     $("#os").inert = true;
+    syncChrome();
     setTimeout(() => $("#guess").focus({ preventScroll: true }), 60);
   }
   function closeSheet() {
+    const back = sheetReturn;
     $("#sheet").hidden = true;
     $("#os").inert = !$("#alert").hidden;
+    syncChrome();
     const pill = document.querySelector('[data-act="name"]');
-    if (pill) pill.focus({ preventScroll: true });
+    const target = back && back.isConnected && back.offsetParent !== null ? back : pill;
+    if (target) target.focus({ preventScroll: true });
+    sheetReturn = null;
   }
 
   /* ---------- Events ---------- */
   const screen = $("#screen");
+
+  function anyDialogOpen() {
+    return !$("#sheet").hidden || !$("#alert").hidden || !$("#call").hidden;
+  }
+  function syncChrome() {
+    const inert = anyDialogOpen();
+    for (const sel of [".mast", ".caption", ".chin"]) {
+      const el = document.querySelector(sel);
+      if (el) el.inert = inert;
+    }
+  }
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Tab") return;
+    const dialog = !$("#call").hidden ? $("#call") : !$("#alert").hidden ? $("#alert") : !$("#sheet").hidden ? $("#sheet") : null;
+    if (!dialog) return;
+    const items = [...dialog.querySelectorAll('button, input, a[href], [tabindex]:not([tabindex="-1"])')]
+      .filter((el) => !el.disabled && el.offsetParent !== null);
+    if (!items.length) return;
+    const first = items[0], last = items[items.length - 1];
+    if (e.shiftKey && (document.activeElement === first || !dialog.contains(document.activeElement))) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && (document.activeElement === last || !dialog.contains(document.activeElement))) {
+      e.preventDefault();
+      first.focus();
+    }
+  });
+
   screen.addEventListener("click", (e) => {
     const other = e.target.closest("[data-case]");
     if (other) { switchCase(+other.dataset.case); return; }
@@ -743,6 +813,8 @@
     flags.wake = true;
     lastKey = "";
     $("#sheet").hidden = true; $("#alert").hidden = true; $("#os").inert = false;
+    sheetReturn = alertReturn = callReturn = null;
+    syncChrome();
     render();
     window.scrollTo(0, 0);
   }
@@ -760,6 +832,8 @@
     chosen = null;
     $("#toast").classList.remove("show");
     $("#sheet").hidden = true; $("#alert").hidden = true; $("#os").inert = false;
+    sheetReturn = alertReturn = callReturn = null;
+    syncChrome();
     render();
     window.scrollTo(0, 0);
     try { if (location.hash !== "#phone-" + CASE.id) location.hash = "phone-" + CASE.id; } catch (_) {}
@@ -788,10 +862,25 @@
   $("#floor").hidden = !GROUND;
   $("#ground").hidden = !GROUND;
   $("#pickup").addEventListener("click", pickUp);
+  $("#ground-reset").addEventListener("click", reset);
   $("#floor").addEventListener("click", pickUp);
   $("#ground-issues").addEventListener("click", (e) => { const b = e.target.closest("[data-case]"); if (b) switchCase(+b.dataset.case); });
   window.matchMedia("(max-width: 640px)").addEventListener("change", () => render());
   window.addEventListener("resize", placeOnFloor);
+
+  const rotateMQ = window.matchMedia("(orientation: landscape) and (max-height: 620px) and (max-width: 1024px)");
+  function syncRotate() {
+    const r = $("#rotate");
+    if (!r) return;
+    r.hidden = !rotateMQ.matches;
+    if (rotateMQ.matches) {
+      const t = $("#rotate-title");
+      if (t) t.focus({ preventScroll: true });
+    }
+  }
+  if (rotateMQ.addEventListener) rotateMQ.addEventListener("change", syncRotate);
+  else if (rotateMQ.addListener) rotateMQ.addListener(syncRotate);
+  syncRotate();
 
   render();
   queueLive();

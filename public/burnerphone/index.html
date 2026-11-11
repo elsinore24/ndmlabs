@@ -19,14 +19,14 @@
 </head>
 <body>
 <div class="stage" id="stage">
-  <header class="mast"><span class="wordmark">Burner Phone</span><nav class="issues" id="issues" aria-label="Phones"></nav></header>
+  <header class="mast"><h1 class="wordmark">Burner Phone</h1><nav class="issues" id="issues" aria-label="Phones"></nav></header>
 
   <div class="floor" id="floor" aria-hidden="true" hidden><i class="floor-tex"></i></div>
   <div class="device" id="device">
     <div class="brow" aria-hidden="true"><i></i></div>
     <div class="island" aria-hidden="true"></div>
     <div class="screen" id="screen">
-      <div class="os" id="os" aria-label="The phone you found"></div>
+      <div class="os" id="os" role="group" aria-label="The phone you found"></div>
       <!-- The cracked glass. It sits over everything on the screen and takes no taps. -->
       <svg class="crack" viewBox="0 0 390 844" preserveAspectRatio="xMaxYMin slice" aria-hidden="true">
         <g fill="none" stroke-linecap="round" stroke-linejoin="round">
@@ -43,7 +43,6 @@
         <h2 id="call-name"></h2>
         <p class="call-sub" id="call-sub"></p>
         <div class="call-btns">
-          <button type="button" data-act="decline"><i><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7.6 4.5h2.1l1.2 3.5-1.7 1.4a10 10 0 0 0 5.4 5.4l1.4-1.7 3.5 1.2v2.1a1.8 1.8 0 0 1-1.9 1.8A13.6 13.6 0 0 1 5.8 6.4a1.8 1.8 0 0 1 1.8-1.900z"/></svg></i>Decline</button>
           <button type="button" data-act="decline"><i><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7.6 4.5h2.1l1.2 3.5-1.7 1.4a10 10 0 0 0 5.4 5.4l1.4-1.7 3.5 1.2v2.1a1.8 1.8 0 0 1-1.9 1.8A13.6 13.6 0 0 1 5.8 6.4a1.8 1.8 0 0 1 1.8-1.900z"/></svg></i>Decline</button>
         </div>
       </div>
@@ -84,7 +83,10 @@
     <div class="ground-card">
       <h1 class="ground-title" id="ground-title">Whose burner is this?</h1>
       <p class="ground-sub" id="ground-sub"></p>
-      <button type="button" class="pickup" id="pickup"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.200" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19.500V9M7.500 13.500 12 9l4.500 4.500M5 4.500h14"/></svg>Pick it up</button>
+      <div class="ground-actions">
+        <button type="button" class="pickup" id="pickup"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.200" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19.500V9M7.500 13.500 12 9l4.500 4.500M5 4.500h14"/></svg>Pick it up</button>
+        <button type="button" class="ground-reset" id="ground-reset">Start over</button>
+      </div>
     </div>
   </div>
 
@@ -92,6 +94,14 @@
 
   <article class="story" id="story" tabindex="-1" hidden></article>
   <p class="sr-only" id="announce" aria-live="assertive"></p>
+</div>
+
+<div class="rotate" id="rotate" role="dialog" aria-modal="true" aria-labelledby="rotate-title" hidden>
+  <div class="rotate-card">
+    <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="2.5" width="10" height="19" rx="2"/><path d="M9.5 5.5h5"/></svg>
+    <h2 id="rotate-title" tabindex="-1">Rotate your phone</h2>
+    <p>Burner Phone is built for portrait. Turn the phone upright so the screen and controls stay in reach.</p>
+  </div>
 </div>
 <noscript><p class="noscript">Burner Phone needs JavaScript to run. Turn it on in your browser and reload the page.</p></noscript>
 <script src="js/phones.js"></script>

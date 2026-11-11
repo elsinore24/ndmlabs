@@ -81,7 +81,7 @@ p { margin: 0; }
   padding-block: 16px 28px;
 }
 .mast { justify-self: stretch; display: flex; align-items: baseline; gap: 10px; font-size: 14px; }
-.wordmark { font-weight: 700; letter-spacing: -0.01em; }
+.wordmark { margin: 0; font-size: inherit; font-weight: 700; line-height: inherit; letter-spacing: -0.01em; }
 .issues { display: flex; gap: 2px; }
 .issue { padding: 3px 9px; border: 0; border-radius: 999px; background: transparent; color: var(--page-muted); font-size: 14px; cursor: pointer; }
 .issue:hover { color: var(--page-ink); }
@@ -101,7 +101,7 @@ p { margin: 0; }
 .device {
   position: relative;
   height: 780px;
-  height: clamp(680px, calc(100dvh - 128px), 844px);
+  height: clamp(620px, calc(100dvh - 128px), 844px);
   aspect-ratio: 390 / 844;
   padding: 9px;
   border-radius: 56px;
@@ -191,6 +191,7 @@ p { margin: 0; }
 }
 .os.light .pill { background: #1c1c1f; }
 .pill:hover { background: rgba(255, 255, 255, 0.28); }
+.pill.is-locked { opacity: 0.55; }
 .os.light .pill:hover { background: #000; }
 
 /* Home screen */
@@ -427,6 +428,7 @@ button.row:hover { background: var(--app-fill); }
   color-scheme: light;
 }
 .story:focus { outline: none; }
+.story :focus-visible { outline-color: var(--paper-ink); }
 .kicker { font-size: 13px; font-weight: 700; }
 .result { font-size: 14px; font-weight: 600; color: #c1271b; }
 
@@ -440,7 +442,7 @@ button.row:hover { background: var(--app-fill); }
 .reply .receipt { color: var(--paper-soft); }
 .undelivered { align-self: flex-end; padding: 2px 4px 0; font-size: 12px; font-weight: 600; color: #d93025; }
 .reply-note { align-self: center; margin-top: 10px; font-size: 13px; color: var(--paper-soft); }
-.reply.fresh .bub.them { animation: bubin 0.35s ease-out both; animation-delay: calc(0.7s + var(--i) * 0.9s); }
+.reply.fresh .bub.them { animation: bubin 0.35s ease-out both; animation-delay: 0.2s; }
 @keyframes bubin { from { opacity: 0; transform: translateY(8px) scale(0.96); } to { opacity: 1; transform: none; } }
 .parody { margin-top: 10px; padding: 10px 12px; border-radius: 8px; background: var(--paper-fill); font-size: 13.5px; line-height: 1.45; }
 .credits { margin-top: 10px; font-size: 12.5px; line-height: 1.5; color: var(--paper-soft); }
@@ -916,6 +918,19 @@ button.row:hover { background: var(--app-fill); }
     transition: scale .15s ease;
   }
   .pickup:active { scale: .97; }
+  .ground-actions { display: flex; gap: 10px; margin-top: 18px; }
+  .ground-actions .pickup { flex: 1; width: auto; margin-top: 0; }
+  .ground-reset {
+    flex: none; height: 58px; padding: 0 18px;
+    border: 1px solid rgba(255, 255, 255, .28); border-radius: 29px;
+    background: transparent; color: #fff;
+    font-size: 15px; font-weight: 600; cursor: pointer;
+  }
+  .ground-reset:active { scale: .97; }
+  @media (max-width: 360px) {
+    .ground-actions { flex-direction: column; }
+    .ground-reset { width: 100%; }
+  }
   .stage:not(.grounded) .ground-card { opacity: 0; translate: 0 48px; visibility: hidden; transition: opacity .2s ease, translate .35s ease, visibility 0s .35s; }
   .stage:not(.grounded) .ground-top { opacity: 0; translate: 0 -24px; visibility: hidden; transition: opacity .2s ease, translate .35s ease, visibility 0s .35s; }
   .stage.reading .floor, .stage.reading .ground { display: none; }
@@ -1084,7 +1099,7 @@ html[data-vt="down"]::view-transition-new(ground-top) { animation: ifyp-top-in .
 .device[data-model="punch"] .draft-card .kb-sugg { background: #23282d; }
 
 /* The cracked glass */
-.crack { position: absolute; inset: 0; z-index: 13; width: 100%; height: 100%; pointer-events: none; }
+.crack { position: absolute; inset: 0; z-index: 13; width: 100%; height: 100%; opacity: .55; pointer-events: none; }
 
 /* Burner apps */
 .cards { list-style: none; margin: 0; padding: 0 var(--gr) 0 var(--gl); display: flex; flex-direction: column; gap: 10px; }
@@ -1144,4 +1159,23 @@ html[data-vt="down"]::view-transition-new(ground-top) { animation: ifyp-top-in .
 .receipts a { color: inherit; text-underline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) {
   .ph-bar i { animation: none; }
+}
+
+/* The game's phone UI needs portrait. A landscape phone gets a clear prompt instead of
+   a 680px phone cut off at the fold. */
+.rotate { display: none; }
+.rotate-card { max-width: 340px; text-align: center; color: var(--page-ink); }
+.rotate-card svg { color: var(--page-muted); }
+.rotate-card h2 { margin: 18px 0 8px; font-size: 28px; font-weight: 700; line-height: 1.1; }
+.rotate-card p { margin: 0; font-size: 15px; line-height: 1.5; color: var(--page-muted); }
+@media (min-width: 641px) and (max-height: 800px) {
+  .stage { padding-block: 6px 8px; gap: 8px; }
+}
+@media (orientation: landscape) and (max-height: 620px) and (max-width: 1024px) {
+  .stage { display: none !important; }
+  .rotate:not([hidden]) {
+    display: grid; place-items: center;
+    position: fixed; inset: 0; z-index: 100;
+    padding: 24px; background: var(--page);
+  }
 }
