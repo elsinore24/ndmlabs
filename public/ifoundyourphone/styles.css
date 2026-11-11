@@ -819,7 +819,7 @@ button.row:hover { background: var(--app-fill); }
 @media (max-width: 640px) {
   .device {
     /* How it lies on the floor, and the body you see around the screen down there */
-    --g-ty: -10%; --g-rot: -13deg; --g-s: .5;
+    --g-ty: -13%; --g-rot: -13deg; --g-s: .5;
     --bezel: #1b1b1e; --rim: #8c8c94; --gr-r: 58px; --bz: 16px;
     --sh-ground: 0 0 0 var(--bz) var(--bezel), 0 0 0 calc(var(--bz) + 3px) var(--rim), 6px 10px 8px calc(var(--bz) + 3px) rgba(0, 0, 0, .62), 30px 54px 70px var(--bz) rgba(0, 0, 0, .55);
     --sh-air: 0 0 0 var(--bz) var(--bezel), 0 0 0 calc(var(--bz) + 3px) var(--rim), 40px 90px 50px calc(var(--bz) + 3px) rgba(0, 0, 0, .3), 90px 190px 150px var(--bz) rgba(0, 0, 0, .28);
@@ -898,7 +898,7 @@ button.row:hover { background: var(--app-fill); }
     -webkit-backdrop-filter: blur(22px) saturate(1.4); backdrop-filter: blur(22px) saturate(1.4);
     box-shadow: 0 24px 60px rgba(0, 0, 0, .5), inset 0 0 0 1px rgba(255, 255, 255, .09);
   }
-  .ground-title { margin: 0; font-size: 46px; font-weight: 800; line-height: .98; letter-spacing: -.035em; text-wrap: balance; }
+  .ground-title { margin: 0; font-size: 42px; font-weight: 800; line-height: 1; letter-spacing: -.035em; text-wrap: balance; }
   .ground-sub { margin-top: 10px; max-width: 32ch; font-size: 16px; line-height: 1.4; color: rgba(255, 255, 255, .74); }
   .pickup {
     display: flex; align-items: center; justify-content: center; gap: 8px;

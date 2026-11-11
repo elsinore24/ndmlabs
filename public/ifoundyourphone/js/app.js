@@ -651,10 +651,9 @@
     $("#floor").dataset.floor = CASE.ground || "boards";
     $("#ground-issues").innerHTML = issuesHTML();
     const where = (CASE.lock.find((n) => n.tile === "game") || {}).title || "";
-    let title = "Lost phone.", sub = where;
+    let title = "Whose phone is that?", sub = where;
     if (state.status === "won") { title = `${CASE.owner}’s phone.`; sub = "You named the owner. It’s back where you found it."; }
     else if (state.status === "dead") sub = "The battery died before you named the owner.";
-    else if (state.opened.length || state.names.length) sub = `You put it down with ${state.battery}% left.`;
     $("#ground-title").textContent = title;
     $("#ground-sub").textContent = sub;
   }
