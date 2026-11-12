@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="900" viewBox="0 0 900 900">
+<defs>
+  <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#171511"/><stop offset="1" stop-color="#0e0c0a"/></linearGradient>
+  <linearGradient id="green" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2c5b3b"/><stop offset=".55" stop-color="#1c432b"/><stop offset="1" stop-color="#12301f"/></linearGradient>
+  <linearGradient id="desk" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3a2a1e"/><stop offset="1" stop-color="#1a120d"/></linearGradient>
+</defs>
+<rect width="900" height="900" fill="url(#bg)"/>
+<rect y="620" width="900" height="280" fill="url(#desk)"/>
+<rect x="96" y="54" width="708" height="790" rx="18" fill="#1a1511" stroke="#574536" stroke-width="2"/>
+<rect x="112" y="70" width="676" height="758" rx="10" fill="#211914"/>
+<path d="M450 118v74M450 192l-170 80M450 192l170 80" fill="none" stroke="#b7915b" stroke-width="7" stroke-linecap="round"/>
+<path d="M450 118c0-24-31-24-31-1 0 15 15 19 31 19" fill="none" stroke="#b7915b" stroke-width="6" stroke-linecap="round"/>
+<path d="M300 248c58-32 262-32 320 0l52 104-50 70-26-32v270c-88 26-184 26-272 0V390l-26 32-50-70z" fill="url(#green)" stroke="#0c2415" stroke-width="4"/>
+<path d="M300 248c44-24 84-32 120-36l30 70 30-70c36 4 76 12 120 36l-20 72-48-38-42 62H410l-42-62-48 38z" fill="#173823" opacity=".95"/>
+<path d="M410 282c26 22 54 22 80 0" fill="none" stroke="#0c2415" stroke-width="4"/>
+<path d="M450 282v340" stroke="#0c2415" stroke-width="3" opacity=".7"/>
+<circle cx="432" cy="356" r="4" fill="#caa66b"/><circle cx="432" cy="410" r="4" fill="#caa66b"/><circle cx="432" cy="464" r="4" fill="#caa66b"/>
+<g transform="translate(388 300)">
+  <circle cx="26" cy="26" r="24" fill="#f2e6ce" stroke="#9a1d24" stroke-width="3"/>
+  <path d="M14 30c4-12 10-16 12-16s8 4 12 16" fill="none" stroke="#9a1d24" stroke-width="4" stroke-linecap="round"/>
+  <path d="M20 36h12" stroke="#9a1d24" stroke-width="3" stroke-linecap="round"/>
+</g>
+<g transform="translate(620 548) rotate(-6)">
+  <rect width="174" height="112" rx="9" fill="#f4f0e6" stroke="#c9c1b0" stroke-width="2"/>
+  <rect x="13" y="17" width="88" height="9" rx="2" fill="#1c432b"/>
+  <text x="13" y="53" font-family="Arial,Helvetica,sans-serif" font-size="10" font-weight="700" fill="#5a5146" letter-spacing="1">THE LODGE</text>
+  <text x="13" y="91" font-family="Arial,Helvetica,sans-serif" font-size="28" font-weight="700" fill="#22201d">214</text>
+  <rect x="125" y="17" width="36" height="78" rx="3" fill="#ded7c7"/>
+</g>
+<g transform="translate(120 300) rotate(-7)">
+  <rect width="190" height="130" rx="7" fill="#f4ead8" stroke="#d8c9b2"/>
+  <text x="18" y="34" font-family="Arial,Helvetica,sans-serif" font-size="15" font-style="italic" fill="#4a3c2f">After Sunday.</text>
+  <path d="M18 48c20-7 44-7 64 0M18 62c20-7 44-7 64 0" fill="none" stroke="#d8c9b2" stroke-width="2"/>
+  <ellipse cx="132" cy="86" rx="22" ry="9" fill="#9c1f2d" opacity=".85"/>
+</g>
+<g transform="translate(170 520)">
+  <path d="M16 0h58l-8 98c-3 14-36 14-42 0z" fill="#f7efdd" opacity=".24" stroke="#f7efdd" stroke-width="2"/>
+  <rect x="43" y="98" width="4" height="90" fill="#f7efdd" opacity=".55"/>
+  <ellipse cx="45" cy="196" rx="34" ry="6" fill="#f7efdd" opacity=".5"/>
+</g>
+<text x="770" y="842" text-anchor="end" font-family="Arial,Helvetica,sans-serif" font-size="13" fill="#8a7158" letter-spacing="3">ROOM 214 / 12:58 AM</text>
+</svg>

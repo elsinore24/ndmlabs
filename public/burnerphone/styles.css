@@ -1179,3 +1179,39 @@ html[data-vt="down"]::view-transition-new(ground-top) { animation: ifyp-top-in .
     padding: 24px; background: var(--page);
   }
 }
+
+/* ---------- Realistic app chrome for the 2008 case ---------- */
+.appbar {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 12px;
+  padding: 10px var(--gr) 2px var(--gl);
+  font-size: 11.500px; line-height: 1.3; color: var(--app-soft);
+}
+.appbar span:last-child { flex: none; white-space: nowrap; }
+.dc-head { display: flex; align-items: center; gap: 10px; }
+.dc-avatar { width: 34px; height: 34px; font-size: 14px; }
+.draft-card .dc-to { flex: 1; min-width: 0; display: flex; flex-direction: column; font-size: 13px; }
+.draft-card .dc-to b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 15px; font-weight: 600; }
+.draft-card .dc-to small { font-size: 11.500px; color: var(--app-soft); }
+.dc-when { flex: none; font-size: 11.500px; color: var(--app-soft); font-variant-numeric: tabular-nums; }
+.dc-subject { margin-top: 9px; font-size: 13px; font-weight: 700; color: var(--app-ink); }
+.dc-meta { justify-content: space-between; gap: 10px; }
+.dc-meta span { display: inline-flex; align-items: center; gap: 5px; min-width: 0; }
+.dc-meta span:last-child { color: var(--app-soft); font-variant-numeric: tabular-nums; }
+.balance .acct { margin-top: 6px; font-size: 11.500px; color: var(--app-soft); }
+.pay-ref { margin-top: 3px; font-size: 11.500px; color: var(--app-soft); font-variant-numeric: tabular-nums; }
+.vm-head { display: flex; align-items: center; gap: 10px; }
+.vm-who { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.vm-who b { font-size: 15px; }
+.vm-who small { font-size: 11.500px; color: var(--app-soft); }
+.vm-when { flex: none; font-size: 11.500px; color: var(--app-soft); }
+.vm .vm-tag { display: inline-block; margin-top: 9px; padding: 2px 7px; border-radius: 99px; background: rgba(255, 90, 80, .12); color: var(--missed); font-size: 10.500px; font-weight: 700; letter-spacing: .02em; }
+.vm .vm-tag.saved { background: rgba(255, 255, 255, .07); color: var(--app-soft); }
+.pl-addr { margin-top: 2px; font-size: 12.500px; color: var(--app-soft); }
+.pl-source { margin-top: 4px; font-size: 11px; color: var(--app-soft); font-variant-numeric: tabular-nums; opacity: .85; }
+.ph-ref { flex: none; font-size: 11px; color: var(--app-soft); font-variant-numeric: tabular-nums; }
+.ph-meta { padding: 0 var(--gr) 10px var(--gl); font-size: 11.500px; color: var(--app-soft); font-variant-numeric: tabular-nums; }
+.device[data-model="punch"] .t-drafts { background: linear-gradient(#ffe08a, #e7a600); color: #3a2800; }
+.device[data-model="punch"] .t-pay { background: linear-gradient(#9fe0a5, #2f9b55); color: #0b2d16; }
+.device[data-model="punch"] .t-voicemail { background: linear-gradient(#ff9d8f, #d94738); color: #3a0905; }
+.device[data-model="punch"] .t-places { background: linear-gradient(#9dc8ff, #3f77d1); color: #0b1c3a; }
+.device[data-model="punch"] .t-photo { background: linear-gradient(#f7b5dc, #bf5c9c); color: #3a0927; }

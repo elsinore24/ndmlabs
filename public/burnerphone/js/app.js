@@ -205,34 +205,69 @@
 
   // Every app screen says what this is, so a screenshot of one still carries it.
   const fine = () => `<p class="fine">Parody. Nothing on this phone is real.</p>`;
+  const appbar = (key) => {
+    const note = CASE.appNotes && CASE.appNotes[key];
+    if (!note) return "";
+    const carrier = CASE.meta && CASE.meta.carrier ? CASE.meta.carrier : "";
+    return `<div class="appbar"><span>${esc(note)}</span><span>${esc(carrier)}</span></div>`;
+  };
 
   function draftsHTML() {
-    const cards = CASE.drafts.map((d, i) => `<li class="draft-card"><p class="dc-to"><span>To</span> ${esc(d.to)}</p>
-      <p class="dc-text">${esc(d.text)}${i === 0 ? '<i class="caret" aria-hidden="true"></i>' : ""}</p>
-      ${d.sugg ? `<p class="kb-sugg"><span class="sr-only">The keyboard suggests: </span>${d.sugg.map((w) => `<span>${esc(w)}</span>`).join("")}</p>` : ""}
-      <p class="dc-meta">${svg(G.pencil, 14)}Not sent, ${esc(d.when)}</p></li>`).join("");
-    return nav("Drafts", "Home", "home") + bodyWrap(`<p class="label">${CASE.drafts.length} unsent</p><ul class="cards">${cards}</ul>${fine()}`);
+    const cards = CASE.drafts.map((d, i) => {
+      const when = [d.date, d.when].filter(Boolean).join(", ");
+      return `<li class="draft-card">
+        <div class="dc-head"><span class="avatar dc-avatar" aria-hidden="true">${esc((d.to || "?").replace(/[^A-Za-z]/g, "").slice(0, 1) || "?")}</span>
+          <span class="dc-to"><b>${esc(d.to)}</b><small>${esc(d.handle || "Burner contact")}</small></span>
+          <span class="dc-when">${esc(when)}</span></div>
+        ${d.subject ? `<p class="dc-subject">${esc(d.subject)}</p>` : ""}
+        <p class="dc-text">${esc(d.text)}${i === 0 ? '<i class="caret" aria-hidden="true"></i>' : ""}</p>
+        ${d.sugg ? `<p class="kb-sugg"><span class="sr-only">The keyboard suggests: </span>${d.sugg.map((w) => `<span>${esc(w)}</span>`).join("")}</p>` : ""}
+        <div class="dc-meta"><span>${svg(G.pencil, 14)}${esc(d.status || "Not sent")}</span><span>${esc(d.ref || "")}</span></div>
+      </li>`;
+    }).join("");
+    return nav("Drafts", "Home", "home") + appbar("drafts") + bodyWrap(`<p class="label">${CASE.drafts.length} unsent</p><ul class="cards">${cards}</ul>${fine()}`);
   }
 
   function payHTML() {
-    const rows = CASE.pay.map((x) => `<li class="row pay ${x.dir}"><span class="avatar" aria-hidden="true">${esc(x.initial)}</span>
-      <span class="row-main"><span class="row-top"><b>${esc(x.who)}</b><span class="amt">${esc(x.amt)}</span></span>
-      <span class="row-sub">${esc(x.memo)}</span><span class="pay-when">${esc(x.kind)}, ${esc(x.when)}</span></span></li>`).join("");
+    const rows = CASE.pay.map((x) => {
+      const when = [x.method, x.date, x.time].filter(Boolean).join(" · ") || [x.kind, x.when].filter(Boolean).join(", ");
+      const ref = [x.status, x.reference].filter(Boolean).join(" · ");
+      return `<li class="row pay ${x.dir}"><span class="avatar" aria-hidden="true">${esc(x.initial)}</span>
+        <span class="row-main"><span class="row-top"><b>${esc(x.who)}</b><span class="amt">${esc(x.amt)}</span></span>
+        <span class="row-sub">${esc(x.memo)}</span><span class="pay-when">${esc(when)}</span>
+        ${ref ? `<span class="pay-ref">${esc(ref)}</span>` : ""}</span></li>`;
+    }).join("");
     const t = CASE.payTop;
-    return nav("Payments", "Home", "home") + bodyWrap(`<div class="balance"><span>${esc(t.label)}</span><b>${esc(t.amt)}</b><span>${esc(t.note)}</span></div>
+    const acct = CASE.meta && CASE.meta.account ? `<span class="acct">${esc(CASE.meta.account)} · ${esc(CASE.meta.synced || "")}</span>` : "";
+    return nav("Payments", "Home", "home") + appbar("pay") + bodyWrap(`<div class="balance"><span>${esc(t.label)}</span><b>${esc(t.amt)}</b><span>${esc(t.note)}</span>${acct}</div>
       <p class="label">Activity</p><ul class="rows">${rows}</ul>${fine()}`);
   }
 
   function voicemailHTML() {
-    const cards = CASE.voicemails.map((v) => `<li class="vm"><b>${esc(v.from)}</b><span>${esc(v.meta)}</span><p>${esc(v.text)}</p></li>`).join("");
-    return nav("Voicemail", "Home", "home") + bodyWrap(`<p class="label trash">${svg(G.trash, 15)}<span>Deleted messages. ${esc(CASE.vmNote)}</span></p><ul class="cards vms">${cards}</ul>${fine()}`);
+    const cards = CASE.voicemails.map((v) => {
+      const when = v.date ? `${v.date}, ${v.time}` : v.meta;
+      const sub = [v.number, v.duration].filter(Boolean).join(" · ");
+      return `<li class="vm">
+        <div class="vm-head"><span class="avatar" aria-hidden="true">${esc((v.from || "?").slice(0, 1))}</span><span class="vm-who"><b>${esc(v.from)}</b><small>${esc(sub)}</small></span><span class="vm-when">${esc(when)}</span></div>
+        <p>${esc(v.text)}</p>
+        ${v.deleted === true ? '<span class="vm-tag">Deleted</span>' : v.deleted === false ? '<span class="vm-tag saved">Saved</span>' : ""}
+      </li>`;
+    }).join("");
+    return nav("Voicemail", "Home", "home") + appbar("voicemail") + bodyWrap(`<p class="label trash">${svg(G.trash, 15)}<span>${esc(CASE.vmNote)}</span></p><ul class="cards vms">${cards}</ul>${fine()}`);
   }
 
   function placesHTML() {
-    const rows = CASE.places.map((x) => `<li class="place"><span class="pl-dot" aria-hidden="true"></span>
-      <div class="pl-main"><p class="pl-when">${esc(x.when)}</p><b>${esc(x.where)}</b><p class="pl-len">${esc(x.len)}</p>
-      ${x.said ? `<p class="pl-said"><span>${esc(x.saidLabel || "Reason given")}:</span> ${esc(x.said)}</p>` : ""}</div></li>`).join("");
-    return nav("Timeline", "Home", "home") + bodyWrap(`<div class="map" aria-hidden="true"><i></i><i></i><i></i><i></i><span class="map-pin">${svg(G.pin, 28)}</span></div>
+    const rows = CASE.places.map((x) => {
+      const when = x.date ? `${x.date} · ${x.time}` : x.when;
+      const source = [x.source, x.ref].filter(Boolean).join(" · ");
+      return `<li class="place"><span class="pl-dot" aria-hidden="true"></span>
+        <div class="pl-main"><p class="pl-when">${esc(when)}</p><b>${esc(x.where)}</b>
+        ${x.address ? `<p class="pl-addr">${esc(x.address)}</p>` : ""}
+        <p class="pl-len">${esc(x.len)}</p>
+        ${source ? `<p class="pl-source">${esc(source)}</p>` : ""}
+        ${x.said ? `<p class="pl-said"><span>${esc(x.saidLabel || "Reason given")}:</span> ${esc(x.said)}</p>` : ""}</div></li>`;
+    }).join("");
+    return nav("Timeline", "Home", "home") + appbar("places") + bodyWrap(`<div class="map" aria-hidden="true"><i></i><i></i><i></i><i></i><span class="map-pin">${svg(G.pin, 28)}</span></div>
       <p class="label">${esc(CASE.placesNote)}</p><ol class="places">${rows}</ol>${fine()}`);
   }
 
@@ -243,7 +278,8 @@
   const photoLeft = () => (state.photoAt ? Math.max(0, PHOTO_SECS - (Date.now() - state.photoAt) / 1000) : PHOTO_SECS);
   function photoHTML() {
     const x = CASE.photo, left = photoLeft();
-    const head = `<div class="ph-from"><span class="avatar" aria-hidden="true">?</span><span class="row-main"><b>${esc(x.from)}</b><span class="row-sub one">${esc(x.sub)}</span></span></div>`;
+    const meta = [x.received ? `received ${x.received}` : "", x.expires ? `expires ${x.expires}` : "", x.bytes || ""].filter(Boolean).join(" · ");
+    const head = `<div class="ph-from"><span class="avatar" aria-hidden="true">${esc((x.from || "?").slice(0, 1))}</span><span class="row-main"><b>${esc(x.from)}</b><span class="row-sub one">${esc(x.handle || x.sub)}</span></span><span class="ph-ref">${esc(x.ref || "")}</span></div>${meta ? `<p class="ph-meta">${esc(meta)}</p>` : ""}`;
     if (!over() && left <= 0) return nav("Photo", "Home", "home") + bodyWrap(`${head}
       <div class="ph-frame gone"><img src="${x.px}" width="${x.w}" height="${x.h}" alt="${esc(x.goneAlt)}"></div>
       <p class="ph-note">This photo has disappeared.</p>${fine()}`);
@@ -317,8 +353,9 @@
   function replyHTML() {
     const rep = ownerReply();
     if (!rep) return "";
-    const first = CASE.owner.split(" ")[0];
-    const head = `<div class="reply-head"><span class="avatar" aria-hidden="true">${esc(CASE.owner[0])}</span><b>${esc(CASE.owner)}</b></div>`;
+    const who = (CASE.reply && CASE.reply.name) || CASE.owner;
+    const first = who.split(" ")[0];
+    const head = `<div class="reply-head"><span class="avatar" aria-hidden="true">${esc(who[0])}</span><b>${esc(who)}</b></div>`;
     const you = `<p class="bub you"><span class="sr-only">You: </span>${esc(CASE.reply.you)}</p>`;
     const cls = "reply" + (flags.fresh ? " fresh" : "");
     if (rep.dead) return `<div class="${cls}">${head}${you}<p class="undelivered">Not Delivered</p><p class="reply-note">The phone died before it could ring.</p></div>`;
@@ -333,7 +370,7 @@
     const spent = `${apps} app${apps === 1 ? "" : "s"} opened, ${miss} wrong name${miss === 1 ? "" : "s"}`;
     const head = `Burner Phone ${no(CASE.id)}`;
     const rep = ownerReply();
-    const quote = rep ? (rep.dead ? "Not delivered." : `They texted back: “${rep.quote}”`) : null;
+    const quote = rep ? (rep.dead ? "Not delivered." : `${(CASE.reply && CASE.reply.name) || "They"}: “${rep.quote}”`) : null;
     const score = state.status === "won" ? `${bar} ${b}% left` : `${bar} the phone died`;
     return [head, score, spent, quote, SITE].filter(Boolean).join("\n");
   }
