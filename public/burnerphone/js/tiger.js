@@ -34,7 +34,7 @@
       { to: "J.", handle: "+1 (706) ••• 2214", subject: "Tonight", text: "I can’t do dinner. Tell them I’m in New York.", date: "Apr 14", when: "12:58 AM", ref: "D-1042", status: "Not sent" },
       { to: "J.", handle: "+1 (706) ••• 2214", subject: "(no subject)", text: "Do not call the house phone. Use this one.", date: "Apr 14", when: "12:41 AM", ref: "D-1041", status: "Not sent" },
       { to: "Agent", handle: "+1 (212) ••• 0198", subject: "The photo", text: "The magazine has the photo. Fix it before the next event.", date: "Apr 14", when: "12:18 AM", ref: "D-1040", status: "Not sent" },
-      { to: "Me", handle: "Drafts", subject: "(no subject)", text: "If anyone asks, I was at the club.", date: "Apr 14", when: "12:04 AM", ref: "D-1039", status: "Not sent" },
+      { to: "Me", handle: "Drafts", subject: "(no subject)", text: "I can still smell your perfume on the collar. I’ll have it cleaned before I go home.", date: "Apr 14", when: "12:04 AM", ref: "D-1039", status: "Not sent" },
       { to: "J.", handle: "+1 (706) ••• 2214", subject: "After", text: "I’ll tell her after the tournament. I mean it this time.", date: "Apr 13", when: "11:52 PM", ref: "D-1038", status: "Not sent" },
       { to: "Fixer", handle: "+1 (212) ••• 7731", subject: "The story", text: "The story is dead if we don’t feed it. Give them the foundation.", date: "Apr 13", when: "11:44 PM", ref: "D-1037", status: "Not sent" },
     ],
