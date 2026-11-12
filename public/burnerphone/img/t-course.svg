@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675" viewBox="0 0 1200 675">
+<defs>
+  <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2b4351"/><stop offset=".45" stop-color="#b46f45"/><stop offset="1" stop-color="#e5b16b"/></linearGradient>
+  <linearGradient id="green" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3e6b43"/><stop offset="1" stop-color="#1e3d2b"/></linearGradient>
+  <linearGradient id="water" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6a9aa7"/><stop offset="1" stop-color="#2b5362"/></linearGradient>
+</defs>
+<rect width="1200" height="675" fill="url(#sky)"/>
+<circle cx="890" cy="220" r="54" fill="#ffd99a" opacity=".92"/>
+<circle cx="890" cy="220" r="90" fill="#ffd99a" opacity=".12"/>
+<path d="M0 390c180-55 330-40 500 0s340 25 700-20v305H0z" fill="url(#green)"/>
+<path d="M0 470c210-45 390-25 560 10s360 5 640-30v225H0z" fill="#244b32"/>
+<path d="M700 490c120-35 250-25 360 10s100 100-10 130-250 10-330-40-70-75-20-100z" fill="url(#water)" opacity=".85"/>
+<path d="M340 540c80-40 160-30 220 10" fill="none" stroke="#6a9c65" stroke-width="14" opacity=".5"/>
+<g transform="translate(430 300)">
+  <rect x="-2" y="0" width="4" height="150" fill="#e9e2d2"/>
+  <path d="M2 5h74l-18 26 18 26H2z" fill="#d6403a"/>
+</g>
+<g fill="#12291c" opacity=".85">
+  <path d="M120 330l18-95 18 95z"/><path d="M180 340l22-120 22 120z"/><path d="M80 345l14-70 14 70z"/>
+</g>
+<path d="M0 600h1200v75H0z" fill="#102018" opacity=".7"/>
+<text x="60" y="630" font-family="Arial,Helvetica,sans-serif" font-size="14" fill="#e9e2d2" letter-spacing="4" opacity=".55">5:58 AM / THE OTHER BAG</text>
+</svg>

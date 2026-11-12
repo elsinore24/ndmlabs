@@ -164,7 +164,7 @@
     },
   };
 
-  const CASES = [LANCE];
+  const CASES = [LANCE, ...(Array.isArray(window.BURNER_CASES) ? window.BURNER_CASES : [])];
 
   // Everyone a player can name. [name, what they are, other spellings]
   const SUSPECTS = [
@@ -324,7 +324,7 @@
     ["Chris Froome", "Cyclist", ["froome"]],
     ["Bradley Wiggins", "Cyclist", ["wiggins"]],
     ["Tadej Pogačar", "Cyclist", ["pogacar", "tadej pogacar"]],
-    ["Tiger Woods", "Golfer", ["tiger"]],
+    ["Tiger Woods", "Golfer", ["tiger", "eldrick woods", "eldrick tiger woods"]],
     ["Elizabeth Holmes", "Founder of Theranos", ["holmes"]],
     ["Richard Nixon", "US president", ["nixon"]],
     ["Bernie Madoff", "Financier", ["madoff"]],
@@ -343,6 +343,18 @@
     ["Michael Phelps", "Swimmer", ["phelps"]],
     ["Usain Bolt", "Sprinter", ["bolt"]],
   ];
+
+  // The generated public-figure index: thousands of names, no visible shortlist.
+  // The phone's owner still has to be found in the crowd.
+  const extra = Array.isArray(window.BURNER_SUSPECTS) ? window.BURNER_SUSPECTS : [];
+  const seen = new Set(SUSPECTS.map((s) => s[0].toLowerCase()));
+  for (const s of extra) {
+    if (!Array.isArray(s) || !s[0]) continue;
+    const k = String(s[0]).toLowerCase();
+    if (seen.has(k)) continue;
+    seen.add(k);
+    SUSPECTS.push([String(s[0]), String(s[1] || "Public figure")]);
+  }
 
   window.BURNER = { CASES, SUSPECTS };
 })();

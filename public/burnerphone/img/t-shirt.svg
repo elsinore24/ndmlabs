@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="900" viewBox="0 0 900 900">
+<defs>
+  <linearGradient id="wall" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#241b15"/><stop offset="1" stop-color="#100d0b"/></linearGradient>
+  <linearGradient id="red" x1="0" y1="0" x2="0.8" y2="1"><stop offset="0" stop-color="#d12b38"/><stop offset="0.55" stop-color="#b51f2e"/><stop offset="1" stop-color="#7e1420"/></linearGradient>
+  <linearGradient id="desk" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3b2a1f"/><stop offset="1" stop-color="#1d1511"/></linearGradient>
+  <linearGradient id="glass" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#f7efdd" stop-opacity=".85"/><stop offset=".5" stop-color="#e8cd9e" stop-opacity=".25"/><stop offset="1" stop-color="#f7efdd" stop-opacity=".8"/></linearGradient>
+</defs>
+<rect width="900" height="900" fill="url(#wall)"/>
+<rect y="610" width="900" height="290" fill="url(#desk)"/>
+<path d="M0 0h260L80 900H0z" fill="#3a2a1d" opacity=".25"/>
+<rect x="108" y="54" width="684" height="792" rx="20" fill="#17120f" stroke="#5c4738" stroke-width="2"/>
+<rect x="124" y="70" width="652" height="760" rx="12" fill="#1d1612"/>
+<path d="M450 120v78M450 198l-168 76M450 198l168 76" fill="none" stroke="#b78d58" stroke-width="7" stroke-linecap="round"/>
+<path d="M450 120c0-25-32-25-32-2 0 16 16 20 32 20" fill="none" stroke="#b78d58" stroke-width="6" stroke-linecap="round"/>
+<path d="M292 252c58-34 258-34 316 0l54 96-46 74-28-30v272c-91 27-185 27-276 0V392l-28 30-46-74z" fill="url(#red)" stroke="#6d111c" stroke-width="4"/>
+<path d="M288 254c42-24 82-32 118-36l44 70 44-70c36 4 76 12 118 36l-22 72-48-40-38 62H396l-38-62-48 40z" fill="#8e1622" opacity=".9"/>
+<path d="M406 288c26 22 62 22 88 0" fill="none" stroke="#5d0c15" stroke-width="5"/>
+<path d="M450 288v340" stroke="#7c121d" stroke-width="3" opacity=".65"/>
+<circle cx="450" cy="351" r="4" fill="#f6e8d0"/><circle cx="450" cy="405" r="4" fill="#f6e8d0"/><circle cx="450" cy="459" r="4" fill="#f6e8d0"/>
+<g transform="translate(414 300)">
+  <rect width="72" height="40" rx="3" fill="#f4ead8" stroke="#cdbfa8"/>
+  <text x="36" y="18" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="9" font-weight="700" fill="#8a1f2a" letter-spacing="1">STANFORD</text>
+  <text x="36" y="31" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="6" fill="#6d5d4a" letter-spacing="1">CARDINAL</text>
+</g>
+<g transform="translate(616 548) rotate(-7)">
+  <rect width="178" height="116" rx="9" fill="#f4f0e6" stroke="#c9c1b0" stroke-width="2"/>
+  <rect x="13" y="17" width="92" height="9" rx="2" fill="#8a1f2a"/>
+  <text x="13" y="55" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="700" fill="#5a5146" letter-spacing="1">THE LODGE</text>
+  <text x="13" y="92" font-family="Arial,Helvetica,sans-serif" font-size="28" font-weight="700" fill="#22201d">214</text>
+  <rect x="125" y="17" width="40" height="82" rx="3" fill="#ded7c7"/>
+</g>
+<g transform="translate(152 532)">
+  <path d="M18 0h64l-9 104c-3 15-41 15-45 0z" fill="url(#glass)" stroke="#f7efdd" stroke-width="2" opacity=".9"/>
+  <rect x="47" y="104" width="5" height="86" fill="#f7efdd" opacity=".75"/>
+  <ellipse cx="50" cy="192" rx="38" ry="6" fill="#f7efdd" opacity=".7"/>
+  <circle cx="49" cy="40" r="3" fill="#f7efdd" opacity=".8"/><circle cx="53" cy="62" r="2" fill="#f7efdd" opacity=".7"/><circle cx="45" cy="80" r="2.5" fill="#f7efdd" opacity=".7"/>
+</g>
+<g transform="translate(118 276) rotate(-8)">
+  <rect width="158" height="116" rx="7" fill="#f4ead8" stroke="#d8c9b2"/>
+  <ellipse cx="80" cy="57" rx="22" ry="9" fill="#a3132a" opacity=".82"/>
+  <path d="M60 66c12 8 28 8 40 0" fill="none" stroke="#7e1420" stroke-width="2" opacity=".5"/>
+  <path d="M18 20c18-8 34-8 50 0M18 34c18-8 34-8 50 0" fill="none" stroke="#d8c9b2" stroke-width="2"/>
+</g>
+<text x="760" y="840" text-anchor="end" font-family="Arial,Helvetica,sans-serif" font-size="13" fill="#7b6755" letter-spacing="3">THE OTHER BAG</text>
+</svg>

@@ -562,7 +562,7 @@
   function matches(q) {
     const hit = SUSPECTS.filter((s) => {
       const hay = norm(s[0] + " " + (s[2] || []).join(" "));
-      return hay.includes(q) || hay.split(" ").some((w) => w.startsWith(q));
+      return hay.startsWith(q) || hay.split(" ").some((w) => w.startsWith(q));
     });
     hit.sort((a, b) => (norm(a[0]).startsWith(q) ? 0 : 1) - (norm(b[0]).startsWith(q) ? 0 : 1));
     return hit.slice(0, 6);
